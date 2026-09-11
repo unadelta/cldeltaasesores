@@ -1,0 +1,5 @@
+MYSQLHOST=localhost
+MYSQLUSER=root
+MYSQLPASSWORD=tu_contraseña_local
+MYSQLDATABASE=asesores
+MYSQLPORT=3306

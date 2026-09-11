@@ -29,13 +29,22 @@ app.use(session({
         maxAge: 24 * 60 * 60 * 1000 // 1 día
     }
 }));
-
+/*
 // Conexión a la Base de Datos MySQL
 const db = mysql.createConnection({
     host: 'localhost',
     user: 'root',
     password: '',
     database: 'asesores'
+});
+*/
+
+const db = mysql.createConnection({
+  host: process.env.MYSQLHOST,
+  user: process.env.MYSQLUSER,
+  password: process.env.MYSQLPASSWORD,
+  database: process.env.MYSQLDATABASE,
+  port: process.env.MYSQLPORT
 });
 
 db.connect((err) => {
