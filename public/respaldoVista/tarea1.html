@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Tareas - Asesores UNA</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+</head>
+
+<body class="bg-light">
+
+    <!-- NAVBAR PRINCIPAL -->
+    <div id="navbar-container"></div>
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="container mt-4">
+        <div class="row mb-3 align-items-center">
+            <div class="col-sm-6">
+                <h3 class="fw-bold text-primary"><i class="bi bi-list-task me-2"></i>Módulo de Tareas</h3>
+            </div>
+            <div class="col-sm-6 text-sm-end">
+                <button class="btn btn-success" onclick="abrirModalNuevo()"><i class="bi bi-plus-circle me-1"></i> Nueva Tarea</button>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body">
+                <div class="input-group">
+                    <span class="input-group-text bg-primary text-white"><i class="bi bi-search"></i></span>
+                    <input type="text" id="busquedaCodigo" class="form-control" placeholder="Buscar por código de tarea..." onkeyup="filtrarTareas()">
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-primary">
+                            <tr>
+                                <th>ID</th>
+                                <th>Código</th>
+                                <th>Descripción</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaTareas">
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">Cargando registros...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL NUEVO / EDITAR TAREA -->
+    <div class="modal fade" id="modalTarea" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="formTarea" onsubmit="guardarTarea(event)">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title" id="modalTitulo">Registrar Nueva Tarea</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="idTarea">
+                        <div class="mb-3">
+                            <label for="codigo" class="form-label fw-semibold">Código</label>
+                            <input type="text" class="form-control" id="codigo" placeholder="Ej: T01" required autocomplete="off">
+                        </div>
+                        <div class="mb-3">
+                            <label for="descripcion" class="form-label fw-semibold">Descripción</label>
+                            <input type="text" class="form-control" id="descripcion" placeholder="Ej: Evaluación Parcial" required autocomplete="off">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" id="btnGuardar">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let modalInstance = null;
+        let modoEdicion = false;
+
+        document.addEventListener("DOMContentLoaded", async() => {
+            modalInstance = new bootstrap.Modal(document.getElementById('modalTarea'));
+            await verificarSesionYCargar();
+        });
+
+        async function verificarSesionYCargar() {
+            const resUser = await fetch('/api/user-session');
+            const dataUser = await resUser.json();
+            if (dataUser.authenticated) document.getElementById('nombreUsuario').textContent = dataUser.user.nombre;
+            else window.location.href = '/';
+
+            await cargarTareas();
+        }
+
+        async function cargarTareas() {
+            const res = await fetch('/api/tareas');
+            const data = await res.json();
+            const tbody = document.getElementById('tablaTareas');
+            tbody.innerHTML = '';
+            if (data && data.length > 0) {
+                data.forEach(t => {
+                    tbody.innerHTML += `<tr>
+                        <td>${t.id}</td>
+                        <td><span class="badge bg-secondary">${t.codigo}</span></td>
+                        <td>${t.descripcion}</td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-outline-primary me-1" onclick="abrirModalEditar(${t.id}, '${t.codigo}', '${t.descripcion.replace(/'/g, "\\'")}')"><i class="bi bi-pencil"></i></button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="eliminarTarea(${t.id})"><i class="bi bi-trash"></i></button>
+                        </td>
+                    </tr>`;
+                });
+            } else tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4">No hay tareas registradas.</td></tr>`;
+        }
+
+        function abrirModalNuevo() {
+            modoEdicion = false;
+            document.getElementById('formTarea').reset();
+            document.getElementById('idTarea').value = '';
+            document.getElementById('modalTitulo').textContent = 'Registrar Nueva Tarea';
+            modalInstance.show();
+        }
+
+        function abrirModalEditar(id, codigo, descripcion) {
+            modoEdicion = true;
+            document.getElementById('modalTitulo').textContent = 'Modificar Tarea';
+            document.getElementById('idTarea').value = id;
+            document.getElementById('codigo').value = codigo;
+            document.getElementById('descripcion').value = descripcion;
+            modalInstance.show();
+        }
+
+        async function guardarTarea(e) {
+            e.preventDefault();
+            const id = document.getElementById('idTarea').value;
+            const data = {
+                codigo: document.getElementById('codigo').value.trim(),
+                descripcion: document.getElementById('descripcion').value.trim()
+            };
+
+            const url = modoEdicion ? `/api/tareas/${id}` : '/api/tareas';
+            const method = modoEdicion ? 'PUT' : 'POST';
+
+            const res = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+
+            if (res.ok) {
+                modalInstance.hide();
+                await cargarTareas();
+            } else {
+                alert('Error al guardar la tarea');
+            }
+        }
+
+        async function eliminarTarea(id) {
+            if (!confirm(`¿Eliminar la tarea con ID ${id}?`)) return;
+            await fetch(`/api/tareas/${id}`, {
+                method: 'DELETE'
+            });
+            await cargarTareas();
+        }
+
+        function filtrarTareas() {
+            const filtro = document.getElementById('busquedaCodigo').value.toLowerCase();
+            document.querySelectorAll('#tablaTareas tr').forEach(fila => {
+                if (fila.cells.length > 1) {
+                    fila.style.display = fila.cells[1].textContent.toLowerCase().includes(filtro) ? '' : 'none';
+                }
+            });
+        }
+
+        // Cargar el HTML del Navbar dinámicamente
+        document.addEventListener("DOMContentLoaded", function() {
+            fetch('/views/navbar.html')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('navbar-container').innerHTML = data;
+
+                    // Consultar y pintar el nombre del usuario en sesión después de cargar el menú
+                    fetch('/api/user-session')
+                        .then(res => res.json())
+                        .then(sesion => {
+                            const spanUsuario = document.getElementById('nombreUsuario');
+                            if (spanUsuario && sesion.authenticated && sesion.user) {
+                                spanUsuario.textContent = sesion.user.nombre || sesion.user.usuario;
+                            }
+                        })
+                        .catch(err => console.error("Error al obtener sesión de usuario:", err));
+                })
+                .catch(err => console.error("Error al cargar el navbar:", err));
+        });
+    </script>
+</body>
+
+</html>

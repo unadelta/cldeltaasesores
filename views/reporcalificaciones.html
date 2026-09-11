@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporte de Calificaciones por Materia - Asesores UNA</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+    <style>
+        /* Configuración base de la página física */
+        
+        @page {
+            size: letter landscape;
+            margin: 5mm;
+        }
+        
+        body {
+            background-color: #f8f9fa;
+            color: #212529;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body.orientacion-vertical @page {
+            size: letter portrait;
+            margin: 5mm;
+        }
+        /* Contenedor que simula la hoja física en pantalla (Horizontal por defecto) */
+        
+        .page-container {
+            background: white;
+            width: 269mm;
+            height: 205mm;
+            max-height: 205mm;
+            margin: 15px auto;
+            padding: 4mm 6mm;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.15);
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            page-break-after: always;
+            page-break-inside: avoid;
+            overflow: hidden;
+        }
+        
+        body.orientacion-vertical .page-container {
+            width: 205mm !important;
+            height: 269mm !important;
+            max-height: 269mm !important;
+        }
+        /* Ocultar barra de acciones y forzar altura exacta al imprimir */
+        
+        @media print {
+            body {
+                background-color: white;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .page-container {
+                box-shadow: none !important;
+                margin: 0 !important;
+                padding: 3mm 5mm !important;
+                width: 100% !important;
+                height: 202mm !important;
+                max-height: 202mm !important;
+                page-break-after: always;
+                page-break-inside: avoid;
+                overflow: hidden;
+            }
+            body.orientacion-vertical .page-container {
+                height: 266mm !important;
+                max-height: 266mm !important;
+            }
+        }
+        /* Encabezado compacto */
+        
+        .header-container {
+            border-bottom: 2px solid #0d6efd;
+            padding-bottom: 2px;
+            margin-bottom: 4px;
+        }
+        
+        .logo-una {
+            max-height: 30px;
+            object-fit: contain;
+        }
+        
+        .institution-title h4 {
+            margin: 0;
+            font-weight: bold;
+            color: #0d6efd;
+            font-size: 0.8rem;
+        }
+        
+        .institution-title h5 {
+            margin: 1px 0 0 0;
+            color: #495057;
+            font-size: 0.68rem;
+            font-weight: 600;
+        }
+        
+        .table-content-area {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        /* Estilo de la tabla ultra-compacto */
+        
+        .table-report {
+            font-size: 0.62rem;
+            width: 100%;
+            margin-bottom: 0;
+        }
+        
+        .table-report th {
+            background-color: #0d6efd !important;
+            color: white;
+            text-align: center;
+            padding: 2px 3px;
+            font-weight: 600;
+            font-size: 0.63rem;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        
+        .table-report td {
+            padding: 2px 3px;
+            vertical-align: middle;
+            border-color: #dee2e6;
+            line-height: 1;
+        }
+        
+        .table-report tbody tr:nth-child(odd) {
+            background-color: #fdfdfd;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        
+        .table-report tbody tr:nth-child(even) {
+            background-color: #f1f4f9;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        /* Pie de página con firmas fijo al final de la hoja */
+        
+        .report-footer {
+            margin-top: auto;
+            padding-top: 4px;
+            border-top: 1px solid #ced4da;
+            font-size: 0.55rem;
+        }
+        
+        .signature-line {
+            border-top: 1px solid #333;
+            width: 85%;
+            margin: 8px auto 1px auto;
+        }
+    </style>
+</head>
+
+<body class="orientacion-horizontal">
+
+    <!-- BARRA DE ACCIONES Y FILTROS (No se imprime) -->
+    <div class="container my-3 no-print">
+        <div class="card shadow-sm border-0 p-3 bg-white">
+            <div class="row align-items-end g-3">
+                <div class="col-md-3">
+                    <label for="filtroCodigoMateria" class="form-label small fw-semibold mb-1">Materia:</label>
+                    <select id="filtroCodigoMateria" class="form-select form-select-sm" onchange="cargarReporteCalificaciones()">
+                        <option value="">-- Seleccione una materia --</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="filtroSemestre" class="form-label small fw-semibold mb-1">Semestre:</label>
+                    <select id="filtroSemestre" class="form-select form-select-sm" onchange="cargarReporteCalificaciones()">
+                        <option value="2026-2" selected>2026-2</option>
+                        <option value="2026-1">2026-1</option>
+                        <option value="2025-2">2025-2</option>
+                        <option value="2025-1">2025-1</option>
+                        <option value="2024-2">2024-2</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="selectOrientacion" class="form-label small fw-semibold mb-1">Orientación:</label>
+                    <select id="selectOrientacion" class="form-select form-select-sm" onchange="cambiarOrientacion(this.value)">
+                        <option value="horizontal" selected>Horizontal</option>
+                        <option value="vertical">Vertical</option>
+                    </select>
+                </div>
+                <div class="col-md-5 d-flex gap-2">
+                    <button onclick="cargarReporteCalificaciones()" class="btn btn-primary btn-sm w-100"><i class="bi bi-filter me-1"></i> Generar</button>
+                    <button onclick="window.print()" class="btn btn-success btn-sm" title="Imprimir"><i class="bi bi-printer-fill"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTENEDOR DINÁMICO DE PÁGINAS -->
+    <div id="contenedorPaginas">
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="text-muted mt-2">Cargando registros por defecto...</p>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let listaMateriasGlobal = [];
+        let nombreAsesorActual = "Asesor Académico";
+        let datosAlumnosGlobal = [];
+        let numObjGlobal = 0;
+        let descripcionMateriaGlobal = "";
+
+        document.addEventListener("DOMContentLoaded", async() => {
+            await cargarSesionYDatos();
+            await cargarMateriasEnCombobox();
+        });
+
+        async function cargarSesionYDatos() {
+            try {
+                const res = await fetch('/api/user-session');
+                const data = await res.json();
+                if (data.authenticated && data.user) {
+                    nombreAsesorActual = data.user.nombre || data.user.usuario || "Asesor Académico";
+                }
+            } catch (e) {
+                console.error("Error al obtener la sesión:", e);
+            }
+        }
+
+        async function cargarMateriasEnCombobox() {
+            try {
+                const res = await fetch('/api/materias');
+                const data = await res.json();
+                const selectFiltro = document.getElementById('filtroCodigoMateria');
+
+                selectFiltro.innerHTML = '<option value="">-- Seleccione una materia --</option>';
+                const lista = data.success ? data.data : data;
+                if (Array.isArray(lista)) {
+                    listaMateriasGlobal = lista;
+                    lista.forEach(m => {
+                        selectFiltro.innerHTML += `<option value="${m.codigo}">${m.codigo} - ${m.descripcion || ''}</option>`;
+                    });
+                }
+            } catch (error) {
+                console.error("Error al cargar materias:", error);
+            }
+        }
+
+        function cambiarOrientacion(tipo) {
+            const body = document.body;
+            if (tipo === 'vertical') {
+                body.className = 'orientacion-vertical';
+            } else {
+                body.className = 'orientacion-horizontal';
+            }
+            if (datosAlumnosGlobal.length > 0) {
+                generarPaginasReporte(datosAlumnosGlobal, numObjGlobal, descripcionMateriaGlobal);
+            }
+        }
+
+        function numeroALetras(val) {
+            const num = parseFloat(val);
+            if (isNaN(num) || num === 0) return 'Cero';
+            const unidades = ['', 'Uno', 'Dos', 'Tres', 'Cuatro', 'Cinco', 'Seis', 'Siete', 'Ocho', 'Nueve', 'Diez', 'Once', 'Doce', 'Trece', 'Catorce', 'Quince', 'Dieciséis', 'Diecisiete', 'Dieciocho', 'Diecinueve', 'Veinte'];
+            if (num >= 0 && num <= 20 && Number.isInteger(num)) return unidades[num];
+            return String(val);
+        }
+
+        async function obtenerCodigoCarreraPorCedula(cedula) {
+            if (!cedula) return '-';
+            try {
+                const res = await fetch(`/api/alumnos/buscar/${encodeURIComponent(cedula)}`);
+                const data = await res.json();
+                if (data.success && data.data) {
+                    return data.data.codigo_carrera || data.data.cod_carrera || '-';
+                }
+            } catch (e) {
+                console.error("Error al consultar carrera:", e);
+            }
+            return '-';
+        }
+
+        async function cargarReporteCalificaciones() {
+            const codigoSeleccionado = document.getElementById('filtroCodigoMateria').value;
+            const semestreSeleccionado = document.getElementById('filtroSemestre').value;
+            const contenedor = document.getElementById('contenedorPaginas');
+
+            if (!codigoSeleccionado) {
+                contenedor.innerHTML = `<div class="text-center text-muted py-5 bg-white shadow-sm m-4 rounded">Seleccione una materia y un semestre para visualizar los registros.</div>`;
+                datosAlumnosGlobal = [];
+                return;
+            }
+
+            const materiaEncontrada = listaMateriasGlobal.find(m => m.codigo === codigoSeleccionado);
+            descripcionMateriaGlobal = materiaEncontrada ? materiaEncontrada.descripcion : codigoSeleccionado;
+            numObjGlobal = materiaEncontrada ? (parseInt(materiaEncontrada.numobj) || 0) : 0;
+
+            contenedor.innerHTML = `<div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div><p class="text-muted mt-2">Cargando registros...</p></div>`;
+
+            try {
+                const res = await fetch(`/api/calificaciones/${codigoSeleccionado}?semestre=${encodeURIComponent(semestreSeleccionado)}`);
+                const resultado = await res.json();
+                const listaAlumnos = resultado.success ? resultado.data : [];
+
+                // Resolver códigos de carrera faltantes de forma asíncrona antes de paginar
+                for (let item of listaAlumnos) {
+                    let codCarreraAlumno = item.codigo_carrera || item.cod_carrera;
+                    if (!codCarreraAlumno && item.cedula_alumno) {
+                        codCarreraAlumno = await obtenerCodigoCarreraPorCedula(item.cedula_alumno);
+                    }
+                    item.codigo_carrera_final = codCarreraAlumno || '-';
+                }
+
+                datosAlumnosGlobal = listaAlumnos;
+                generarPaginasReporte(datosAlumnosGlobal, numObjGlobal, descripcionMateriaGlobal);
+
+            } catch (error) {
+                console.error("Error al cargar el reporte:", error);
+                contenedor.innerHTML = `<div class="alert alert-danger text-center m-4">Error al obtener los datos del servidor.</div>`;
+            }
+        }
+
+        function generarPaginasReporte(datos, numObj, descripcionMateria) {
+            const contenedor = document.getElementById('contenedorPaginas');
+            contenedor.innerHTML = '';
+
+            if (datos.length === 0) {
+                contenedor.innerHTML = `<div class="text-center text-muted py-5 bg-white shadow-sm m-4 rounded">No se encontraron alumnos registrados para esta materia.</div>`;
+                return;
+            }
+
+            const esVertical = document.body.classList.contains('orientacion-vertical');
+            const itemsPorPagina = esVertical ? 13 : 18;
+            const totalPaginas = Math.ceil(datos.length / itemsPorPagina);
+            const codigoMateriaActual = document.getElementById('filtroCodigoMateria').value;
+            const semestreActual = document.getElementById('filtroSemestre').value;
+
+            for (let i = 0; i < totalPaginas; i++) {
+                const inicio = i * itemsPorPagina;
+                const fin = inicio + itemsPorPagina;
+                const chunk = datos.slice(inicio, fin);
+
+                let thObjetivosHtml = '';
+                for (let objIdx = 1; objIdx <= numObj; objIdx++) {
+                    thObjetivosHtml += `<th style="width: 5%;">Obj ${objIdx}</th>`;
+                }
+
+                let filasHTML = '';
+                chunk.forEach((item, index) => {
+                    const numeroConsecutivo = inicio + index + 1;
+
+                    let tdObjetivosHtml = '';
+                    for (let objIdx = 1; objIdx <= numObj; objIdx++) {
+                        const notaObj = item[`obj${objIdx}`] !== undefined ? item[`obj${objIdx}`] : (item[`obj_${objIdx}`] || 0);
+                        tdObjetivosHtml += `<td class="text-center">${notaObj}</td>`;
+                    }
+
+                    const notaFinal = item.nota_final !== undefined && item.nota_final !== null ? item.nota_final : 0;
+                    const notaFinalLetra = item.nota_final_letra || numeroALetras(notaFinal);
+
+                    filasHTML += `
+                        <tr>
+                            <td class="text-center fw-semibold">${numeroConsecutivo}</td>
+                            <td class="text-start">${item.nombre_alumno || '-'}</td>
+                            <td class="text-center">${item.cedula_alumno || '-'}</td>
+                            <td class="text-center"><span class="badge bg-light text-dark border" style="font-size: 0.58rem;">${item.codigo_carrera_final || '-'}</span></td>
+                            ${tdObjetivosHtml}
+                            <td class="text-center fw-bold text-success">${notaFinal}</td>
+                            <td class="text-muted">${notaFinalLetra}</td>
+                        </tr>
+                    `;
+                });
+
+                const paginaDiv = document.createElement('div');
+                paginaDiv.className = 'page-container';
+                paginaDiv.innerHTML = `
+                    <div class="table-content-area">
+                        <!-- ENCABEZADO INSTITUCIONAL INTEGRADO EN CADA HOJA -->
+                        <div class="row align-items-center header-container">
+                            <div class="col-8 d-flex align-items-center">
+                                <img src="/jpg/logouna.jpg" alt="Logo UNA" class="logo-una me-3" onerror="this.style.display='none'">
+                                <div class="institution-title">
+                                    <h4>Universidad Nacional Abierta</h4>
+                                    <h5>Centro Local Delta Amacuro</h5>
+                                </div>
+                            </div>
+                            <div class="col-4 text-end">
+                                <span class="text-primary fw-bold" style="font-size: 0.68rem;">CALIFICACIONES: ${codigoMateriaActual}</span>
+                                <div class="text-muted" style="font-size: 0.52rem;">Semestre: ${semestreActual} | Emitido: ${new Date().toLocaleDateString()}</div>
+                            </div>
+                        </div>
+
+                        <!-- TABLA DE DATOS -->
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-report align-middle">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 6%;">N°</th>
+                                        <th style="width: 25%;">Apellido y nombre</th>
+                                        <th style="width: 12%;">Cédula</th>
+                                        <th style="width: 10%;">Carrera</th>
+                                        ${thObjetivosHtml}
+                                        <th style="width: 8%;">Calificación</th>
+                                        <th style="width: 15%;">Descripción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${filasHTML}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- PIE DE PÁGINA CON FIRMAS FIJO AL FINAL DE LA HOJA -->
+                    <div class="report-footer">
+                        <div class="row align-items-end text-center">
+                            <!-- 1. Firma Asesor de la sesión -->
+                            <div class="col-3">
+                                <div class="signature-line"></div>
+                                <div class="fw-bold text-truncate" style="font-size: 0.55rem;">${nombreAsesorActual}</div>
+                                <div class="text-muted" style="font-size: 0.48rem;">Asesor Académico</div>
+                            </div>
+
+                            <!-- 2. Firma Dra. Yovinsa Salazar -->
+                            <div class="col-3">
+                                <div class="signature-line"></div>
+                                <div class="fw-bold" style="font-size: 0.55rem;">Dra. Yovinsa Salazar</div>
+                                <div class="text-muted" style="font-size: 0.48rem;">Jefa de la Unidad Académica</div>
+                            </div>
+
+                            <!-- 3. Firma Dr. Edgar Ramírez -->
+                            <div class="col-3">
+                                <div class="signature-line"></div>
+                                <div class="fw-bold" style="font-size: 0.55rem;">Dr. Edgar Ramírez</div>
+                                <div class="text-muted" style="font-size: 0.48rem;">Coordinador</div>
+                            </div>
+
+                            <!-- 4. Número de Página Dinámico -->
+                            <div class="col-3">
+                                <div class="signature-line" style="visibility: hidden;"></div>
+                                <div class="fw-bold text-dark" style="font-size: 0.55rem;">Página ${i + 1} de ${totalPaginas}</div>
+                                <div class="text-muted" style="font-size: 0.48rem; visibility: hidden;">Paginación</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                contenedor.appendChild(paginaDiv);
+            }
+        }
+    </script>
+</body>
+
+</html>

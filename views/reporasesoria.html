@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporte de Asesorías - UNA Delta Amacuro</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+    <style>
+        /* 1. Configuración de página física (Nativa) */
+        
+        @page {
+            size: letter landscape;
+            /* Márgenes pequeños pero suficientes para la impresora */
+            margin: 10mm;
+        }
+        /* 2. Estilos Base para Pantalla e Impresión */
+        
+        body {
+            background-color: #f8f9fa;
+            color: #212529;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        /* Contenedor que simula la hoja en pantalla */
+        
+        .page-container {
+            background: white;
+            width: 269mm;
+            /* Ancho carta ajustado a márgenes */
+            min-height: 195mm;
+            /* Alto carta ajustado */
+            margin: 10px auto;
+            padding: 5mm;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+            box-sizing: border-box;
+            /* Importante: Este contenedor no debe forzar saltos de página internos */
+            display: flex;
+            flex-direction: column;
+        }
+        /* 3. Estilos Específicos de Impresión (Lo que ve la impresora) */
+        
+        @media print {
+            body {
+                background-color: white;
+                /* IMPRESCINDIBLE: Forzar al navegador a imprimir colores de fondo */
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            /* Ocultar elementos de la interfaz (botones, filtros) */
+            .no-print {
+                display: none !important;
+            }
+            /* Ajustar el contenedor al 100% de la hoja física */
+            .page-container {
+                box-shadow: none;
+                margin: 0;
+                padding: 2mm;
+                width: 100% !important;
+                min-height: auto !important;
+                border: none;
+            }
+            /* Permitir que el body y html crezcan varias páginas físicas */
+            html,
+            body {
+                height: auto;
+                overflow: visible;
+            }
+            /* Asegurar que la tabla se corte limpiamente entre páginas */
+            table.table-report {
+                page-break-inside: auto !important;
+            }
+            table.table-report tr {
+                page-break-inside: avoid;
+                page-break-after: auto;
+            }
+            table.table-report thead {
+                display: table-header-group;
+                /* Repetir cabecera en cada hoja */
+            }
+            table.table-report tfoot {
+                display: table-footer-group;
+                /* Repetir pie de tabla en cada hoja (raro pero posible) */
+            }
+        }
+        /* 4. Encabezado del Reporte (Diseño de flujo, no fixed) */
+        
+        .header-container {
+            border-bottom: 2px solid #0d6efd;
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo-una {
+            max-height: 45px;
+            object-fit: contain;
+        }
+        
+        .institution-title h4 {
+            margin: 0;
+            font-weight: bold;
+            color: #0d6efd;
+            font-size: 1.1rem;
+        }
+        
+        .institution-title h5 {
+            margin: 1px 0 0 0;
+            color: #495057;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        /* 5. Cuerpo de la Tabla (Ocupa el resto del espacio) */
+        
+        .content-area {
+            flex-grow: 1;
+            /* Empuja el footer hacia abajo en pantalla */
+        }
+        
+        .table-report {
+            font-size: 0.7rem;
+            /* Fuente ultra-compacta */
+            width: 100%;
+            margin-bottom: 0;
+            table-layout: fixed;
+        }
+        
+        .table-report th {
+            background-color: #0d6efd !important;
+            /* Azul UNA forzado */
+            color: white;
+            text-align: center;
+            padding: 4px;
+            font-weight: 600;
+            border: 1px solid #dee2e6;
+        }
+        
+        .table-report td {
+            padding: 3px 4px;
+            vertical-align: middle;
+            border: 1px solid #dee2e6;
+            line-height: 1.1;
+        }
+        /* Filas intercaladas (efecto cebra) */
+        
+        .table-report tbody tr:nth-child(odd) {
+            background-color: #fdfdfd !important;
+        }
+        
+        .table-report tbody tr:nth-child(even) {
+            background-color: #f1f4f9 !important;
+        }
+        /* 6. Pie de Página (Firmas) - Fluye después de la tabla */
+        
+        .footer-signature {
+            margin-top: 20px;
+            /* Espacio después de la tabla */
+            padding-top: 10px;
+            border-top: 1px solid #ced4da;
+            font-size: 0.75rem;
+            page-break-inside: avoid;
+            /* Mantener las firmas juntas */
+        }
+        
+        .signature-line {
+            border-top: 1px solid #333;
+            width: 85%;
+            margin: 25px auto 3px auto;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- BARRA DE ACCIONES (No se imprime) -->
+    <div class="container my-3 no-print">
+        <div class="card shadow-sm border-0 p-3 bg-white">
+            <div class="row align-items-end g-3">
+                <div class="col-md-3">
+                    <a href="/dashboard" class="btn btn-outline-secondary btn-sm w-100"><i class="bi bi-arrow-left me-1"></i> Dashboard</a>
+                </div>
+                <div class="col-md-6 text-center">
+                    <h5 class="text-primary m-0">Generar Reporte de Asesorías</h5>
+                </div>
+                <div class="col-md-3">
+                    <button onclick="window.print()" class="btn btn-success btn-sm w-100" title="Imprimir Reporte"><i class="bi bi-printer-fill me-2"></i> Imprimir / Guardar PDF</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTENEDOR DE LA PÁGINA (Simulación de hoja) -->
+    <div class="page-container">
+
+        <!-- Encabezado (Flujo normal, se imprimirá arriba en cada hoja) -->
+        <div class="header-container">
+            <div class="col-8 d-flex align-items-center">
+                <img src="/jpg/logouna.jpg" alt="Logo UNA" class="logo-una me-3" onerror="this.style.display='none'">
+                <div class="institution-title">
+                    <h4>Universidad Nacional Abierta</h4>
+                    <h5>Centro Local Delta Amacuro</h5>
+                    <div class="text-muted fw-bold mt-1" style="font-size: 0.8rem;">REPORTE DE ASESORÍAS ACADÉMICAS</div>
+                </div>
+            </div>
+            <div class="col-4 text-end">
+                <div class="text-muted" style="font-size: 0.7rem;">Emitido: ${new Date().toLocaleDateString()}</div>
+            </div>
+        </div>
+
+        <!-- Área de contenido (Tabla) -->
+        <div class="content-area">
+            <div class="table-responsive">
+                <table class="table table-bordered table-report align-middle" id="tablaReporte">
+                    <thead>
+                        <tr>
+                            <th style="width: 5%;">N°</th>
+                            <th style="width: 15%;">Cédula</th>
+                            <th style="width: 25%;">Nombre del Alumno</th>
+                            <th style="width: 10%;">Carrera</th>
+                            <th style="width: 10%;">Materia</th>
+                            <th style="width: 25%;">Observación / Tema</th>
+                            <th style="width: 10%;">Fecha</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cuerpoTabla">
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4"><em>Cargando datos...</em></td>
+                        </tr>
+                        <!-- Las filas se insertarán aquí vía JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pie de Página con Firmas (Flujo normal, aparece al final de la tabla) -->
+        <div class="footer-signature">
+            <div class="row text-center mt-4">
+                <div class="col-4">
+                    <div class="signature-line"></div>
+                    <div class="fw-bold text-truncate" style="font-size: 0.8rem;" id="nombreAsesorFirma">Prof. (a) Asesor</div>
+                    <div class="text-muted" style="font-size: 0.7rem;">Asesor Académico</div>
+                </div>
+                <div class="col-4 offset-4">
+                    <!-- Espacio para la segunda firma a la derecha -->
+                    <div class="signature-line"></div>
+                    <div class="fw-bold" style="font-size: 0.8rem;">Dra. Yovinsa Salazar</div>
+                    <div class="text-muted" style="font-size: 0.7rem;">Jefa de la Unidad Académica</div>
+                </div>
+            </div>
+            <div class="text-center text-muted mt-3 no-print" style="font-size: 0.65rem;">
+                Documento generado automáticamente por el sistema de control de estudios.
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Al cargar la página, obtenemos la sesión y los datos
+        document.addEventListener("DOMContentLoaded", async() => {
+            await cargarDatosIniciales();
+        });
+
+        async function cargarDatosIniciales() {
+            try {
+                // 1. Obtener sesión del usuario
+                const resUser = await fetch('/api/user-session');
+                const dataUser = await resUser.json();
+                if (dataUser.authenticated && dataUser.user) {
+                    // Asignar nombre del asesor logueado a la firma
+                    const nombreAsesor = dataUser.user.nombre || dataUser.user.usuario || "Asesor Académico";
+                    document.getElementById('nombreAsesorFirma').textContent = nombreAsesor;
+                }
+
+                // 2. Obtener datos de la tabla controlasesoria
+                const resAsesorias = await fetch('/api/controlasesoria');
+                const dataAsesorias = await resAsesorias.json();
+
+                // Extraer el array de datos
+                const lista = Array.isArray(dataAsesorias) ? dataAsesorias : (dataAsesorias.data || dataAsesorias.resultado || []);
+
+                // 3. Llenar la tabla en pantalla (sin paginación JS, el navegador lo hace al imprimir)
+                llenarTablaHTML(lista);
+
+            } catch (err) {
+                console.error("Error al cargar datos:", err);
+                document.getElementById('cuerpoTabla').innerHTML = `<tr><td colspan="7" class="alert alert-danger text-center m-0">Error al conectar con el servidor.</td></tr>`;
+            }
+        }
+
+        function llenarTablaHTML(datos) {
+            const cuerpoTabla = document.getElementById('cuerpoTabla');
+            cuerpoTabla.innerHTML = ''; // Limpiar spinner
+
+            if (datos.length === 0) {
+                cuerpoTabla.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4"><em>No se encontraron registros de asesorías.</em></td></tr>`;
+                return;
+            }
+
+            datos.forEach((item, index) => {
+                // Formatear fecha (asumiendo ISO YYYY-MM-DD)
+                let fechaFormateada = item.fecha || item.fecha_hora || 'N/D';
+                if (fechaFormateada !== 'N/D' && fechaFormateada.includes('T')) {
+                    fechaFormateada = fechaFormateada.split('T')[0];
+                }
+
+                // Crear fila
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="text-center fw-semibold">${index + 1}</td>
+                    <td class="text-center">${item.cedula_alumno || ''}</td>
+                    <td class="text-start">${item.nombre_alumno || ''}</td>
+                    <td class="text-center"><span class="badge bg-light text-dark border">${item.codigo_carrera || ''}</span></td>
+                    <td class="text-center"><span class="badge bg-secondary">${item.codigo_materia || ''}</span></td>
+                    <td class="text-start">${item.observacion || item.tema || ''}</td>
+                    <td class="text-center">${fechaFormateada}</td>
+                `;
+                cuerpoTabla.appendChild(row);
+            });
+        }
+    </script>
+</body>
+
+</html>

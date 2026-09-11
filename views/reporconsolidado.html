@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporte Consolidado de Actividades - UNA Delta Amacuro</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <style>
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            body {
+                background-color: white !important;
+                -webkit-print-color-adjust: exact;
+            }
+            .card {
+                border: none !important;
+                box-shadow: none !important;
+            }
+            .firmas-section {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-light">
+
+    <!-- NAVBAR PRINCIPAL -->
+    <div id="navbar-container" class="no-print"></div>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="container my-4">
+
+        <!-- FILTROS Y ACCIONES (NO SE IMPRIMEN) -->
+        <div class="card border-0 shadow-sm mb-4 no-print">
+            <div class="card-body">
+                <h5 class="fw-bold text-primary mb-3"><i class="bi bi-filter-circle me-2"></i>Generar Reporte de Actividades Mensuales</h5>
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label for="fechaInicio" class="form-label fw-semibold">Fecha de Inicio</label>
+                        <input type="date" class="form-control" id="fechaInicio" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="fechaFin" class="form-label fw-semibold">Fecha de Fin</label>
+                        <input type="date" class="form-control" id="fechaFin" required>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <button class="btn btn-primary me-2" onclick="generarReporte()"><i class="bi bi-search me-1"></i> Consultar</button>
+                        <button class="btn btn-secondary" onclick="window.print()"><i class="bi bi-printer me-1"></i> Imprimir / PDF</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VISTA DEL REPORTE -->
+        <div class="card border-0 shadow-sm p-4" id="areaImpresion">
+
+            <!-- ENCABEZADO INSTITUCIONAL CON LOGO -->
+            <div class="text-center border-bottom pb-3 mb-4">
+                <div class="d-flex align-items-center justify-content-center mb-3">
+                    <img src="/jpg/logouna.jpg" alt="Logo UNA" height="60" class="bg-white rounded p-1 shadow-sm" onerror="this.style.display='none'">
+                </div>
+                <h5 class="text-uppercase fw-bold text-secondary m-0">Universidad Nacional Abierta</h5>
+                <h6 class="fw-semibold text-muted m-0">Centro Local Delta Amacuro</h6>
+                <h4 class="fw-bold text-primary mt-2">Reporte de Actividades Mensuales</h4>
+                <p class="text-muted small mb-0" id="textoRangoFechas">Período: No seleccionado</p>
+            </div>
+
+            <!-- CONTENIDO CONSOLIDADO -->
+            <div id="contenidoReporte">
+                <div class="text-center text-muted py-5">
+                    <i class="bi bi-info-circle display-6 mb-2 d-block"></i> Seleccione un rango de fechas y haga clic en <strong>Consultar</strong> para generar el reporte consolidado.
+                </div>
+            </div>
+
+            <!-- PIE DE PÁGINA CON FIRMAS -->
+            <div class="row mt-5 pt-5 firmas-section" id="seccionFirmas" style="display: none;">
+                <div class="col-6 text-center">
+                    <div style="border-top: 1px solid #000; width: 80%; margin: 0 auto 10px auto;"></div>
+                    <p class="fw-bold mb-1" id="nombreAsesorFirma">Asesor de la Carrera</p>
+                    <p class="text-muted small mb-0">Asesor Responsable</p>
+                </div>
+                <div class="col-6 text-center">
+                    <div style="border-top: 1px solid #000; width: 80%; margin: 0 auto 10px auto;"></div>
+                    <p class="fw-bold mb-1">Dra. Yovinza Salazar</p>
+                    <p class="text-muted small mb-0">Jefa de la Unidad Académica</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        let nombreAsesorActual = "Asesor de la Carrera";
+
+        document.addEventListener("DOMContentLoaded", async() => {
+            // Establecer por defecto el mes actual en los inputs de fecha
+            const hoy = new Date();
+            const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
+            const ultimoDia = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).toISOString().split('T')[0];
+
+            document.getElementById('fechaInicio').value = primerDia;
+            document.getElementById('fechaFin').value = ultimoDia;
+
+            // Obtener datos del asesor actual para la firma
+            try {
+                const resUser = await fetch('/api/user-session');
+                const dataUser = await resUser.json();
+                if (dataUser.authenticated && dataUser.user) {
+                    nombreAsesorActual = dataUser.user.nombre || dataUser.user.usuario;
+                }
+            } catch (e) {
+                console.error("Error al obtener sesión de usuario:", e);
+            }
+        });
+
+        async function generarReporte() {
+            const fechaInicio = document.getElementById('fechaInicio').value;
+            const fechaFin = document.getElementById('fechaFin').value;
+
+            if (!fechaInicio || !fechaFin) {
+                Swal.fire('Campos requeridos', 'Por favor seleccione la fecha de inicio y fin.', 'warning');
+                return;
+            }
+
+            document.getElementById('textoRangoFechas').textContent = `Período desde: ${fechaInicio} hasta: ${fechaFin}`;
+
+            try {
+                const res = await fetch(`/api/reporte_actividades?inicio=${fechaInicio}&fin=${fechaFin}`);
+                const data = await res.json();
+
+                if (data.success) {
+                    renderizarReporte(data);
+                    document.getElementById('seccionFirmas').style.display = 'flex';
+                    document.getElementById('nombreAsesorFirma').textContent = nombreAsesorActual;
+                } else {
+                    Swal.fire('Error', data.message || 'No se pudo generar el reporte.', 'error');
+                }
+            } catch (error) {
+                console.error("Error al consultar reporte:", error);
+                Swal.fire('Error', 'Error de conexión con el servidor.', 'error');
+            }
+        }
+
+        function renderizarReporte(data) {
+            const contenedor = document.getElementById('contenidoReporte');
+            const {
+                asesorias,
+                correcciones
+            } = data;
+
+            let htmlAsesorias = '';
+            if (asesorias && asesorias.length > 0) {
+                let totalAsesorias = 0;
+                let filas = asesorias.map(item => {
+                    totalAsesorias += item.cantidad;
+                    return `<tr>
+                        <td>${item.tipo_asesoria}</td>
+                        <td class="text-center"><span class="badge bg-primary rounded-pill">${item.cantidad}</span></td>
+                    </tr>`;
+                }).join('');
+
+                htmlAsesorias = `
+                    <h5 class="fw-bold text-dark mb-3"><i class="bi bi-people me-2"></i>Consolidado de Asesorías</h5>
+                    <div class="table-responsive mb-4">
+                        <table class="table table-bordered align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Tipo de Asesoría</th>
+                                    <th class="text-center" style="width: 150px;">Cantidad</th>
+                                </tr>
+                            </thead>
+                            <tbody>${filas}</tbody>
+                            <tfoot class="table-group-divider">
+                                <tr class="fw-bold">
+                                    <td class="text-end">Total Asesorías:</td>
+                                    <td class="text-center">${totalAsesorias}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>`;
+            } else {
+                htmlAsesorias = `<div class="alert alert-info py-2">No se registraron asesorías en el período seleccionado.</div>`;
+            }
+
+            let htmlCorrecciones = '';
+            if (correcciones && correcciones.length > 0) {
+                let totalCorrecciones = 0;
+                let filasCorr = correcciones.map(item => {
+                    totalCorrecciones += item.cantidad;
+                    return `<tr>
+                        <td>${item.tipo_correccion}</td>
+                        <td class="text-center"><span class="badge bg-success rounded-pill">${item.cantidad}</span></td>
+                    </tr>`;
+                }).join('');
+
+                htmlCorrecciones = `
+                    <h5 class="fw-bold text-dark mb-3 mt-4"><i class="bi bi-pencil-square me-2"></i>Consolidado de Correcciones</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Tipo de Corrección</th>
+                                    <th class="text-center" style="width: 150px;">Cantidad</th>
+                                </tr>
+                            </thead>
+                            <tbody>${filasCorr}</tbody>
+                            <tfoot class="table-group-divider">
+                                <tr class="fw-bold">
+                                    <td class="text-end">Total Correcciones:</td>
+                                    <td class="text-center">${totalCorrecciones}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>`;
+            } else {
+                htmlCorrecciones = `<div class="alert alert-info py-2 mt-4">No se registraron correcciones en el período seleccionado.</div>`;
+            }
+
+            contenedor.innerHTML = htmlAsesorias + htmlCorrecciones;
+        }
+
+        // Cargar Navbar dinámicamente
+        document.addEventListener("DOMContentLoaded", function() {
+            fetch('/views/navbar.html')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('navbar-container').innerHTML = data;
+                })
+                .catch(err => console.error("Error al cargar el navbar:", err));
+        });
+    </script>
+</body>
+
+</html>

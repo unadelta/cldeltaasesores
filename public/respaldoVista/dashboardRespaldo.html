@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Sistema Asesores UNA</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+</head>
+
+<body class="bg-light">
+
+    <!-- NAVBAR PRINCIPAL -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+        <div class="container-fluid">
+            <!-- LOGO Y NOMBRE DE LA UNA A LA IZQUIERDA -->
+            <a class="navbar-brand fw-bold d-flex align-items-center" href="/dashboard">
+                <img src="/jpg/logouna1.png" alt="Logo UNA" height="35" class="bg-white rounded p-1 me-2 shadow-sm" onerror="this.style.display='none'">
+                <span>Asesores UNA</span>
+            </a>
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarNavDropdown">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="/dashboard">Inicio</a>
+                    </li>
+
+                    <!-- MENÚ DESPLEGABLE: ADMINISTRADOR -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle text-white fw-semibold" href="#" id="navbarDropdownAdmin" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-shield-lock me-1"></i> Administrador
+                        </a>
+                        <ul class="dropdown-menu shadow" aria-labelledby="navbarDropdownAdmin">
+                            <li><a class="dropdown-item" href="/asesor"><i class="bi bi-people me-2"></i>Asesores</a></li>
+                            <li><a class="dropdown-item" href="/carrera"><i class="bi bi-mortarboard me-2"></i>Carreras</a></li>
+                            <li><a class="dropdown-item" href="/materia"><i class="bi bi-book me-2"></i>Materias</a></li>
+                            <li><a class="dropdown-item" href="/tarea"><i class="bi bi-check2-square me-2"></i>Tareas</a></li>
+                            <li><a class="dropdown-item" href="/tipo_asesoria"><i class="bi bi-check2-square me-2"></i>Tipos de Asesorias</a></li>
+                        </ul>
+                    </li>
+
+                    <!-- NUEVAS ETIQUETAS DESPUÉS DE ADMINISTRADOR -->
+                    <li class="nav-item">
+                        <a class="nav-link text-white" href="/alumno"><i class="bi bi-mortarboard-fill me-1"></i> Alumnos</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-white" href="/asesoria"><i class="bi bi-journal-text me-1"></i> Asesorias</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-white" href="/tarea"><i class="bi bi-list-task me-1"></i> Tareas</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-white" href="/calificaciones"><i class="bi bi-list-task me-1"></i> Calificaciones</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle text-white fw-semibold" href="#" data-bs-toggle="dropdown">Reportes</a>
+                        <ul class="dropdown-menu shadow">
+                            <li><a class="dropdown-item" href=/reporasesoria>Reporte Asesorias</a></li>
+                            <li><a class="dropdown-item" href="/reporcalificaciones">Reporte Calificaciones</a></li>
+                        </ul>
+                    </li>
+
+                </ul>
+
+                <!-- SECCIÓN DERECHA: NOMBRE DE USUARIO Y CERRAR SESIÓN -->
+                <div class="d-flex align-items-center text-white ms-auto">
+                    <span class="me-2"><i class="bi bi-person-circle"></i></span>
+                    <span id="nombreUsuario" class="me-3 fw-semibold">Cargando...</span>
+                    <button onclick="cerrarSesion()" class="btn btn-outline-light btn-sm">
+                        <i class="bi bi-box-arrow-right me-1"></i> Salir
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- En lugar del navbar completo, solo pones esto donde debe ir el menú -->
+    <div id="navbar-container"></div>
+
+    <!-- CONTENIDO PRINCIPAL DEL DASHBOARD -->
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm p-4">
+                    <h3 class="fw-bold text-primary">Bienvenido al Panel de Control</h3>
+                    <p class="text-muted">Seleccione una opción del menú superior para gestionar los registros del sistema.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Cargar datos de la sesión activa al entrar al dashboard y mostrar el nombre en el navbar derecho
+        document.addEventListener("DOMContentLoaded", async() => {
+            try {
+                const res = await fetch('/api/user-session');
+                const data = await res.json();
+
+                if (data.authenticated) {
+                    document.getElementById('nombreUsuario').textContent = data.user.nombre;
+                } else {
+                    window.location.href = '/';
+                }
+            } catch (err) {
+                console.error("Error al verificar la sesión", err);
+            }
+        });
+
+        // Función para cerrar sesión
+        function cerrarSesion() {
+            window.location.href = '/';
+        }
+    </script>
+</body>
+
+</html>

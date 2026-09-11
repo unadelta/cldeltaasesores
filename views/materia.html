@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Materias - Sistema Asesores UNA</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        /* Estilo para mostrar los objetivos en horizontal */
+        
+        .objetivos-horizontal {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-bottom: 0;
+        }
+        
+        .badge-objetivo {
+            font-size: 0.75rem;
+            padding: 4px 6px;
+        }
+        /* Asegurar que el modal no se corte y tenga scroll interno */
+        
+        .modal-dialog-scrollable .modal-content {
+            max-height: 90vh;
+            overflow: hidden;
+        }
+        
+        .modal-dialog-scrollable .modal-body {
+            max-height: calc(90vh - 120px);
+            overflow-y: auto;
+        }
+        /* Estilo para inputs de solo lectura (gris claro) */
+        
+        .form-control[readonly] {
+            background-color: #e9ecef;
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body class="bg-light">
+
+    <!-- NAVBAR PRINCIPAL -->
+    <div id="navbar-container"></div>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="container mt-4 mb-5">
+        <div class="row mb-3 align-items-center">
+            <div class="col-sm-6">
+                <h3 class="fw-bold text-primary"><i class="bi bi-book me-2"></i>Módulo de Materias</h3>
+            </div>
+            <div class="col-sm-6 text-sm-end mt-2 mt-sm-0">
+                <button class="btn btn-success" onclick="abrirModalCrear()">
+                    <i class="bi bi-plus-circle me-1"></i> Nueva Materia
+                </button>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-primary">
+                            <tr>
+                                <th>Código</th>
+                                <th>Descripción</th>
+                                <th>Nro. Objetivos</th>
+                                <th>Mín. Aprobatorio</th>
+                                <th>Pesos por Objetivo</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaMaterias">
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">Cargando registros...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL ÚNICO (Crear/Editar) - ESTRUCTURA MODIFICADA Y CORREGIDA -->
+    <div class="modal fade" id="modalMateria" tabindex="-1" aria-labelledby="modalMateriaLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <form id="formMateria" onsubmit="guardarMateria(event)">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title" id="modalMateriaLabel">Registrar Nueva Materia</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Campo oculto para manejar la edición -->
+                        <input type="hidden" id="materiaOriginalCodigo" value="">
+
+                        <!-- ============================================
+                             DATOS BÁSICOS (ESTRUCTURA MODIFICADA)
+                             ============================================ -->
+                        <div class="row mb-3">
+                            <!-- Columna 1: Selección de Materia (Catálogo Maestro) -->
+                            <div class="col-md-6">
+                                <label for="codigo" class="form-label fw-semibold">Seleccione la Materia (Catálogo UNA)</label>
+
+                                <!-- COMBOBOX (SELECT) PRINCIPAL -->
+                                <!-- IMPORTANTE: Este select mantiene el ID 'codigo' y el 'required'. 
+                                     Su valor (.value) se envía al servidor para crear la materia. -->
+                                <select class="form-select" id="codigo" required onchange="autocompletarMateria()">
+                                    <option value="" selected disabled>Cargando catálogo...</option>
+                                    <!-- Opciones generadas dinámicamente por JS -->
+                                </select>
+                                <div class="form-text text-muted small">Seleccione una opción para autocompletar los campos.</div>
+                            </div>
+
+                            <!-- Columna 2: Visualización de Código y Descripción (Solo lectura) -->
+                            <div class="col-md-6">
+                                <div class="row g-2">
+                                    <!-- Campo Código (Visual) -->
+                                    <div class="col-md-4">
+                                        <label for="codigo_visualizar" class="form-label fw-semibold small text-muted">Código</label>
+                                        <!-- ID distinto al select. Es solo lectura. -->
+                                        <input type="text" class="form-control" id="codigo_visualizar" readonly placeholder="---">
+                                    </div>
+
+                                    <!-- Campo Descripción (Visual) -->
+                                    <div class="col-md-8">
+                                        <label for="descripcion" class="form-label fw-semibold">Descripción</label>
+                                        <!-- ID distinto al select. Es solo lectura. -->
+                                        <input type="text" class="form-control" id="descripcion" required readonly placeholder="--- Autocompletar ---">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="numobj" class="form-label fw-semibold">Número de Objetivos (1-20)</label>
+                                <input type="number" class="form-control" id="numobj" min="1" max="20" required onchange="generarCamposDinamicos()" placeholder="Ej. 8">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="minaprueba" class="form-label fw-semibold">Mínimo Aprobatorio</label>
+                                <input type="number" step="0.01" class="form-control" id="minaprueba" required placeholder="Ej. 9.5">
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <!-- 1. Contenedor de Peso de cada Objetivo -->
+                        <div id="contenedorPesos" class="mt-3 p-3 border rounded bg-light d-none">
+                            <label class="form-label fw-bold text-primary mb-3"><i class="bi bi-sliders me-1"></i> Peso Específico de Cada Objetivo:</label>
+
+                            <!-- AVISO VISUAL: Confirmando nueva lógica -->
+                            <div class="alert alert-warning small mb-3 py-2">
+                                <i class="bi bi-info-circle-fill me-2"></i> La suma de los pesos de los objetivos puede ser diferente a 100. El sistema validará que esta suma coincida con el <strong>Último Peso Acumulado</strong> definido en la escala
+                                de calificaciones.
+                            </div>
+
+                            <div id="listaPesos" class="row g-3">
+                                <!-- Inputs generados dinámicamente -->
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <!-- 2. Contenedor de Escala de Calificaciones -->
+                        <div id="contenedorCalificaciones" class="mt-3 p-3 border rounded bg-white shadow-sm d-none">
+                            <label class="form-label fw-bold text-primary mb-2"><i class="bi bi-award me-1"></i> Escala de Calificaciones (Peso Acumulado / Nota):</label>
+                            <p class="text-muted small mb-3">Defina la equivalencia entre el peso acumulado obtenido y la calificación definitiva.</p>
+
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-sm align-middle text-center mb-2">
+                                    <thead class="table-secondary">
+                                        <tr>
+                                            <th>Peso Acumulado</th>
+                                            <th>Calificación Definitiva</th>
+                                            <th style="width: 60px;">Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tablaEscalaCalificaciones">
+                                        <!-- Filas dinámicas -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="agregarFilaCalificacion()">
+                                <i class="bi bi-plus-circle me-1"></i> Agregar Criterio
+                            </button>
+                        </div>
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" id="btnGuardar">Guardar Materia</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // ==============================================================================
+        // VARIABLES GLOBALES
+        // ==============================================================================
+        let modalMateriaInstance = null;
+        let listaMateriasGestionadasGlobal = []; // Materias ya guardadas (tabla materias)
+        let catalogoMateriasGlobal = []; // Catálogo maestro (tabla materia_una)
+
+        // ==============================================================================
+        // 1. INICIALIZACIÓN PRINCIPAL
+        // ==============================================================================
+        document.addEventListener("DOMContentLoaded", async() => {
+            // Inicializar instancia de Bootstrap Modal
+            modalMateriaInstance = new bootstrap.Modal(document.getElementById('modalMateria'));
+
+            // 1. Cargar Navbar
+            await cargarNavbar();
+
+            // 2. Verificar Sesión y Cargar Datos
+            try {
+                const res = await fetch('/api/user-session');
+                const data = await res.json();
+                if (data.authenticated) {
+                    const spanUser = document.getElementById('nombreUsuario');
+                    if (spanUser) spanUser.textContent = data.user.nombre || data.user.usuario;
+
+                    // A. Cargar Catálogo Maestro para el combobox
+                    await inicializarCatalogo();
+                    // B. Cargar Materias ya gestionadas en la tabla principal
+                    await cargarMaterias();
+                } else {
+                    window.location.href = '/'; // Sesión no válida
+                }
+            } catch (err) {
+                console.error("Error crítico:", err);
+                window.location.href = '/';
+            }
+        });
+
+        // ==============================================================================
+        // 2. FUNCIONES DE ESTRUCTURA (Navbar)
+        // ==============================================================================
+        async function cargarNavbar() {
+            try {
+                const response = await fetch('/views/navbar.html');
+                if (!response.ok) throw new Error('Error al cargar navbar');
+                const html = await response.text();
+                document.getElementById('navbar-container').innerHTML = html;
+            } catch (err) {
+                console.error("Error al cargar el navbar:", err);
+            }
+        }
+
+        // ==============================================================================
+        // 3. LÓGICA DEL CATÁLOGO MAESTRO Y AUTOCOMPLETADO
+        // ==============================================================================
+
+        // A. Cargar Catálogo Maestro (con OPTGROUP visual)
+        async function inicializarCatalogo() {
+            const selectCodigo = document.getElementById('codigo');
+            if (!selectCodigo) return;
+            selectCodigo.innerHTML = '<option value="" selected disabled>Cargando catálogo...</option>';
+
+            try {
+                const res = await fetch('/api/catalogo-materias'); // Debe devolver { success: true, data: [...] }
+                const data = await res.json();
+
+                if (data.success && Array.isArray(data.data)) {
+                    catalogoMateriasGlobal = data.data; // Guardar lista maestra
+
+                    // Limpiar y añadir opción por defecto
+                    selectCodigo.innerHTML = '<option value="" selected disabled>Seleccione una materia...</option>';
+
+                    const optgroup = document.createElement('optgroup');
+                    optgroup.label = 'Catálogo de Materias UNA';
+
+                    catalogoMateriasGlobal.forEach(mat => {
+                        const option = document.createElement('option');
+                        option.value = mat.codigo; // El valor real (ej. '610')
+                        option.textContent = `${mat.codigo} -${mat.descripcion}`; // Visual (ej. '610 - CONTADURIA')
+                        optgroup.appendChild(option);
+                    });
+
+                    selectCodigo.appendChild(optgroup);
+
+                } else {
+                    selectCodigo.innerHTML = '<option value="" selected disabled>Error al cargar catálogo</option>';
+                }
+            } catch (err) {
+                console.error("Error conexión catálogo:", err);
+                selectCodigo.innerHTML = '<option value="" selected disabled>Error de conexión</option>';
+            }
+        }
+
+        // B. Autocompletar campos visuales al cambiar el combobox
+        function autocompletarMateria() {
+            const selectCodigo = document.getElementById('codigo');
+            const inputCodVisual = document.getElementById('codigo_visualizar'); // Nuevo campo visual (readonly)
+            const inputDesc = document.getElementById('descripcion'); // Campo visual (readonly)
+
+            const codigoSeleccionado = selectCodigo.value; // El código (ej. '610')
+
+            if (codigoSeleccionado && catalogoMateriasGlobal.length > 0) {
+                // Buscamos la materia en el catálogo global
+                const materiaEncontrada = catalogoMateriasGlobal.find(m => m.codigo == codigoSeleccionado);
+                if (materiaEncontrada) {
+                    inputDesc.value = materiaEncontrada.descripcion; // Rellenar descripción
+                    inputCodVisual.value = materiaEncontrada.codigo; // Rellenar código visual
+                } else {
+                    inputDesc.value = '';
+                    inputCodVisual.value = '';
+                }
+            } else {
+                inputDesc.value = '';
+                inputCodVisual.value = '';
+            }
+        }
+
+        // ==============================================================================
+        // 4. LÓGICA CRUD MATERIAS GESTIONADAS (Tabla Principal)
+        // ==============================================================================
+
+        // READ (Listar materias ya gestionadas en la tabla principal)
+        async function cargarMaterias() {
+            const tbody = document.getElementById('tablaMaterias');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Cargando materias gestionadas...</td></tr>';
+
+            try {
+                const res = await fetch('/api/materias');
+                const data = await res.json();
+                tbody.innerHTML = ''; // Limpiar spinner
+
+                if (data.success && Array.isArray(data.data)) {
+                    listaMateriasGestionadasGlobal = data.data; // Respaldar lista
+
+                    if (listaMateriasGestionadasGlobal.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan
+                            "6" class="text-center text-muted py-4">No hay materias gestionadas registradas.</td></tr>`;
+                        return;
+                    }
+
+                    listaMateriasGestionadasGlobal.forEach(materia => {
+                        // Formatear mínimo aprobatorio
+                        const minAprob = materia.minaprueba !== null ? parseFloat(materia.minaprueba).toFixed(2) : '-';
+
+                        // Construir HTML para los pesos de objetivos
+                        let objetivosHtml = '<span class="text-muted fst-italic">Sin objetivos</span>';
+                        if (Array.isArray(materia.objetivos) && materia.objetivos.length > 0) {
+                            objetivosHtml = '<div class="objetivos-horizontal">';
+                            materia.objetivos.sort((a, b) => a.nro_objetivo - b.nro_objetivo);
+                            materia.objetivos.forEach(obj => {
+                                objetivosHtml += `<span class="badge bg-secondary badge-objetivo">O${obj.nro_objetivo}: <strong>${parseFloat(obj.peso).toFixed(2)}</strong></span>`;
+                            });
+                            objetivosHtml += '</div>';
+                        }
+
+                        // Agregar fila a la tabla
+                        tbody.innerHTML += `
+                            <tr>
+                                <td class="fw-bold">${materia.codigo}</td>
+                                <td>${materia.descripcion}</td>
+                                <td class="text-center">${materia.numobj || '-'}</td>
+                                <td class="text-center">${minAprob}</td>
+                                <td>${objetivosHtml}</td>
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-outline-primary me-1" onclick="abrirModalEditar('${materia.codigo}')" title="Editar">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="eliminarMateria('${materia.codigo}')" title="Eliminar">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-4">Error al cargar materias gestionadas.</td></tr>`;
+                    console.error("Estructura de datos de materias inválida:", data);
+                }
+            } catch (err) {
+                console.error("Error conexión materias:", err);
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-4">Error de conexión al servidor.</td></tr>`;
+            }
+        }
+
+        // ==============================================================================
+        // 5. GESTIÓN DEL MODAL (Crear / Editar y funciones auxiliares)
+        // ==============================================================================
+
+        // MODIFICADO: ABRIR MODAL CREAR
+        function abrirModalCrear() {
+            const form = document.getElementById('formMateria');
+            form.reset(); // Limpia los inputs normales
+
+            document.getElementById('modalMateriaLabel').textContent = 'Registrar Nueva Materia';
+            document.getElementById('materiaOriginalCodigo').value = ''; // Vacío = Creación
+
+            const selectCodigo = document.getElementById('codigo');
+            const inputCodVisual = document.getElementById('codigo_visualizar');
+            const inputDesc = document.getElementById('descripcion');
+
+            // 1. Habilitar el select principal para elegir del catálogo
+            selectCodigo.disabled = false;
+            selectCodigo.value = ''; // Selecciona la opción por defecto del combo
+
+            // 2. Limpiar campos visuales
+            inputCodVisual.value = '';
+            inputDesc.value = '';
+
+            // Ocultar secciones dinámicas hasta seleccionar nro. objetivos
+            document.getElementById('contenedorPesos').classList.add('d-none');
+            document.getElementById('contenedorCalificaciones').classList.add('d-none');
+            document.getElementById('listaPesos').innerHTML = '';
+            document.getElementById('tablaEscalaCalificaciones').innerHTML = '';
+
+            // Asegurar botón guardar activo
+            document.getElementById('btnGuardar').disabled = false;
+
+            modalMateriaInstance.show();
+        }
+
+        // MODIFICADO: ABRIR MODAL EDITAR
+        function abrirModalEditar(codigoMateria) {
+            // Buscar en la lista de YA GESTIONADAS (tabla materias)
+            const materia = listaMateriasGestionadasGlobal.find(m => m.codigo === codigoMateria);
+            if (!materia) return;
+
+            document.getElementById('formMateria').reset();
+            document.getElementById('modalMateriaLabel').textContent = `Editar Materia: ${materia.codigo}`;
+
+            const selectCodigo = document.getElementById('codigo');
+            const inputCodVisual = document.getElementById('codigo_visualizar'); // Nuevo campo visual (readonly)
+            const inputDesc = document.getElementById('descripcion'); // Campo visual (readonly)
+
+            // 1. En edición, inyectamos una opción temporal con el valor actual y la seleccionamos.
+            // Esto permite mostrar "Código - Descripción" en el combo aunque esté deshabilitado.
+            selectCodigo.innerHTML = `<option value="${materia.codigo}" selected>${materia.codigo} - ${materia.descripcion}</option>`;
+            selectCodigo.disabled = true; // Bloqueado en edición para no cambiar la Clave Primaria
+
+            // 2. Rellenar campos visuales (readonly)
+            inputCodVisual.value = materia.codigo;
+            inputDesc.value = materia.descripcion;
+
+            // 3. Rellenar campos ocultos y normales
+            document.getElementById('materiaOriginalCodigo').value = materia.codigo; // Importante para el UPDATE
+            document.getElementById('minaprueba').value = materia.minaprueba;
+            document.getElementById('numobj').value = materia.numobj;
+
+            // 4. Generar y rellenar campos dinámicos
+            generarCamposDinamicos();
+
+            // Rellenar pesos de objetivos
+            if (Array.isArray(materia.objetivos)) {
+                materia.objetivos.forEach(obj => {
+                    const inputObj = document.querySelector(`.peso-input[data-obj="${obj.nro_objetivo}"]`);
+                    if (inputObj) inputObj.value = obj.peso;
+                });
+            }
+
+            // Rellenar tabla de escala de calificaciones
+            const tablaCal = document.getElementById('tablaEscalaCalificaciones');
+            tablaCal.innerHTML = ''; // Limpiar filas por defecto
+            if (Array.isArray(materia.calificaciones) && materia.calificaciones.length > 0) {
+                // Ordenar por peso acumulado antes de insertar
+                materia.calificaciones.sort((a, b) => a.peso_acumulado - b.peso_acumulado);
+                materia.calificaciones.forEach(cal => {
+                    agregarFilaCalificacion(cal.peso_acumulado, cal.calificacion);
+                });
+            } else {
+                // Si por error no tiene escala, agregar 5 filas vacías
+                for (let i = 0; i < 5; i++) {
+                    agregarFilaCalificacion();
+                }
+            }
+
+            // Asegurar botón guardar activo
+            document.getElementById('btnGuardar').disabled = false;
+
+            modalMateriaInstance.show();
+        }
+
+        // ==============================================================================
+        // 6. FUNCIONES AUXILIARES (Dinámicas, Guardar, Eliminar)
+        // ==============================================================================
+
+        // Generar dinámicamente los inputs para los pesos de los objetivos
+        function generarCamposDinamicos() {
+            const numObjInput = document.getElementById('numobj');
+            if (!numObjInput) return;
+            const numObj = parseInt(numObjInput.value);
+
+            const contenedorPesos = document.getElementById('contenedorPesos');
+            const listaPesos = document.getElementById('listaPesos');
+            const contenedorCal = document.getElementById('contenedorCalificaciones');
+            const tablaCal = document.getElementById('tablaEscalaCalificaciones');
+            /*
+            if (numObj >= 6 && numObj <= 14) {
+                contenedorPesos.classList.remove('d-none');
+                listaPesos.innerHTML = ''; // Limpiar anterior
+            */
+            if (numObj >= 1 && numObj <= 20) {
+                contenedorPesos.classList.remove('d-none');
+                listaPesos.innerHTML = ''; // Limpiar anterior
+
+                for (let i = 1; i <= numObj; i++) {
+                    listaPesos.innerHTML += `
+                        <div class="col-md-3 col-sm-4">
+                            <label class="form-label small fw-semibold mb-1">Obj ${i}:</label>
+                            <input type="number" step="0.01" class="form-control form-control-sm peso-input" data-obj="${i}" required placeholder="Peso ${i}">
+                        </div>`;
+                }
+
+                contenedorCal.classList.remove('d-none');
+                // Solo agregar filas por defecto si la tabla está vacía (caso nuevo registro)
+                if (tablaCal && tablaCal.children.length === 0) {
+                    for (let i = 0; i < 5; i++) {
+                        agregarFilaCalificacion();
+                    }
+                }
+            } else {
+                contenedorPesos.classList.add('d-none');
+                contenedorCal.classList.add('d-none');
+            }
+        }
+
+        // Agrega una fila vacía a la tabla de escala de calificaciones
+        function agregarFilaCalificacion(pesoVal = '', califVal = '') {
+            const tablaCal = document.getElementById('tablaEscalaCalificaciones');
+            if (!tablaCal) return;
+            const fila = document.createElement('tr');
+            fila.innerHTML = `
+                <td>
+                    <input type="number" step="0.01" class="form-control form-control-sm text-center calif-peso" value="${pesoVal}" required placeholder="Ej. 35.00">
+                </td>
+                <td>
+                    <input type="number" step="0.01" class="form-control form-control-sm text-center calif-valor" value="${califVal}" required placeholder="Ej. 9.50">
+                </td>
+                <td>
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="this.closest('tr').remove()" title="Eliminar fila">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            `;
+            tablaCal.appendChild(fila);
+        }
+        /*
+                // GUARDAR MATERIA (Crear o Editar) - CORREGIDO PARA VALIDACIÓN CRÍTICA
+                async function guardarMateria(e) {
+                    e.preventDefault();
+                    const btnGuardar = document.getElementById('btnGuardar');
+                    btnGuardar.disabled = true;
+                    btnGuardar.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
+
+                    const codigoOriginal = document.getElementById('materiaOriginalCodigo').value;
+                    const esEdicion = codigoOriginal !== "";
+
+                    // Obtenemos el código
+                    const selectCodigo = document.getElementById('codigo');
+                    const codigo = esEdicion ? codigoOriginal : selectCodigo.value;
+
+                    const descripcion = document.getElementById('descripcion').value.trim();
+                    const numobj = parseInt(document.getElementById('numobj').value);
+                    const minaprueba = parseFloat(document.getElementById('minaprueba').value);
+
+                    // Validaciones básicas
+                    if (!codigo || !descripcion || !numobj || !minaprueba) {
+                        Swal.fire('Atención', 'Por favor complete todos los campos básicos.', 'warning');
+                        btnGuardar.disabled = false;
+                        btnGuardar.textContent = 'Guardar Materia';
+                        return;
+                    }
+
+                    // 1. Recopilar pesos de objetivos y CALCULAR SU SUMA TOTAL
+                    let sumaObjetivos = 0;
+                    const objetivos = [];
+                    document.querySelectorAll('.peso-input').forEach(input => {
+                        // SOLUCIONANDO problema de coma/punto decimal
+                        let valorLimpio = input.value.replace(',', '.');
+                        let pesoObj = parseFloat(valorLimpio) || 0;
+
+                        objetivos.push({
+                            nro_objetivo: parseInt(input.dataset.obj),
+                            peso: pesoObj
+                        });
+                        sumaObjetivos += pesoObj; // Acumular suma
+                    });
+
+                    // --- SE ELIMINÓ AQUÍ LA VALIDACIÓN ESTRICTA DE SUMA 100 ---
+
+                    // 2. Recopilar escala de calificaciones
+                    const calificaciones = [];
+                    let ultimoPesoAcumulado = 0;
+                    let escalaValida = true;
+                    let hayFilas = false;
+
+                    const filasCal = document.querySelectorAll('#tablaEscalaCalificaciones tr');
+
+                    filasCal.forEach((fila, index) => {
+                        const pesoCell = fila.querySelector('.calif-peso');
+                        const notaCell = fila.querySelector('.calif-valor');
+
+                        if (pesoCell && notaCell && pesoCell.value !== '' && notaCell.value !== '') {
+                            hayFilas = true;
+                            let pesoAcumuladoLimpio = pesoCell.value.replace(',', '.');
+                            let calificacionLimpia = notaCell.value.replace(',', '.');
+
+                            let pesoAcum = parseFloat(pesoAcumuladoLimpio);
+                            let calif = parseFloat(calificacionLimpia);
+
+                            // Validar que los pesos acumulados sean ascendentes
+                            if (index > 0 && pesoAcum <= ultimoPesoAcumulado) {
+                                escalaValida = false;
+                            }
+
+                            calificaciones.push({
+                                peso_acumulado: pesoAcum,
+                                calificacion: calif
+                            });
+                            ultimoPesoAcumulado = pesoAcum; // Guardar último valor para la comparación
+                        }
+                    });
+
+                    if (!hayFilas) {
+                        Swal.fire('Error en Escala', 'Debe definir al menos un criterio en la escala de calificaciones.', 'error');
+                        btnGuardar.disabled = false;
+                        btnGuardar.textContent = 'Guardar Materia';
+                        return;
+                    }
+
+                    if (!escalaValida) {
+                        Swal.fire('Error en Escala', 'Los pesos acumulados deben ir en orden ascendente.', 'error');
+                        btnGuardar.disabled = false;
+                        btnGuardar.textContent = 'Guardar Materia';
+                        return;
+                    }
+
+                    // 3. NUEVA VALIDACIÓN CRÍTICA: El último peso acumulado debe igualar la suma de objetivos
+                    // Usamos un pequeño margen de error (0.01) por temas de punto flotante de JS
+                    if (Math.abs(ultimoPesoAcumulado - sumaObjetivos) > 0.01) {
+                        Swal.fire(
+                            'Error de Coherencia',
+                            `El último peso acumulado de la escala (${ultimoPesoAcumulado.toFixed(2)}) 
+                             no coincide con la suma total de los objetivos (${sumaObjetivos.toFixed(2)}). 
+                             ¡Deben ser iguales!`,
+                            'error'
+                        );
+                        btnGuardar.disabled = false;
+                        btnGuardar.textContent = 'Guardar Materia';
+                        return;
+                    }
+
+                    // Payload a enviar al servidor
+                    const payload = {
+                        codigo,
+                        descripcion,
+                        minaprueba,
+                        numobj,
+                        objetivos,
+                        calificaciones
+                    };
+
+                    try {
+                        const url = esEdicion ? `/api/materias/${codigoOriginal}` : '/api/materias';
+                        const method = esEdicion ? 'PUT' : 'POST';
+
+                        const res = await fetch(url, {
+                            method: method,
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(payload)
+                        });
+
+                        const data = await res.json();
+
+                        if (data.success) {
+                            Swal.fire({
+                                title: '¡Éxito!',
+                                text: esEdicion ? 'Materia actualizada correctamente.' : 'Materia registrada correctamente.',
+                                icon: 'success',
+                                timer: 2000,
+                                showConfirmButton: false
+                            });
+                            modalMateriaInstance.hide();
+                            await cargarMaterias(); // Recargar tabla principal
+                        } else {
+                            Swal.fire('Error', data.message || 'No se pudo guardar la materia.', 'error');
+                        }
+                    } catch (err) {
+                        console.error("Error al guardar:", err);
+                        Swal.fire('Error', 'Error de conexión con el servidor.', 'error');
+                    } finally {
+                        btnGuardar.disabled = false;
+                        btnGuardar.textContent = 'Guardar Materia';
+                    }
+                }
+
+                // ELIMINAR MATERIA
+                async function eliminarMateria(codigo) {
+                    const result = await Swal.fire({
+                        title: '¿Estás seguro?',
+                        text: `Se eliminará la materia ${codigo} y todos sus registros asociados. Esta acción no se puede deshacer.`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#6c757d',
+                        confirmButtonText: 'Sí, eliminar',
+                        cancelButtonText: 'Cancelar'
+                    });
+                    if (result.isConfirmed) {
+                        try {
+                            const res = await fetch(`/api/materias/${codigo}`, {
+                                method: 'DELETE'
+                            });
+                            const data = await res.json();
+                            if (data.success) {
+                                Swal.fire('Eliminado', 'La materia ha sido eliminada correctamente.', 'success');
+                                await cargarMaterias(); // Recargar tabla
+                            } else {
+                                Swal.fire('Error', data.message || 'No se pudo eliminar la materia.', 'error');
+                            }
+                        } catch (err) {
+                            console.error("Error al eliminar:", err);
+                            Swal.fire('Error', 'Error de conexión con el servidor.', 'error');
+                        }
+                    }
+                }*/
+        // ELIMINAR MATERIA
+        async function eliminarMateria(codigo) {
+            const result = await Swal.fire({
+                title: '¿Estás completamente seguro?',
+                html: `Se eliminará la materia <b>${codigo}</b>.<br><br>` +
+                    `<span class="text-danger fw-bold">¡Atención! Esto eliminará permanentemente todos los datos y registros almacenados en su tabla dinámica de notas, objetivos y calificaciones asociadas.</span><br><br>` +
+                    `Esta acción no se puede deshacer.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, eliminar todo',
+                cancelButtonText: 'Cancelar'
+            });
+
+            if (result.isConfirmed) {
+                try {
+                    const res = await fetch(`/api/materias/${codigo}`, {
+                        method: 'DELETE'
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        Swal.fire('¡Eliminado!', 'La materia y todos sus datos asociados fueron borrados correctamente.', 'success');
+                        await cargarMaterias(); // Recargar la tabla principal
+                    } else {
+                        Swal.fire('Error', data.message || 'No se pudo eliminar la materia.', 'error');
+                    }
+                } catch (err) {
+                    console.error("Error al eliminar:", err);
+                    Swal.fire('Error', 'Error de conexión con el servidor.', 'error');
+                }
+            }
+        }
+
+
+        // GUARDAR MATERIA (Crear o Editar) - VALIDACIÓN DE 100% EN OBJETIVOS Y COHERENCIA CON ÚLTIMO PESO
+        async function guardarMateria(e) {
+            e.preventDefault();
+            const btnGuardar = document.getElementById('btnGuardar');
+            btnGuardar.disabled = true;
+            btnGuardar.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
+
+            const codigoOriginal = document.getElementById('materiaOriginalCodigo').value;
+            const esEdicion = codigoOriginal !== "";
+
+            // Obtenemos el código
+            const selectCodigo = document.getElementById('codigo');
+            const codigo = esEdicion ? codigoOriginal : selectCodigo.value;
+
+            const descripcion = document.getElementById('descripcion').value.trim();
+            const numobj = parseInt(document.getElementById('numobj').value);
+            const minaprueba = parseFloat(document.getElementById('minaprueba').value);
+
+            // Validaciones básicas
+            if (!codigo || !descripcion || !numobj || !minaprueba) {
+                Swal.fire('Atención', 'Por favor complete todos los campos básicos.', 'warning');
+                btnGuardar.disabled = false;
+                btnGuardar.textContent = 'Guardar Materia';
+                return;
+            }
+
+            // 1. Recopilar pesos de objetivos y calcular SU SUMA TOTAL (que representa el 100%)
+            let sumaObjetivos = 0;
+            const objetivos = [];
+            document.querySelectorAll('.peso-input').forEach(input => {
+                let valorLimpio = input.value.replace(',', '.');
+                let pesoObj = parseFloat(valorLimpio) || 0;
+
+                objetivos.push({
+                    nro_objetivo: parseInt(input.dataset.obj),
+                    peso: pesoObj
+                });
+                sumaObjetivos += pesoObj;
+            });
+
+            // 2. Recopilar escala de calificaciones y obtener el ÚLTIMO peso acumulado
+            const calificaciones = [];
+            let ultimoPesoAcumulado = 0;
+            let escalaValida = true;
+            let hayFilas = false;
+
+            const filasCal = document.querySelectorAll('#tablaEscalaCalificaciones tr');
+
+            filasCal.forEach((fila, index) => {
+                const pesoCell = fila.querySelector('.calif-peso');
+                const notaCell = fila.querySelector('.calif-valor');
+
+                if (pesoCell && notaCell && pesoCell.value !== '' && notaCell.value !== '') {
+                    hayFilas = true;
+                    let pesoAcumuladoLimpio = pesoCell.value.replace(',', '.');
+                    let calificacionLimpia = notaCell.value.replace(',', '.');
+
+                    let pesoAcum = parseFloat(pesoAcumuladoLimpio);
+                    let calif = parseFloat(calificacionLimpia);
+
+                    // Validar que los pesos acumulados vayan en orden ascendente
+                    if (index > 0 && pesoAcum <= ultimoPesoAcumulado) {
+                        escalaValida = false;
+                    }
+
+                    calificaciones.push({
+                        peso_acumulado: pesoAcum,
+                        calificacion: calif
+                    });
+                    ultimoPesoAcumulado = pesoAcum; // Actualizamos con el último peso de la tabla
+                }
+            });
+
+            if (!hayFilas) {
+                Swal.fire('Error en Escala', 'Debe definir al menos un criterio en la escala de calificaciones.', 'error');
+                btnGuardar.disabled = false;
+                btnGuardar.textContent = 'Guardar Materia';
+                return;
+            }
+
+            if (!escalaValida) {
+                Swal.fire('Error en Escala', 'Los pesos acumulados de la escala deben ir en orden ascendente.', 'error');
+                btnGuardar.disabled = false;
+                btnGuardar.textContent = 'Guardar Materia';
+                return;
+            }
+
+            // 3. VALIDACIÓN DOBLE: 
+            // A) Validar que la suma de los objetivos sea mayor a 0
+            if (sumaObjetivos <= 0) {
+                Swal.fire('Error en Pesos', 'La suma de los pesos de los objetivos debe ser mayor a 0.', 'error');
+                btnGuardar.disabled = false;
+                btnGuardar.textContent = 'Guardar Materia';
+                return;
+            }
+
+            // B) VALIDACIÓN CLAVE: El último peso acumulado de la escala DEBE EQUIVALER a la suma total de los objetivos (el 100%)
+            if (Math.abs(ultimoPesoAcumulado - sumaObjetivos) > 0.01) {
+                Swal.fire(
+                    'Error de Coherencia',
+                    `La suma de los objetivos es <strong>${sumaObjetivos.toFixed(2)}</strong> (equivalente al 100%).<br>` +
+                    `Sin embargo, el último peso acumulado de la escala es <strong>${ultimoPesoAcumulado.toFixed(2)}</strong>.<br><br>` +
+                    `¡Ambos valores deben ser exactamente iguales!`,
+                    'error'
+                );
+                btnGuardar.disabled = false;
+                btnGuardar.textContent = 'Guardar Materia';
+                return;
+            }
+
+            // Payload a enviar al servidor
+            const payload = {
+                codigo,
+                descripcion,
+                minaprueba,
+                numobj,
+                objetivos,
+                calificaciones
+            };
+
+            try {
+                const url = esEdicion ? `/api/materias/${codigoOriginal}` : '/api/materias';
+                const method = esEdicion ? 'PUT' : 'POST';
+
+                const res = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    Swal.fire({
+                        title: '¡Éxito!',
+                        text: esEdicion ? 'Materia actualizada correctamente.' : 'Materia registrada correctamente.',
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    modalMateriaInstance.hide();
+                    await cargarMaterias(); // Recargar tabla principal
+                } else {
+                    Swal.fire('Error', data.message || 'No se pudo guardar la materia.', 'error');
+                }
+            } catch (err) {
+                console.error("Error al guardar:", err);
+                Swal.fire('Error', 'Error de conexión con el servidor.', 'error');
+            } finally {
+                btnGuardar.disabled = false;
+                btnGuardar.textContent = 'Guardar Materia';
+            }
+        }
+    </script>
+
+    <!-- =========================================================
+         PARTE 3: CARGA DEL NAVBAR (Al final del archivo)
+         ========================================================= -->
+    <script>
+        // Cargar el navbar estándar al iniciar la página
+        document.addEventListener("DOMContentLoaded", function() {
+            fetch('/views/navbar.html')
+                .then(response => {
+                    if (!response.ok) throw new Error('Error al cargar navbar');
+                    return response.text();
+                })
+                .then(html => {
+                    const navContainer = document.getElementById('navbar-container');
+                    if (navContainer) {
+                        navContainer.innerHTML = html;
+                    }
+                })
+                .catch(err => {
+                    console.error("Error al cargar el navbar:", err);
+                    // Opcional: mostrar un mensaje en el contenedor si falla
+                    const navContainer = document.getElementById('navbar-container');
+                    if (navContainer) navContainer.innerHTML = '<div class="alert alert-danger m-0">Error cargando menú de navegación</div>';
+                });
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Tipos de Asesoría - UNA Delta Amacuro</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SweetAlert2 para alertas elegantes -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+
+<body class="bg-light">
+
+    <!-- Barra de Navegación -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/dashboard">
+                <i class="fas fa-graduation-cap me-2"></i>UNA - Centro Local Delta Amacuro
+            </a>
+            <div class="d-flex">
+                <a href="/dashboard" class="btn btn-outline-light btn-sm">
+                    <i class="fas fa-arrow-left me-1"></i> Volver al Dashboard
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Contenido Principal -->
+    <div class="container my-5">
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <h2><i class="fas fa-tags text-primary me-2"></i>Gestión de Tipos de Asesoría</h2>
+                <p class="text-muted">Administre los códigos y descripciones de las asesorías institucionales.</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#modalTipoAsesoria" onclick="resetForm()">
+                    <i class="fas fa-plus-circle me-1"></i> Nuevo Tipo de Asesoría
+                </button>
+            </div>
+        </div>
+
+        <!-- Tabla de Datos -->
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle" id="tablaTipoAsesoria">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>#ID</th>
+                                <th>Código</th>
+                                <th>Descripción de la Asesoría</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cuerpoTablaTipoAsesoria">
+                            <!-- Los datos se cargan dinámicamente vía JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Crear / Editar -->
+    <div class="modal fade" id="modalTipoAsesoria" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="formTipoAsesoria">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title" id="modalLabel"><i class="fas fa-edit me-2"></i>Registrar Tipo de Asesoría</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="tipoId">
+
+                        <div class="mb-3">
+                            <label for="codigo_ase" class="form-label fw-bold">Código de Asesoría</label>
+                            <input type="text" class="form-control" id="codigo_ase" required placeholder="Ej. AS-01">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="descripcion_asesoria" class="form-label fw-bold">Descripción</label>
+                            <textarea class="form-control" id="descripcion_asesoria" rows="3" required placeholder="Detalle el tipo de asesoría..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" id="btnGuardar">Guardar Registro</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Lógica Frontend -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            cargarTiposAsesoria();
+
+            document.getElementById('formTipoAsesoria').addEventListener('submit', function(e) {
+                e.preventDefault();
+                guardarTipoAsesoria();
+            });
+        });
+
+        async function cargarTiposAsesoria() {
+            try {
+                const response = await fetch('/api/tipo_asesoria');
+                const result = await response.json();
+
+                const tbody = document.getElementById('cuerpoTablaTipoAsesoria');
+                tbody.innerHTML = '';
+
+                if (result.success && result.data.length > 0) {
+                    result.data.forEach(item => {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${item.id}</td>
+                                <td><span class="badge bg-secondary">${item.codigo_ase}</span></td>
+                                <td>${item.descripcion_asesoria}</td>
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-outline-warning me-1" onclick="editarTipo(${item.id}, '${item.codigo_ase}', '${item.descripcion_asesoria.replace(/'/g, "\\'")}')" title="Editar">
+                                        <i class="fas fa-pencil-alt"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="eliminarTipo(${item.id})" title="Eliminar">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4">No hay registros de tipos de asesoría.</td></tr>`;
+                }
+            } catch (error) {
+                console.error('Error al cargar datos:', error);
+                Swal.fire('Error', 'No se pudieron cargar los tipos de asesoría', 'error');
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('formTipoAsesoria').reset();
+            document.getElementById('tipoId').value = '';
+            document.getElementById('modalLabel').innerHTML = '<i class="fas fa-plus-circle me-2"></i>Registrar Tipo de Asesoría';
+            document.getElementById('btnGuardar').textContent = 'Guardar Registro';
+        }
+
+        async function guardarTipoAsesoria() {
+            const id = document.getElementById('tipoId').value;
+            const codigo_ase = document.getElementById('codigo_ase').value.trim();
+            const descripcion_asesoria = document.getElementById('descripcion_asesoria').value.trim();
+
+            const url = id ? `/api/tipo_asesoria/${id}` : '/api/tipo_asesoria';
+            const method = id ? 'PUT' : 'POST';
+
+            try {
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        codigo_ase,
+                        descripcion_asesoria
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Éxito!',
+                        text: result.message,
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+
+                    const modalEl = document.getElementById('modalTipoAsesoria');
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    modal.hide();
+
+                    cargarTiposAsesoria();
+                } else {
+                    Swal.fire('Atención', result.message, 'warning');
+                }
+            } catch (error) {
+                console.error('Error al guardar:', error);
+                Swal.fire('Error', 'Ocurrió un error en la solicitud', 'error');
+            }
+        }
+
+        function editarTipo(id, codigo, descripcion) {
+            document.getElementById('tipoId').value = id;
+            document.getElementById('codigo_ase').value = codigo;
+            document.getElementById('descripcion_asesoria').value = descripcion;
+            document.getElementById('modalLabel').innerHTML = '<i class="fas fa-edit me-2"></i>Editar Tipo de Asesoría';
+            document.getElementById('btnGuardar').textContent = 'Actualizar Registro';
+
+            const modal = new bootstrap.Modal(document.getElementById('modalTipoAsesoria'));
+            modal.show();
+        }
+
+        async function eliminarTipo(id) {
+            const confirm = await Swal.fire({
+                title: '¿Está seguro?',
+                text: "Esta acción eliminará permanentemente el registro.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            });
+
+            if (confirm.isConfirmed) {
+                try {
+                    const response = await fetch(`/api/tipo_asesoria/${id}`, {
+                        method: 'DELETE'
+                    });
+                    const result = await response.json();
+
+                    if (result.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Eliminado',
+                            text: result.message,
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                        cargarTiposAsesoria();
+                    } else {
+                        Swal.fire('Error', result.message, 'error');
+                    }
+                } catch (error) {
+                    console.error('Error al eliminar:', error);
+                    Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>

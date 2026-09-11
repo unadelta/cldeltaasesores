@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Materias - Sistema Asesores UNA</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        /* Estilo para mostrar los objetivos en horizontal */
+        
+        .objetivos-horizontal {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-bottom: 0;
+        }
+        
+        .badge-objetivo {
+            font-size: 0.75rem;
+            padding: 4px 6px;
+        }
+        /* Asegurar que el modal no se corte */
+        
+        .modal-dialog-scrollable .modal-body {
+            overflow-y: auto;
+        }
+        /* Forzar una altura máxima segura al modal y habilitar scroll interno */
+        
+        .modal-dialog-scrollable .modal-content {
+            max-height: 90vh;
+            overflow: hidden;
+        }
+        
+        .modal-dialog-scrollable .modal-body {
+            max-height: calc(90vh - 120px);
+            overflow-y: auto;
+        }
+        /* Estilo para mostrar los objetivos en horizontal */
+        
+        .objetivos-horizontal {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-bottom: 0;
+        }
+        
+        .badge-objetivo {
+            font-size: 0.75rem;
+            padding: 4px 6px;
+        }
+    </style>
+</head>
+
+<body class="bg-light">
+
+    <!-- NAVBAR PRINCIPAL -->
+    <div id="navbar-container"></div>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="container mt-4 mb-5">
+        <div class="row mb-3 align-items-center">
+            <div class="col-sm-6">
+                <h3 class="fw-bold text-primary"><i class="bi bi-book me-2"></i>Módulo de Materias</h3>
+            </div>
+            <div class="col-sm-6 text-sm-end mt-2 mt-sm-0">
+                <button class="btn btn-success" onclick="abrirModalCrear()">
+                    <i class="bi bi-plus-circle me-1"></i> Nueva Materia
+                </button>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-primary">
+                            <tr>
+                                <th>Código</th>
+                                <th>Descripción</th>
+                                <th>Nro. Objetivos</th>
+                                <th>Mín. Aprobatorio</th>
+                                <th>Pesos por Objetivo</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaMaterias">
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">Cargando registros...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL ÚNICO (Crear/Editar) -->
+
+    <!-- Modal Registro/Edición de Materia -->
+    <div class="modal fade" id="modalMateria" tabindex="-1" aria-labelledby="modalMateriaLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <form id="formMateria" onsubmit="guardarMateria(event)">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title" id="modalMateriaLabel">Registrar Nueva Materia</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Campo oculto para manejar la edición -->
+                        <input type="hidden" id="materiaOriginalCodigo" value="">
+
+                        <!-- Datos Básicos -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="codigo" class="form-label fw-semibold">Código y Materia</label>
+
+                                <!-- CAMBIO AQUÍ: Ahora es un SELECT en lugar de un INPUT text -->
+                                <select class="form-select" id="codigo" required onchange="autocompletarMateria()">
+                                <option value="" selected disabled>Cargando catálogo...</option>
+                                <!-- Las opciones se llenarán dinámicamente con JS -->
+                            </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="descripcion" class="form-label fw-semibold">Descripción de la Materia</label>
+                                <!-- CAMBIO AQUÍ: Se agregó 'readonly' para que no se pueda editar manualmente -->
+                                <input type="text" class="form-control" id="descripcion" required autocomplete="off" placeholder="Seleccione un código..." readonly>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="numobj" class="form-label fw-semibold">Número de Objetivos (6-14)</label>
+                                <input type="number" class="form-control" id="numobj" min="6" max="14" required onchange="generarCamposDinamicos()" placeholder="Ej. 8">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="minaprueba" class="form-label fw-semibold">Mínimo Aprobatorio</label>
+                                <input type="number" step="0.01" class="form-control" id="minaprueba" required placeholder="Ej. 9.5">
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <!-- 1. Contenedor de Peso de cada Objetivo -->
+                        <div id="contenedorPesos" class="mt-3 p-3 border rounded bg-light d-none">
+                            <label class="form-label fw-bold text-primary mb-3"><i class="bi bi-sliders me-1"></i> Peso Específico de Cada Objetivo:</label>
+                            <div id="listaPesos" class="row g-3">
+                                <!-- Inputs generados dinámicamente -->
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <!-- 2. Contenedor de Escala de Calificaciones -->
+                        <div id="contenedorCalificaciones" class="mt-3 p-3 border rounded bg-white shadow-sm d-none">
+                            <label class="form-label fw-bold text-primary mb-2"><i class="bi bi-award me-1"></i> Escala de Calificaciones (Peso Acumulado / Nota):</label>
+                            <p class="text-muted small mb-3">Defina la equivalencia entre el peso acumulado obtenido y la calificación definitiva.</p>
+
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-sm align-middle text-center mb-2">
+                                    <thead class="table-secondary">
+                                        <tr>
+                                            <th>Peso Acumulado</th>
+                                            <th>Calificación Definitiva</th>
+                                            <th style="width: 60px;">Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tablaEscalaCalificaciones">
+                                        <!-- Filas dinámicas -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="agregarFilaCalificacion()">
+                            <i class="bi bi-plus-circle me-1"></i> Agregar Criterio
+                        </button>
+                        </div>
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" id="btnGuardar">Guardar Materia</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+
+
+    <!-- SCRIPTS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let modalMateriaInstance = null;
+        let listaMateriasGlobal = []; // Almacenar materias para edición rápida
+
+        // ==============================================================================
+        // 1. INICIALIZACIÓN PRINCIPAL (Manejo de Asincronía)
+        // ==============================================================================
+        document.addEventListener("DOMContentLoaded", async() => {
+            modalMateriaInstance = new bootstrap.Modal(document.getElementById('modalMateria'));
+
+            // A. PRIMERO: Verificamos sesión y esperamos el resultado
+            const sesionValida = await verificarSesion();
+
+            // B. SEGUNDO: Solo si la sesión es válida, cargamos los datos de la tabla
+            if (sesionValida) {
+                await cargarMaterias();
+            }
+            // Si no es válida, la función verificarSesion ya se encargó de redirigir al login
+        });
+
+        // ==============================================================================
+        // 2. FUNCIONES DE SESIÓN Y DATOS
+        // ==============================================================================
+
+        // Función para verificar la sesión con el servidor (espera la respuesta)
+        async function verificarSesion() {
+            try {
+                const res = await fetch('/api/user-session');
+                const data = await res.json();
+                if (data.authenticated) {
+                    // Pintamos el nombre en el navbar (usando el ID correcto definido en tu navbar.html)
+                    const spanUser = document.getElementById('nombreUsuario');
+                    if (spanUser) {
+                        spanUser.textContent = data.user.nombre || data.user.usuario;
+                    }
+                    return true; // Sesión válida
+                } else {
+                    // Sesión no válida, redirigir al login inmediatamente
+                    window.location.href = '/';
+                    return false;
+                }
+            } catch (err) {
+                console.error("Error crítico al verificar sesión:", err);
+                window.location.href = '/'; // Error de red, por seguridad al login
+                return false;
+            }
+        }
+
+        // Función para cargar y pintar la tabla de materias
+        async function cargarMaterias() {
+            const tbody = document.getElementById('tablaMaterias');
+            if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Cargando materias...</td></tr>';
+
+            try {
+                const res = await fetch('/api/materias');
+
+                // Manejo de errores HTTP (401, 500, etc.)
+                if (!res.ok) {
+                    if (res.status === 401 || res.status === 403) {
+                        console.warn("Sesión expirada detectada al cargar materias.");
+                        window.location.href = '/';
+                        return;
+                    }
+                    throw new Error(`Error del servidor: ${res.status}`);
+                }
+
+                const data = await res.json();
+
+                if (tbody) tbody.innerHTML = ''; // Limpiamos el estado de carga
+
+                if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+                    listaMateriasGlobal = data.data; // Guardamos respaldo en memoria
+
+                    data.data.forEach(materia => {
+                        const minAprob = materia.minaprueba !== null ? parseFloat(materia.minaprueba).toFixed(2) : '-';
+
+                        // Procesar objetivos en formato HORIZONTAL
+                        let objetivosHtml = '<span class="text-muted fst-italic">Sin objetivos</span>';
+                        if (Array.isArray(materia.objetivos) && materia.objetivos.length > 0) {
+                            objetivosHtml = '<div class="objetivos-horizontal">';
+                            // Ordenamos los objetivos por número para mostrarlos en orden
+                            materia.objetivos.sort((a, b) => a.nro_objetivo - b.nro_objetivo);
+                            materia.objetivos.forEach(obj => {
+                                objetivosHtml += `<span class="badge bg-secondary badge-objetivo">O${obj.nro_objetivo}: <strong>${parseFloat(obj.peso).toFixed(2)}</strong></span>`;
+                            });
+                            objetivosHtml += '</div>';
+                        }
+
+                        tbody.innerHTML += `
+                            <tr>
+                                <td class="fw-bold">${materia.codigo}</td>
+                                <td>${materia.descripcion}</td>
+                                <td class="text-center">${materia.numobj || '-'}</td>
+                                <td class="text-center">${minAprob}</td>
+                                <td>${objetivosHtml}</td>
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-outline-primary me-1" onclick="abrirModalEditar('${materia.codigo}')" title="Editar">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="eliminarMateria('${materia.codigo}')" title="Eliminar">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">No hay materias registradas.</td></tr>`;
+                }
+            } catch (err) {
+                console.error("Error cargando materias:", err);
+                const tbodyError = document.getElementById('tablaMaterias');
+                if (tbodyError) tbodyError.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-4">Error al conectar con el servidor.</td></tr>`;
+            }
+        }
+
+        // --- AQUÍ TERMINA LA PARTE 1. CONTINÚA EN LA PARTE 2 CON LA LÓGICA DEL MODAL ---
+
+        // ==============================================================================
+        // 3. FUNCIONALIDAD DEL MODAL (Crear / Editar)
+        // ==============================================================================
+
+        function abrirModalCrear() {
+            const form = document.getElementById('formMateria');
+            if (form) form.reset();
+            const titulo = document.getElementById('modalMateriaLabel');
+            if (titulo) titulo.textContent = 'Registrar Nueva Materia';
+            const codInput = document.getElementById('codigo');
+            if (codInput) codInput.disabled = false; // Código editable al crear
+            const codOrig = document.getElementById('materiaOriginalCodigo');
+            if (codOrig) codOrig.value = '';
+
+            const contPesos = document.getElementById('contenedorPesos');
+            if (contPesos) contPesos.classList.add('d-none');
+            const contCal = document.getElementById('contenedorCalificaciones');
+            if (contCal) contCal.classList.add('d-none');
+
+            if (modalMateriaInstance) modalMateriaInstance.show();
+        }
+
+        function abrirModalEditar(codigoMateria) {
+            const materia = listaMateriasGlobal.find(m => m.codigo === codigoMateria);
+            if (!materia) return;
+
+            const form = document.getElementById('formMateria');
+            if (form) form.reset();
+            const titulo = document.getElementById('modalMateriaLabel');
+            if (titulo) titulo.textContent = `Editar Materia: ${materia.codigo}`;
+
+            const codInput = document.getElementById('codigo');
+            if (codInput) {
+                codInput.value = materia.codigo;
+                // Dependiendo de tu backend, es mejor no permitir editar la PK si ya tiene notas.
+                // Pero si tu backend lo maneja con el campo hidden, déjalo en false.
+                codInput.disabled = true;
+            }
+            const codOrig = document.getElementById('materiaOriginalCodigo');
+            if (codOrig) codOrig.value = materia.codigo; // Guardamos el original para la BD
+
+            const desc = document.getElementById('descripcion');
+            if (desc) desc.value = materia.descripcion;
+            const min = document.getElementById('minaprueba');
+            if (min) min.value = materia.minaprueba;
+            const num = document.getElementById('numobj');
+            if (num) num.value = materia.numobj;
+
+            // 1. Generar campos dinámicos de objetivos y escala basados en el número
+            generarCamposDinamicos();
+
+            // 2. Rellenar los pesos de los objetivos guardados
+            if (Array.isArray(materia.objetivos)) {
+                materia.objetivos.forEach(obj => {
+                    const inputObj = document.querySelector(`.peso-input[data-obj="${obj.nro_objetivo}"]`);
+                    if (inputObj) inputObj.value = obj.peso;
+                });
+            }
+
+            // 3. Rellenar la tabla de escala de calificaciones
+            const tablaCal = document.getElementById('tablaEscalaCalificaciones');
+            if (tablaCal) tablaCal.innerHTML = '';
+            if (Array.isArray(materia.calificaciones) && materia.calificaciones.length > 0) {
+                materia.calificaciones.forEach(cal => {
+                    agregarFilaCalificacion(cal.peso_acumulado, cal.calificacion);
+                });
+            } else {
+                // Si no hay, agregamos 5 filas por defecto
+                for (let i = 0; i < 5; i++) {
+                    agregarFilaCalificacion();
+                }
+            }
+
+            if (modalMateriaInstance) modalMateriaInstance.show();
+        }
+
+        // Genera dinámicamente los inputs para los pesos de los objetivos
+        function generarCamposDinamicos() {
+            const numObjInput = document.getElementById('numobj');
+            if (!numObjInput) return;
+            const numObj = parseInt(numObjInput.value);
+
+            const contenedorPesos = document.getElementById('contenedorPesos');
+            const listaPesos = document.getElementById('listaPesos');
+            const contenedorCal = document.getElementById('contenedorCalificaciones');
+            const tablaCal = document.getElementById('tablaEscalaCalificaciones');
+
+            if (numObj >= 6 && numObj <= 14) {
+                if (contenedorPesos) contenedorPesos.classList.remove('d-none');
+                if (listaPesos) {
+                    listaPesos.innerHTML = '';
+                    for (let i = 1; i <= numObj; i++) {
+                        listaPesos.innerHTML += `
+                            <div class="col-md-3 col-sm-4">
+                                <label class="form-label small fw-semibold mb-1">Obj ${i}:</label>
+                                <input type="number" step="0.01" class="form-control form-control-sm peso-input" data-obj="${i}" required placeholder="Peso ${i}">
+                            </div>`;
+                    }
+                }
+
+                if (contenedorCal) contenedorCal.classList.remove('d-none');
+                if (tablaCal && tablaCal.children.length === 0) {
+                    for (let i = 0; i < 5; i++) {
+                        agregarFilaCalificacion();
+                    }
+                }
+            } else {
+                if (contenedorPesos) contenedorPesos.classList.add('d-none');
+                if (contenedorCal) contenedorCal.classList.add('d-none');
+            }
+        }
+
+        // Agrega una fila vacía a la tabla de escala de calificaciones
+        function agregarFilaCalificacion(pesoVal = '', califVal = '') {
+            const tablaCal = document.getElementById('tablaEscalaCalificaciones');
+            if (!tablaCal) return;
+            const fila = document.createElement('tr');
+            fila.innerHTML = `
+                <td>
+                    <input type="number" step="0.01" class="form-control form-control-sm text-center calif-peso" value="${pesoVal}" required placeholder="Ej. 35.00">
+                </td>
+                <td>
+                    <input type="number" step="0.01" class="form-control form-control-sm text-center calif-valor" value="${califVal}" required placeholder="Ej. 9.50">
+                </td>
+                <td>
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="this.closest('tr').remove()" title="Eliminar fila">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            `;
+            tablaCal.appendChild(fila);
+        }
+
+        // ==============================================================================
+        // 4. GUARDAR Y ELIMINAR (API)
+        // ==============================================================================
+
+        async function guardarMateria(e) {
+            e.preventDefault();
+            const btnGuardar = document.getElementById('btnGuardar');
+            if (btnGuardar) {
+                btnGuardar.disabled = true;
+                btnGuardar.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
+            }
+
+            const codigoOriginal = document.getElementById('materiaOriginalCodigo').value;
+            // IMPORTANTE: Si deshabilitaste el input codigo al editar, usa el hidden field o el valor de la variable global
+            let codigo = document.getElementById('codigo').value.trim();
+            // Si estaba deshabilitado, el valor del input podría estar vacío, tomamos el original
+            if (codigo === '' && codigoOriginal !== '') codigo = codigoOriginal;
+
+            const descripcion = document.getElementById('descripcion').value.trim();
+            const numobj = parseInt(document.getElementById('numobj').value);
+            const minaprueba = parseFloat(document.getElementById('minaprueba').value);
+
+            // Recopilar pesos de objetivos
+            const pesosInputs = document.querySelectorAll('.peso-input');
+            const objetivos = Array.from(pesosInputs).map((input, index) => {
+                return {
+                    nro_objetivo: index + 1,
+                    peso: parseFloat(input.value) || 0
+                };
+            });
+
+            // Recopilar escala de calificaciones
+            const filasCal = document.querySelectorAll('#tablaEscalaCalificaciones tr');
+            const calificaciones = Array.from(filasCal).map(fila => {
+                return {
+                    peso_acumulado: parseFloat(fila.querySelector('.calif-peso').value) || 0,
+                    calificacion: parseFloat(fila.querySelector('.calif-valor').value) || 0
+                };
+            });
+
+            const payload = {
+                codigo,
+                descripcion,
+                numobj,
+                minaprueba,
+                objetivos,
+                calificaciones
+            };
+
+            const esEdicion = codigoOriginal !== "";
+            const url = esEdicion ? `/api/materias/${codigoOriginal}` : '/api/materias';
+            const method = esEdicion ? 'PUT' : 'POST';
+
+            try {
+                const res = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    Swal.fire('¡Éxito!', esEdicion ? 'Materia actualizada correctamente' : 'Materia registrada correctamente', 'success');
+                    if (modalMateriaInstance) modalMateriaInstance.hide();
+                    await cargarMaterias(); // Recargar tabla
+                } else {
+                    // Manejo de error específico desde el servidor (ej. código duplicado)
+                    Swal.fire('Error', data.message || 'No se pudo guardar la materia', 'error');
+                }
+            } catch (err) {
+                console.error("Error al guardar:", err);
+                Swal.fire('Error', 'Error de conexión con el servidor', 'error');
+            } finally {
+                if (btnGuardar) {
+                    btnGuardar.disabled = false;
+                    btnGuardar.textContent = 'Guardar Materia';
+                }
+            }
+        }
+
+        async function eliminarMateria(codigo) {
+            const result = await Swal.fire({
+                title: '¿Estás seguro?',
+                text: `Se eliminará la materia ${codigo} y todos sus registros asociados (notas, etc.). Esta acción no se puede deshacer.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            });
+
+            if (result.isConfirmed) {
+                try {
+                    const res = await fetch(`/api/materias/${codigo}`, {
+                        method: 'DELETE'
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        Swal.fire('Eliminado', 'La materia ha sido borrada correctamente.', 'success');
+                        await cargarMaterias(); // Recargar tabla
+                    } else {
+                        Swal.fire('Error', data.message || 'No se pudo eliminar la materia.', 'error');
+                    }
+                } catch (err) {
+                    console.error("Error al eliminar:", err);
+                    Swal.fire('Error', 'Error de conexión con el servidor al intentar eliminar.', 'error');
+                }
+            }
+        }
+
+        // ==============================================================================
+        // 5. CARGA DEL NAVBAR (Carga estándar para todos los módulos)
+        // ==============================================================================
+        document.addEventListener("DOMContentLoaded", function() {
+            fetch('/views/navbar.html')
+                .then(response => {
+                    if (!response.ok) throw new Error('Error al cargar navbar');
+                    return response.text();
+                })
+                .then(html => {
+                    const navContainer = document.getElementById('navbar-container');
+                    if (navContainer) navContainer.innerHTML = html;
+                })
+                .catch(err => console.error("Error al cargar el navbar:", err));
+        });
+    </script>
+
+
+
+
+</body>
+
+</html>
