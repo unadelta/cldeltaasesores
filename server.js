@@ -9,7 +9,7 @@ const session = require('express-session');
 // ==========================================
 // CONFIGURACIÓN DE LA BASE DE DATOS MYSQL
 // ==========================================
-
+/*
 const db = mysql.createPool({
     host: process.env.MYSQLHOST || process.env.DB_HOST || 'localhost',
     user: process.env.MYSQLUSER || process.env.DB_USER || 'root',
@@ -30,6 +30,46 @@ db.getConnection((err, connection) => {
         connection.release(); // Obligatorio liberar la conexión de prueba
     }
 });
+*/
+
+
+
+// Conexión para inicializar el script SQL
+const dbInit = mysql.createConnection({
+    host: process.env.MYSQLHOST || 'localhost',
+    user: process.env.MYSQLUSER || 'root',
+    password: (process.env.MYSQLPASSWORD || '').trim(),
+    database: process.env.MYSQLDATABASE || 'railway',
+    port: process.env.MYSQLPORT || 3306,
+    multipleStatements: true // Permite ejecutar múltiples consultas SQL a la vez
+});
+
+dbInit.connect((err) => {
+    if (err) {
+        console.error('❌ Error al conectar para inicializar la BD:', err.message);
+        return;
+    }
+
+    // Ruta de tu archivo sql en el repositorio
+    const sqlFilePath = path.join(__dirname, 'asesores.sql');
+
+    if (fs.existsSync(sqlFilePath)) {
+        const sqlScript = fs.readFileSync(sqlFilePath, 'utf8');
+
+        dbInit.query(sqlScript, (error, results) => {
+            if (error) {
+                console.error('⚠️ Error al ejecutar el script sql (puede que ya existan las tablas):', error.message);
+            } else {
+                console.log('✅ Base de datos y tablas transferidas/creadas exitosamente desde asesores.sql');
+            }
+            dbInit.end();
+        });
+    } else {
+        console.log('⚠️ No se encontró el archivo asesores.sql en la ruta del proyecto.');
+        dbInit.end();
+    }
+});
+
 
 // Configuración de Middlewares
 app.use(express.json());

@@ -1,0 +1,7 @@
+MYSQL_DATABASE   railway
+MYSQL_ROOT_PASSWORD ceNYMAPloXlKxDRDmUgVYQHeCVsWWEzJ
+MYSQL_URL  mysql://root:ceNYMAPloXlKxDRDmUgVYQHeCVsWWEzJ@mysql.railway.internal:3306/railway
+MYSQLDATABASE railway
+MYSQLHOST mysql.railway.internal
+MYSQLPORT 3306
+MYSQLUSER root
