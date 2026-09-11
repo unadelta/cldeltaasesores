@@ -9,24 +9,25 @@ const session = require('express-session');
 // ==========================================
 // CONFIGURACIÓN DE LA BASE DE DATOS MYSQL
 // ==========================================
+
 const db = mysql.createPool({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'asesorias_una',
-    port: process.env.DB_PORT || 3306,
+    host: process.env.MYSQLHOST || process.env.DB_HOST || 'localhost',
+    user: process.env.MYSQLUSER || process.env.DB_USER || 'root',
+    password: (process.env.MYSQLPASSWORD || process.env.DB_PASSWORD || '').trim(),
+    database: process.env.MYSQLDATABASE || process.env.DB_NAME || 'asesores',
+    port: process.env.MYSQLPORT || process.env.DB_PORT || 3306,
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
 });
 
-// Verificar conexión inicial
+// Verificación inicial para Pool
 db.getConnection((err, connection) => {
     if (err) {
-        console.error('❌ Error al conectar a la base de datos:', err);
+        console.error('❌ Error al conectar a la base de datos:', err.message);
     } else {
-        console.log('✅ Conectado exitosamente a la base de datos MySQL.');
-        connection.release();
+        console.log('✅ Conectado exitosamente a la base de datos MySQL (Pool).');
+        connection.release(); // Obligatorio liberar la conexión de prueba
     }
 });
 
