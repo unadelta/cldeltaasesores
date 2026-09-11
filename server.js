@@ -3,9 +3,9 @@ const mysql = require('mysql2');
 const session = express.session ? require('express-session') : require('express-session'); // Mantenido según tu estructura
 const path = require('path');
 
-//imprimimir pdf
-const puppeteer = require('puppeteer');
-//const path = require('path');
+require('dotenv').config();
+
+
 const fs = require('fs');
 
 const app = express();
@@ -40,11 +40,11 @@ const db = mysql.createConnection({
 */
 
 const db = mysql.createConnection({
-  host: process.env.MYSQLHOST,
-  user: process.env.MYSQLUSER,
-  password: process.env.MYSQLPASSWORD,
-  database: process.env.MYSQLDATABASE,
-  port: process.env.MYSQLPORT
+    host: process.env.MYSQLHOST,
+    user: process.env.MYSQLUSER,
+    password: process.env.MYSQLPASSWORD,
+    database: process.env.MYSQLDATABASE,
+    port: process.env.MYSQLPORT
 });
 
 db.connect((err) => {
