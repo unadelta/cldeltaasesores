@@ -123,7 +123,7 @@
         }
         
         .table-report {
-            font-size: 0.7rem;
+            font-size: 0.75rem;
             /* Fuente ultra-compacta */
             width: 100%;
             margin-bottom: 0;
@@ -217,19 +217,21 @@
             <div class="table-responsive">
                 <table class="table table-bordered table-report align-middle" id="tablaReporte">
                     <thead>
+                        <!-- COMENTARIO DE CAMBIO 2: Eliminamos la columna Observación/Tema del encabezado -->
                         <tr>
                             <th style="width: 5%;">N°</th>
                             <th style="width: 15%;">Cédula</th>
-                            <th style="width: 25%;">Nombre del Alumno</th>
+                            <th style="width: 40%;">Nombre del Alumno</th>
+                            <!-- Ajustado ancho -->
                             <th style="width: 10%;">Carrera</th>
                             <th style="width: 10%;">Materia</th>
-                            <th style="width: 25%;">Observación / Tema</th>
-                            <th style="width: 10%;">Fecha</th>
+                            <th style="width: 20%;">Fecha</th>
+                            <!-- Ajustado ancho -->
                         </tr>
                     </thead>
                     <tbody id="cuerpoTabla">
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-4"><em>Cargando datos...</em></td>
+                            <td colspan="6" class="text-center text-muted py-4"><em>Cargando datos...</em></td>
                         </tr>
                         <!-- Las filas se insertarán aquí vía JS -->
                     </tbody>
@@ -278,18 +280,24 @@
                 }
 
                 // 2. Obtener datos de la tabla controlasesoria
+                // COMENTARIO DE CAMBIO 1 (CORRECCIÓN): La API devuelve un objeto data, debemos usar dataAsesorias.data.
                 const resAsesorias = await fetch('/api/controlasesoria');
                 const dataAsesorias = await resAsesorias.json();
 
-                // Extraer el array de datos
-                const lista = Array.isArray(dataAsesorias) ? dataAsesorias : (dataAsesorias.data || dataAsesorias.resultado || []);
+                // Extraer el array de datos CORRECTAMENTE
+                let lista = [];
+                if (dataAsesorias.success && Array.isArray(dataAsesorias.data)) {
+                    lista = dataAsesorias.data; // <--- ESTA ES LA CORRECCIÓN
+                } else if (Array.isArray(dataAsesorias)) {
+                    lista = dataAsesorias;
+                }
 
                 // 3. Llenar la tabla en pantalla (sin paginación JS, el navegador lo hace al imprimir)
                 llenarTablaHTML(lista);
 
             } catch (err) {
                 console.error("Error al cargar datos:", err);
-                document.getElementById('cuerpoTabla').innerHTML = `<tr><td colspan="7" class="alert alert-danger text-center m-0">Error al conectar con el servidor.</td></tr>`;
+                document.getElementById('cuerpoTabla').innerHTML = `<tr><td colspan="6" class="alert alert-danger text-center m-0">Error al conectar con el servidor.</td></tr>`;
             }
         }
 
@@ -298,12 +306,12 @@
             cuerpoTabla.innerHTML = ''; // Limpiar spinner
 
             if (datos.length === 0) {
-                cuerpoTabla.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4"><em>No se encontraron registros de asesorías.</em></td></tr>`;
+                cuerpoTabla.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4"><em>No se encontraron registros de asesorías.</em></td></tr>`;
                 return;
             }
 
             datos.forEach((item, index) => {
-                // Formatear fecha (asumiendo ISO YYYY-MM-DD)
+                // Formatear fecha (asumiendo ISO YYYY-MM-DD o formato legible)
                 let fechaFormateada = item.fecha || item.fecha_hora || 'N/D';
                 if (fechaFormateada !== 'N/D' && fechaFormateada.includes('T')) {
                     fechaFormateada = fechaFormateada.split('T')[0];
@@ -311,13 +319,13 @@
 
                 // Crear fila
                 const row = document.createElement('tr');
+                // COMENTARIO DE CAMBIO 3: Eliminamos la celda de observación/tema de la fila (tr.innerHTML)
                 row.innerHTML = `
                     <td class="text-center fw-semibold">${index + 1}</td>
                     <td class="text-center">${item.cedula_alumno || ''}</td>
                     <td class="text-start">${item.nombre_alumno || ''}</td>
                     <td class="text-center"><span class="badge bg-light text-dark border">${item.codigo_carrera || ''}</span></td>
                     <td class="text-center"><span class="badge bg-secondary">${item.codigo_materia || ''}</span></td>
-                    <td class="text-start">${item.observacion || item.tema || ''}</td>
                     <td class="text-center">${fechaFormateada}</td>
                 `;
                 cuerpoTabla.appendChild(row);

@@ -7,89 +7,91 @@
     <title>Dashboard - Sistema Asesores UNA</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
     <style>
-        /* Estilo para la imagen de fondo de la fachada */
+        /* Estilos base para pantalla completa y fondo */
         
         body {
-            background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('/jpg/fachadaUna.jpg') no-repeat center 80% fixed;
+            background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('/jpg/fachadaUna.jpg') no-repeat center center;
             background-size: cover;
+            background-attachment: fixed;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
-            /* Empuja el contenido hacia abajo */
         }
-        /* Estilo de la tarjeta de bienvenida con opacidad */
+        /* Área principal de contenido para empujar la tarjeta hacia abajo dinámicamente */
+        
+        .main-content {
+            flex: 1;
+            display: flex;
+            align-items: flex-end;
+        }
+        /* Tarjeta de bienvenida responsiva con efecto glassmorphism */
         
         .card-welcome {
             background-color: rgba(255, 255, 255, 0.92);
-            backdrop-filter: blur(4px);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+        }
+        /* Ajuste responsivo del fondo para móviles (evita congelamientos de background-attachment: fixed) */
+        
+        @media (max-width: 768px) {
+            body {
+                background-attachment: scroll;
+            }
         }
     </style>
 </head>
 
 <body>
 
-    <!-- NAVBAR PRINCIPAL -->
     <div id="navbar-container"></div>
 
-    <!-- CONTENIDO PRINCIPAL: Alineado a la derecha (justify-content-end) y abajo (mb-5) -->
-    <div class="container mb-5">
-        <div class="row justify-content-end">
-            <div class="col-md-7">
-                <div class="card border-0 shadow-lg p-4 rounded-4 card-welcome">
-                    <h3 class="fw-bold text-primary mb-2">Bienvenido al Panel de Control</h3>
-                    <p class="text-secondary fs-6 mb-0">Seleccione una opción del menú superior para gestionar los registros del sistema.</p>
+    <main class="main-content py-4 py-md-5">
+        <div class="container">
+            <div class="row justify-content-center justify-content-md-end">
+                <div class="col-12 col-sm-10 col-md-8 col-lg-6">
+                    <div class="card border-0 shadow-lg p-3 p-sm-4 p-md-5 rounded-4 card-welcome">
+                        <h3 class="fw-bold text-primary mb-2 fs-4 fs-md-3">Bienvenido al Panel de Control</h3>
+                        <p class="text-secondary fs-6 mb-0">Seleccione una opción del menú superior para gestionar los registros del sistema.</p>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Cargar datos de la sesión activa al entrar al dashboard y mostrar el nombre en el navbar derecho
+        // Función general para cerrar sesión
+        function cerrarSesion() {
+            window.location.href = '/';
+        }
+
+        // Cargar Navbar y Validar Sesión en una sola ejecución optimizada
         document.addEventListener("DOMContentLoaded", async() => {
             try {
-                const res = await fetch('/api/user-session');
-                const data = await res.json();
+                // 1. Cargar el HTML del Navbar
+                const navResponse = await fetch('/views/navbar.html');
+                if (navResponse.ok) {
+                    const navHtml = await navResponse.text();
+                    document.getElementById('navbar-container').innerHTML = navHtml;
+                }
 
-                if (data.authenticated) {
+                // 2. Verificar la sesión del usuario
+                const sessionResponse = await fetch('/api/user-session');
+                const sessionData = await sessionResponse.json();
+
+                if (sessionData.authenticated && sessionData.user) {
                     const spanUsuario = document.getElementById('nombreUsuario');
                     if (spanUsuario) {
-                        spanUsuario.textContent = data.user.nombre || data.user.usuario;
+                        spanUsuario.textContent = sessionData.user.nombre || sessionData.user.usuario;
                     }
                 } else {
                     window.location.href = '/';
                 }
             } catch (err) {
-                console.error("Error al verificar la sesión", err);
+                console.error("Error al inicializar el dashboard:", err);
             }
-        });
-
-        // Función para cerrar sesión
-        function cerrarSesion() {
-            window.location.href = '/';
-        }
-
-        // Cargar el HTML del Navbar dinámicamente
-        document.addEventListener("DOMContentLoaded", function() {
-            fetch('/views/navbar.html')
-                .then(response => response.text())
-                .then(data => {
-                    document.getElementById('navbar-container').innerHTML = data;
-
-                    // Consultar y pintar el nombre del usuario en sesión después de cargar el menú
-                    fetch('/api/user-session')
-                        .then(res => res.json())
-                        .then(sesion => {
-                            const spanUsuario = document.getElementById('nombreUsuario');
-                            if (spanUsuario && sesion.authenticated && sesion.user) {
-                                spanUsuario.textContent = sesion.user.nombre || sesion.user.usuario;
-                            }
-                        })
-                        .catch(err => console.error("Error al obtener sesión de usuario:", err));
-                })
-                .catch(err => console.error("Error al cargar el navbar:", err));
         });
     </script>
 </body>

@@ -48,45 +48,26 @@
                         <i class="bi bi-file-earmark-bar-graph me-1 d-lg-none"></i> Reportes
                     </a>
                     <ul class="dropdown-menu shadow border-0">
-                        <li><a class="dropdown-item" href="/reporasesoria"><i class="bi bi-file-text me-2"></i>Reporte Asesorías</a></li>
-                        <li><a class="dropdown-item" href="/reporcalificaciones"><i class="bi bi-file-earmark-check me-2"></i>Reporte Calificaciones</a></li>
-                        <li><a class="dropdown-item" href="/reporcorrecciones"><i class="bi bi-file-earmark-diff me-2"></i>Reporte Correcciones</a></li>
-                        <li><a class="dropdown-item" href="/reporconsolidado"><i class="bi bi-files me-2"></i>Reporte Consolidado</a></li>
+                        <li>
+                            <a class="dropdown-item" href="/reporasesoria><i class=" bi bi-file-text me-2 "></i>Reporte Asesorías</a></li>
+                        <li><a class="dropdown-item " href="/reporcalificaciones "><i class="bi bi-file-earmark-check me-2 "></i>Reporte Calificaciones</a></li>
+                        <li><a class="dropdown-item " href="/reporcorrecciones "><i class="bi bi-file-earmark-diff me-2 "></i>Reporte Correcciones</a></li>
+                        <li><a class="dropdown-item " href="/reporconsolidado "><i class="bi bi-files me-2 "></i>Reporte Consolidado</a></li>
                     </ul>
                 </li>
             </ul>
 
-            <!-- Sección Usuario / Salir -->
-            <div class="d-flex align-items-center justify-content-between justify-content-lg-end text-white pt-3 pt-lg-0 mt-2 mt-lg-0 border-top border-lg-0 border-light-50">
-                <div class="d-flex align-items-center me-3">
-                    <i class="bi bi-person-circle fs-5 me-2"></i>
-                    <span id="nombreUsuario" class="fw-semibold">Cargando...</span>
+            <!-- Sección Usuario / Salir (Adaptable en móvil con borde superior y márgenes) -->
+            <div class="d-flex align-items-center justify-content-between justify-content-lg-end text-white pt-3 pt-lg-0 mt-2 mt-lg-0 border-top border-lg-0 border-light-50 ">
+                <div class="d-flex align-items-center me-3 ">
+                    <i class="bi bi-person-circle fs-5 me-2 "></i>
+                   
+                    <span id="nombreUsuario " class="fw-semibold ">Cargando...</span>
                 </div>
-                <button onclick="window.location.href='/'" class="btn btn-outline-light btn-sm shadow-sm">
-                    <i class="bi bi-box-arrow-right me-1"></i> Salir
+                <button onclick="window.location.href='/' " class="btn btn-outline-light btn-sm shadow-sm ">
+                    <i class="bi bi-box-arrow-right me-1 "></i> Salir
                 </button>
             </div>
         </div>
     </div>
 </nav>
-
-<!-- Script autónomo para el Navbar sincronizado -->
-<script>
-    (function() {
-        fetch('/api/user-session')
-            .then(res => res.json())
-            .then(sesion => {
-                const spanUsuario = document.getElementById('nombreUsuario') || document.getElementById('usuarioAsesorLogueado');
-                if (spanUsuario && sesion.authenticated && sesion.user) {
-                    spanUsuario.textContent = sesion.user.nombre || sesion.user.usuario;
-                } else if (spanUsuario) {
-                    spanUsuario.textContent = 'Invitado';
-                }
-            })
-            .catch(err => {
-                console.error("Error al obtener sesión en el navbar:", err);
-                const spanUsuario = document.getElementById('nombreUsuario') || document.getElementById('usuarioAsesorLogueado');
-                if (spanUsuario) spanUsuario.textContent = 'Sesión no disponible';
-            });
-    })();
-</script>

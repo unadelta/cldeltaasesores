@@ -95,7 +95,7 @@
                             <!-- Código de Carrera (Automático) -->
                             <div class="col-md-6 mb-3">
                                 <label for="codigoCarrera" class="form-label fw-semibold">Carrera del Alumno</label>
-                                <input type="text" class="form-control bg-light" id="codigoCarrera" placeholder="Carrera" readonly required>
+                                <input type="text" class="form-control bg-light" id="codigoCarrera" placeholder="Carrera (solo código)" readonly required>
                             </div>
                             <!-- Tipo de Asesoría -->
                             <div class="col-md-6 mb-3">
@@ -148,27 +148,64 @@
         document.addEventListener("DOMContentLoaded", async() => {
             modalAsesoriaInstance = new bootstrap.Modal(document.getElementById('modalAsesoria'));
 
-            try {
-                const navResponse = await fetch('/views/navbar.html');
-                if (!navResponse.ok) throw new Error('Error al cargar navbar');
-                const navHtml = await navResponse.text();
-                document.getElementById('navbar-container').innerHTML = navHtml;
+            // CORRECCIÓN: Carga diferida e independiente del navbar
+            fetch('/views/navbar.html')
+                .then(res => res.ok ? res.text() : Promise.reject(res))
+                .then(navHtml => {
+                    document.getElementById('navbar-container').innerHTML = navHtml;
+                    // Intenta asignar el nombre si la sesión ya cargó
+                    actualizarNombreNavbar();
 
-                const trySetUser = () => {
-                    const spanUsuario = document.getElementById('nombreUsuario');
-                    if (spanUsuario && asesorActual.nombre) {
-                        spanUsuario.textContent = asesorActual.nombre;
-                    } else {
-                        setTimeout(trySetUser, 50);
-                    }
-                };
-                trySetUser();
-            } catch (err) {
-                console.error("Error crítico navbar:", err);
-            }
+                    // CORRECCIÓN: Asigna evento al botón cerrar sesión si existe en el navbar cargado
+                    const btnCerrar = document.getElementById('btnCerrarSesion');
+                    if (btnCerrar) btnCerrar.addEventListener('click', cerrarSesion);
+                })
+                .catch(err => console.error("Error al cargar navbar:", err));
 
             await inicializarDatos();
         });
+
+        /*
+
+                document.addEventListener("DOMContentLoaded", function() {
+                    modalAsesoriaInstance = new bootstrap.Modal(document.getElementById('modalAsesoria'));
+
+                    fetch('/views/navbar.html')
+                        .then(response => response.text())
+                        .then(data => {
+                            document.getElementById('navbar-container').innerHTML = data;
+
+                            // Petición para obtener los datos del asesor logueado
+                            fetch('/api/user-session')
+                                .then(res => res.json())
+                                .then(sesion => {
+                                    const spanUsuario = document.getElementById('usuarioAsesorLogueado');
+                                    if (spanUsuario && sesion.authenticated && sesion.user) {
+                                        spanUsuario.textContent = sesion.user.nombre || sesion.user.usuario;
+                                    } else if (spanUsuario) {
+                                        spanUsuario.textContent = 'Invitado';
+                                    }
+                                })
+                                .catch(err => console.error("Error al obtener sesión de usuario:", err));
+                        })
+                        .catch(err => console.error("Error al cargar el navbar:", err));
+                    await inicializarDatos();
+                });
+        */
+
+
+
+
+
+
+        // CORRECCIÓN: Función auxiliar para actualizar nombre en navbar de forma segura
+        function actualizarNombreNavbar() {
+            const spanUsuario = document.getElementById('nombreUsuario');
+            const nombreMostrar = asesorActual.nombre || asesorActual.usuario;
+            if (spanUsuario && nombreMostrar) {
+                spanUsuario.textContent = nombreMostrar;
+            }
+        }
 
         async function inicializarDatos() {
             try {
@@ -176,10 +213,13 @@
                 const dataUser = await resUser.json();
                 if (dataUser.authenticated) {
                     asesorActual = dataUser.user;
-                    const spanUsuario = document.getElementById('nombreUsuario');
-                    if (spanUsuario) spanUsuario.textContent = asesorActual.nombre || asesorActual.usuario;
-                    document.getElementById('nombreAsesor').value = asesorActual.nombre || asesorActual.usuario;
-                    document.getElementById('cedulaAsesor').value = asesorActual.cedula;
+                    // Intenta actualizar navbar (por si cargó antes que la sesión)
+                    actualizarNombreNavbar();
+
+                    const hiddenNombre = document.getElementById('nombreAsesor');
+                    const hiddenCedula = document.getElementById('cedulaAsesor');
+                    if (hiddenNombre) hiddenNombre.value = asesorActual.nombre || asesorActual.usuario;
+                    if (hiddenCedula) hiddenCedula.value = asesorActual.cedula;
                 } else {
                     window.location.href = '/';
                     return;
@@ -190,6 +230,7 @@
                 return;
             }
 
+            // Carga de Alumnos
             try {
                 const resAlumnos = await fetch('/api/alumnos');
                 const dataAlumnos = await resAlumnos.json();
@@ -206,6 +247,7 @@
                 console.error("Error al cargar alumnos:", error);
             }
 
+            // Carga de Tipos de Asesoría
             try {
                 const resTipos = await fetch('/api/tipo_asesoria');
                 const dataTipos = await resTipos.json();
@@ -225,6 +267,7 @@
                 console.error("Error al cargar tipos de asesoría:", error);
             }
 
+            // Carga de Materias
             try {
                 const resMaterias = await fetch('/api/materia_una');
                 const dataMaterias = await resMaterias.json();
@@ -253,18 +296,21 @@
             document.getElementById('asesoriaId').value = ''; // Limpiar ID (modo creación)
             document.getElementById('modalTituloLabel').textContent = 'Registrar Nueva Asesoría';
 
+            // Restablecer campos ocultos del asesor actual
             document.getElementById('nombreAsesor').value = asesorActual.nombre || asesorActual.usuario;
             document.getElementById('cedulaAsesor').value = asesorActual.cedula;
 
+            // Limpiar campos autocompletados
             document.getElementById('selectAlumno').value = '';
             document.getElementById('cedulaAlumno').value = '';
             document.getElementById('nombreAlumno').value = '';
-            document.getElementById('codigoCarrera').value = '';
+            document.getElementById('codigoCarrera').value = ''; // CORRECCIÓN: Asegurar limpieza
 
             const mensajeAlumno = document.getElementById('mensajeAlumno');
             mensajeAlumno.textContent = 'Seleccione un alumno del listado para autocompletar sus datos.';
             mensajeAlumno.className = 'form-text text-muted';
 
+            // Establecer fecha y hora actual formateada
             const ahora = new Date();
             const fechaStr = ahora.getDate().toString().padStart(2, '0') + '/' +
                 (ahora.getMonth() + 1).toString().padStart(2, '0') + '/' +
@@ -295,7 +341,9 @@
             if (alumnoEncontrado) {
                 document.getElementById('cedulaAlumno').value = alumnoEncontrado.cedula || '';
                 document.getElementById('nombreAlumno').value = alumnoEncontrado.nombre || '';
-                document.getElementById('codigoCarrera').value = `${alumnoEncontrado.codigo_carrera || ''} - ${alumnoEncontrado.descripcion_carrera || ''}`;
+
+                // El valor que se obtiene de 'codigoCarrera' ya es solo el código.
+                document.getElementById('codigoCarrera').value = alumnoEncontrado.codigo_carrera || '';
 
                 mensajeDiv.textContent = '¡Alumno seleccionado correctamente!';
                 mensajeDiv.className = 'form-text text-success fw-semibold';
@@ -318,6 +366,7 @@
             const idRegistro = document.getElementById('asesoriaId').value;
             const isEditing = Boolean(idRegistro);
 
+            // El valor que se obtiene de 'codigoCarrera' ya es solo el código.
             const data = {
                 cedula_alumno: document.getElementById('cedulaAlumno').value,
                 nombre_alumno: document.getElementById('nombreAlumno').value,
@@ -370,6 +419,11 @@
                 tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm" role="status"></span> Actualizando registros...</td></tr>';
 
                 const res = await fetch('/api/control_asesoria');
+                // CORRECCIÓN: Manejo de respuesta no exitosa (ej: 401)
+                if (res.status === 401) {
+                    window.location.href = '/';
+                    return;
+                }
                 const data = await res.json();
 
                 tbody.innerHTML = '';
@@ -378,7 +432,8 @@
                 if (Array.isArray(listaAsesoriasGlobal) && listaAsesoriasGlobal.length > 0) {
                     listaAsesoriasGlobal.forEach(item => {
                         const fechaObj = new Date(item.fecha_hora);
-                        const fechaF = fechaObj.toLocaleString('es-ES', {
+                        // CORRECCIÓN: Validación de fecha válida
+                        const fechaF = isNaN(fechaObj) ? 'N/A' : fechaObj.toLocaleString('es-ES', {
                             day: '2-digit',
                             month: '2-digit',
                             year: 'numeric',
@@ -428,13 +483,21 @@
             document.getElementById('asesoriaId').value = id;
             document.getElementById('modalTituloLabel').textContent = 'Editar Asesoría';
 
+            // CORRECCIÓN: Asegurar que los selects se asignen correctamente
             document.getElementById('selectAlumno').value = registro.cedula_alumno || '';
             document.getElementById('cedulaAlumno').value = registro.cedula_alumno || '';
             document.getElementById('nombreAlumno').value = registro.nombre_alumno || '';
             document.getElementById('codigoCarrera').value = registro.codigo_carrera || '';
             document.getElementById('selectTipoAsesoria').value = registro.tipo_asesoria || '';
             document.getElementById('selectMateria').value = registro.codigo_materia || '';
-            document.getElementById('fechaHora').value = registro.fecha_hora ? new Date(registro.fecha_hora).toLocaleString('es-ES') : '';
+
+            // CORRECCIÓN: Formateo de fecha para visualización en edición (asumiendo input text)
+            if (registro.fecha_hora) {
+                const fEdicion = new Date(registro.fecha_hora);
+                document.getElementById('fechaHora').value = isNaN(fEdicion) ? '' : fEdicion.toLocaleString('es-ES');
+            } else {
+                document.getElementById('fechaHora').value = '';
+            }
 
             const mensajeAlumno = document.getElementById('mensajeAlumno');
             mensajeAlumno.textContent = 'Modificando registro seleccionado.';
@@ -476,7 +539,13 @@
             }
         }
 
-        function cerrarSesion() {
+        async function cerrarSesion() {
+            // CORRECCIÓN: Opcional llamar a API de logout antes de redirigir
+            try {
+                await fetch('/api/logout', {
+                    method: 'POST'
+                });
+            } catch (e) {}
             window.location.href = '/';
         }
     </script>

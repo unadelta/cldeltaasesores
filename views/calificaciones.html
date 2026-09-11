@@ -28,6 +28,17 @@
             font-size: 0.85rem !important;
             vertical-align: middle;
         }
+        /* Estilo para los controles compactos */
+        
+        .select-materia-compact {
+            max-width: 250px;
+        }
+        
+        @media (max-width: 576px) {
+            .select-materia-compact {
+                max-width: 100%;
+            }
+        }
     </style>
 </head>
 
@@ -37,35 +48,37 @@
     <div id="navbar-container"></div>
 
     <!-- CONTENIDO PRINCIPAL -->
-    <div class="container mt-4">
-        <div class="row mb-3 align-items-end">
-            <div class="col-sm-4">
-                <h3 class="fw-bold text-primary mb-0"><i class="bi bi-award-fill me-2"></i>Módulo de Calificaciones</h3>
-                <p id="nombreMateriaSeleccionada" class="text-muted fw-semibold mt-1 mb-0" style="font-size: 1.1rem; min-height: 27px;"></p>
+    <div class="container-fluid container-lg mt-3 mt-md-4">
+        <div class="row gy-3 mb-3 align-items-end">
+            <div class="col-12 col-md-5">
+                <h3 class="fw-bold text-primary mb-0 fs-4 fs-md-3"><i class="bi bi-award-fill me-2"></i>Módulo de Calificaciones</h3>
+                <p id="nombreMateriaSeleccionada" class="text-muted fw-semibold mt-1 mb-0" style="font-size: 0.95rem; min-height: 24px;"></p>
             </div>
-            <div class="col-sm-8 text-sm-end d-flex justify-content-sm-end align-items-end gap-3 mt-2 mt-sm-0">
-                <div>
-                    <label for="filtroSemestre" class="form-label fw-semibold text-start d-block mb-1" style="font-size: 0.85rem;">Semestre</label>
-                    <select id="filtroSemestre" class="form-select w-auto border-success shadow-sm" style="border-width: 2px;" onchange="filtrarCalificacionesPorMateria()">
-                    </select>
-                </div>
-                <div>
-                    <label for="filtroCodigoMateria" class="form-label fw-semibold text-start d-block mb-1" style="font-size: 0.85rem;">Código materia</label>
-                    <select id="filtroCodigoMateria" class="form-select w-auto border-success shadow-sm" style="border-width: 2px;" onchange="filtrarCalificacionesPorMateria()">
-                        <option value="">Seleccione una materia</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="form-label d-block mb-1" style="font-size: 0.85rem; visibility: hidden;">Acción</label>
-                    <button class="btn btn-success text-nowrap shadow-sm" onclick="abrirModalRegistrarAlumno()"><i class="bi bi-plus-circle me-1"></i> Registrar Alumnos</button>
+
+            <div class="col-12 col-md-7">
+                <div class="row g-2 justify-content-md-end align-items-end">
+                    <div class="col-6 col-sm-auto">
+                        <label for="filtroSemestre" class="form-label fw-semibold text-start d-block mb-1" style="font-size: 0.8rem;">Semestre</label>
+                        <select id="filtroSemestre" class="form-select form-select-sm border-success shadow-sm" style="border-width: 2px;" onchange="filtrarCalificacionesPorMateria()">
+                        </select>
+                    </div>
+                    <div class="col-6 col-sm-auto">
+                        <label for="filtroCodigoMateria" class="form-label fw-semibold text-start d-block mb-1" style="font-size: 0.8rem;">Código materia</label>
+                        <select id="filtroCodigoMateria" class="form-select form-select-sm select-materia-compact border-success shadow-sm" style="border-width: 2px;" onchange="filtrarCalificacionesPorMateria()">
+                            <option value="">Seleccione materia</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-sm-auto mt-2 mt-sm-0">
+                        <button class="btn btn-sm btn-success w-100 text-nowrap shadow-sm py-1" onclick="abrirModalRegistrarAlumno()"><i class="bi bi-plus-circle me-1"></i> Registrar Alumnos</button>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="card border-0 shadow-sm">
-            <div class="card-body">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body p-2 p-md-3">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle">
+                    <table class="table table-hover align-middle mb-0">
                         <thead class="table-custom-header" id="tablaCabecera">
                             <tr>
                                 <th>Items</th>
@@ -88,52 +101,25 @@
         </div>
     </div>
 
-    <!-- MODAL BUSCAR Y REGISTRAR ALUMNO -->
+    <!-- MODAL REGISTRAR ALUMNO POR COMBOBOX -->
     <div class="modal fade" id="modalRegistrarAlumno" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title"><i class="bi bi-search me-2"></i>Buscar y Agregar Alumno</h5>
+                <div class="modal-header bg-primary text-white py-2">
+                    <h5 class="modal-title fs-6"><i class="bi bi-person-plus-fill me-2"></i>Registrar Alumno en Materia</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="row g-3 align-items-end mb-3">
-                        <div class="col-md-3">
-                            <label for="tipoNacionalidad" class="form-label fw-semibold">Nacionalidad</label>
-                            <select id="tipoNacionalidad" class="form-select">
-                                <option value="V">V</option>
-                                <option value="E">E</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="inputCedulaBusqueda" class="form-label fw-semibold">Número de Cédula</label>
-                            <input type="text" class="form-control" id="inputCedulaBusqueda" placeholder="Ej: 9858269" autocomplete="off">
-                        </div>
-                        <div class="col-md-3">
-                            <button type="button" class="btn btn-primary w-100" onclick="buscarAlumnoParaCalificacion()"><i class="bi bi-search me-1"></i> Buscar</button>
-                        </div>
-                    </div>
-
-                    <div class="table-responsive mt-3">
-                        <table class="table table-striped table-hover align-middle">
-                            <thead class="table-secondary">
-                                <tr>
-                                    <th>Cédula</th>
-                                    <th>Nombre</th>
-                                    <th>Cod. Carrera</th>
-                                    <th class="text-center">Acción</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tablaResultadosAlumnos">
-                                <tr>
-                                    <td colspan="4" class="text-center text-muted py-3">Ingrese una cédula para buscar alumnos.</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <div class="mb-3">
+                        <label for="selectAlumnoBusqueda" class="form-label fw-semibold" style="font-size: 0.85rem;">Seleccionar Alumno (Orden Descendente Cédula)</label>
+                        <select id="selectAlumnoBusqueda" class="form-select form-select-sm border-primary">
+                            <option value="">Cargando lista de alumnos...</option>
+                        </select>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-sm btn-success" onclick="procesarAgregarAlumno()"><i class="bi bi-plus-circle me-1"></i> Agregar a Materia</button>
                 </div>
             </div>
         </div>
@@ -198,10 +184,10 @@
         let modalCalificacionInstance = null;
         let modalAlumnoInstance = null;
         let listaMateriasGlobal = [];
+        let listaAlumnosGlobal = [];
         let listaAlumnosActuales = [];
         let cedulaAsesorActual = '';
 
-        // 1. Inicialización principal de la página y la tabla de calificaciones
         document.addEventListener("DOMContentLoaded", async() => {
             modalCalificacionInstance = new bootstrap.Modal(document.getElementById('modalCalificacion'));
             modalAlumnoInstance = new bootstrap.Modal(document.getElementById('modalRegistrarAlumno'));
@@ -227,6 +213,7 @@
                 }
 
                 await cargarMaterias();
+                await cargarTodosLosAlumnos();
             } catch (e) {
                 console.error("Error al verificar sesión", e);
             }
@@ -256,7 +243,7 @@
                 const data = await res.json();
                 const selectFiltro = document.getElementById('filtroCodigoMateria');
 
-                selectFiltro.innerHTML = '<option value="">Seleccione una materia</option>';
+                selectFiltro.innerHTML = '<option value="">Seleccione materia</option>';
 
                 const lista = data.success ? data.data : data;
                 if (Array.isArray(lista)) {
@@ -269,6 +256,33 @@
                 }
             } catch (error) {
                 console.error("Error al cargar materias:", error);
+            }
+        }
+
+        async function cargarTodosLosAlumnos() {
+            try {
+                const res = await fetch('/api/alumnos');
+                const data = await res.json();
+                const selectAlumno = document.getElementById('selectAlumnoBusqueda');
+
+                const lista = data.success ? data.data : data;
+                if (Array.isArray(lista)) {
+                    // Orden descendente por número de cédula
+                    listaAlumnosGlobal = lista.sort((a, b) => {
+                        const numA = parseInt((a.cedula || '').replace(/\D/g, '')) || 0;
+                        const numB = parseInt((b.cedula || '').replace(/\D/g, '')) || 0;
+                        return numB - numA;
+                    });
+
+                    selectAlumno.innerHTML = '<option value="">-- Seleccionar un Alumno --</option>';
+                    listaAlumnosGlobal.forEach(a => {
+                        selectAlumno.innerHTML += `<option value="${a.id}">${a.cedula} - ${a.nombre}</option>`;
+                    });
+                } else {
+                    selectAlumno.innerHTML = '<option value="">No hay alumnos disponibles</option>';
+                }
+            } catch (error) {
+                console.error("Error al cargar la lista de alumnos:", error);
             }
         }
 
@@ -290,53 +304,20 @@
                 return;
             }
 
-            document.getElementById('inputCedulaBusqueda').value = '';
-            document.getElementById('tablaResultadosAlumnos').innerHTML = `<tr><td colspan="4" class="text-center text-muted py-3">Ingrese una cédula para buscar alumnos.</td></tr>`;
+            document.getElementById('selectAlumnoBusqueda').value = '';
             modalAlumnoInstance.show();
         }
 
-        async function buscarAlumnoParaCalificacion() {
-            const nacionalidad = document.getElementById('tipoNacionalidad').value;
-            const cedulaInput = document.getElementById('inputCedulaBusqueda').value.trim();
-            const tbodyResultados = document.getElementById('tablaResultadosAlumnos');
-
-            if (!cedulaInput) {
-                Swal.fire('Atención', 'Por favor ingrese un número de cédula.', 'warning');
+        function procesarAgregarAlumno() {
+            const idAlumnoSel = document.getElementById('selectAlumnoBusqueda').value;
+            if (!idAlumnoSel) {
+                Swal.fire('Atención', 'Por favor seleccione un alumno de la lista.', 'warning');
                 return;
             }
 
-            const cedulaBuscada = `${nacionalidad}-${cedulaInput}`;
-
-            try {
-                const res = await fetch(`/api/alumnos/buscar/${encodeURIComponent(cedulaBuscada)}`);
-                const data = await res.json();
-
-                tbodyResultados.innerHTML = '';
-
-                if (data.success && data.data) {
-                    const alum = data.data;
-                    const ced = alum.cedula || 'N/A';
-                    const nom = alum.nombre || 'N/A';
-                    const carrera = alum.codigo_carrera || alum.cod_carrera || 'N/A';
-
-                    tbodyResultados.innerHTML = `
-                        <tr>
-                            <td>${ced}</td>
-                            <td>${nom}</td>
-                            <td>${carrera}</td>
-                            <td class="text-center">
-                                <button class="btn btn-sm btn-success" onclick='agregarAlumnoACarritos(${JSON.stringify(alum)})'>
-                                    <i class="bi bi-plus-lg me-1"></i> Agregar
-                                </button>
-                            </td>
-                        </tr>
-                    `;
-                } else {
-                    tbodyResultados.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-3">No se encontró ningún alumno con la cédula ${cedulaBuscada}.</td></tr>`;
-                }
-            } catch (error) {
-                console.error("Error en la búsqueda:", error);
-                Swal.fire('Error', 'No se pudo conectar con el servidor para buscar el alumno.', 'error');
+            const alumnoObj = listaAlumnosGlobal.find(a => String(a.id) === String(idAlumnoSel));
+            if (alumnoObj) {
+                agregarAlumnoACarritos(alumnoObj);
             }
         }
 
@@ -724,14 +705,12 @@
             });
         }
 
-        // 2. Script independiente para cargar el HTML del Navbar y rellenar el usuario al inyectarlo
         document.addEventListener("DOMContentLoaded", function() {
             fetch('/views/navbar.html')
                 .then(response => response.text())
                 .then(data => {
                     document.getElementById('navbar-container').innerHTML = data;
 
-                    // Consultar y pintar el nombre del usuario en sesión después de que el navbar aparezca en el DOM
                     fetch('/api/user-session')
                         .then(res => res.json())
                         .then(sesion => {

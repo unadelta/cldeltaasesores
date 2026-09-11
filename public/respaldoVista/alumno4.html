@@ -33,12 +33,12 @@
                     <table class="table table-hover align-middle">
                         <thead class="table-primary">
                             <tr>
-                                <th style="width: 5%;">N°</th>
-                                <th style="width: 15%;">Cédula</th>
-                                <th style="width: 30%;">Nombre y Apellido</th>
-                                <th style="width: 10%;">Código de Carrera</th>
-                                <th style="width: 30%;">Descripción</th>
-                                <th style="width: 10%;" class="text-center">Acciones</th>
+                                <th>ID</th>
+                                <th>Cédula</th>
+                                <th>Nombre y Apellido</th>
+                                <th>Código de Carrera</th>
+                                <th>Descripción</th>
+                                <th class="text-center">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="tablaAlumnos">
@@ -102,6 +102,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- SweetAlert2 JS -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         let modalInstance = null;
@@ -110,34 +111,18 @@
 
         document.addEventListener("DOMContentLoaded", async() => {
             modalInstance = new bootstrap.Modal(document.getElementById('modalAlumno'));
-
-            // Orden de ejecución sincronizado para evitar errores
-            await cargarNavbar();
             await verificarSesion();
             await cargarCarreras();
             await cargarAlumnos();
         });
 
-        // 1. Cargar el componente Navbar
-        async function cargarNavbar() {
-            try {
-                const response = await fetch('/views/navbar.html');
-                const data = await response.text();
-                document.getElementById('navbar-container').innerHTML = data;
-            } catch (err) {
-                console.error("Error al cargar el navbar:", err);
-            }
-        }
-
-        // 2. Verificar sesión y colocar el nombre en el navbar cargado
         async function verificarSesion() {
             try {
                 const resUser = await fetch('/api/user-session');
                 const dataUser = await resUser.json();
                 if (dataUser.authenticated) {
-                    // Busca ambos IDs para ser compatible con el nuevo navbar
-                    const elem = document.getElementById('nombreUsuario') || document.getElementById('usuarioAsesorLogueado');
-                    if (elem) elem.textContent = dataUser.user.nombre || dataUser.user.usuario;
+                    const elem = document.getElementById('nombreUsuario');
+                    if (elem) elem.textContent = dataUser.user.nombre;
                 } else {
                     window.location.href = '/';
                 }
@@ -178,18 +163,20 @@
                 listaAlumnosGlobal = Array.isArray(lista) ? lista : [];
 
                 if (listaAlumnosGlobal.length > 0) {
-                    listaAlumnosGlobal.forEach((a, index) => {
+                    listaAlumnosGlobal.forEach(a => {
                         const descripcionCarrera = a.descripcion_carrera || 'N/A';
                         const nombreEscape = (a.nombre || '').replace(/'/g, "\\'");
 
                         tbody.innerHTML += `
                     <tr>
-                        <td>${index + 1}</td>
+                        <td>${a.id}</td>
                         <td class="text-nowrap" style="font-size: 0.9rem;">${a.cedula}</td>
                         <td>${a.nombre}</td>
+                    <tr>
+
                         <td><span class="badge bg-secondary">${a.codigo_carrera}</span></td>
                         <td>${descripcionCarrera}</td>
-                        <td class="text-center text-nowrap">
+                        <td class="text-center">
                             <button class="btn btn-sm btn-warning me-1" onclick="editarAlumno(${a.id})" title="Editar">
                                 <i class="bi bi-pencil"></i>
                             </button>
@@ -426,6 +413,25 @@
                 });
             }
         }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            fetch('/views/navbar.html')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('navbar-container').innerHTML = data;
+
+                    fetch('/api/user-session')
+                        .then(res => res.json())
+                        .then(sesion => {
+                            const spanUsuario = document.getElementById('nombreUsuario');
+                            if (spanUsuario && sesion.authenticated && sesion.user) {
+                                spanUsuario.textContent = sesion.user.nombre || sesion.user.usuario;
+                            }
+                        })
+                        .catch(err => console.error("Error al obtener sesión de usuario:", err));
+                })
+                .catch(err => console.error("Error al cargar el navbar:", err));
+        });
     </script>
 </body>
 

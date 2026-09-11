@@ -5,31 +5,8 @@ const path = require('path');
 const fs = require('fs');
 const app = express();
 const session = require('express-session');
-
-// ==========================================
-// CONFIGURACIÓN DE LA BASE DE DATOS MYSQL
-// ==========================================
-const db = mysql.createPool({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'asesorias_una',
-    port: process.env.DB_PORT || 3306,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
-});
-
-// Verificar conexión inicial
-db.getConnection((err, connection) => {
-    if (err) {
-        console.error('❌ Error al conectar a la base de datos:', err);
-    } else {
-        console.log('✅ Conectado exitosamente a la base de datos MySQL.');
-        connection.release();
-    }
-});
-
+//const PORT = process.env.PORT || 3000;
+/*aqui*/
 // Configuración de Middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -47,73 +24,6 @@ app.use(session({
         maxAge: 24 * 60 * 60 * 1000 // 1 día
     }
 }));
-
-
-// ==========================================
-// RUTA RAÍZ (LOGIN)
-// ==========================================
-
-app.get('/', (req, res) => {
-    // Si ya hay una sesión activa, lo mandamos directo al dashboard
-    if (req.session && req.session.usuario) {
-        return res.redirect('/dashboard');
-    }
-    // Si no ha iniciado sesión, muestra tu archivo de login (ajusta el nombre si es login.html o index.html)
-    res.sendFile(path.join(__dirname, 'views', 'login.html'));
-});
-
-// ==========================================
-// RUTA DE AUTENTICACIÓN (LOGIN)
-// ==========================================
-
-app.post('/api/login', (req, res) => {
-    const { usuario, clave } = req.body;
-
-    if (!usuario || !clave) {
-        return res.status(400).json({ success: false, message: 'Por favor, ingrese usuario y contraseña.' });
-    }
-
-    const sql = 'SELECT * FROM asesor WHERE usuario = ? AND clave = ?';
-    db.query(sql, [usuario, clave], (err, results) => {
-        if (err) {
-            console.error('Error en el servidor al intentar iniciar sesión:', err);
-            return res.status(500).json({ success: false, message: 'Error interno en el servidor.' });
-        }
-
-        if (results.length > 0) {
-            const asesor = results[0];
-            // Guardar datos en la sesión
-            req.session.usuario = {
-                id: asesor.id,
-                cedula: asesor.cedula,
-                usuario: asesor.usuario,
-                nombre: asesor.nombre,
-                email: asesor.email,
-                rol_id: asesor.rol_id
-            };
-
-            res.json({ success: true, message: 'Autenticación exitosa' });
-        } else {
-            res.status(401).json({ success: false, message: 'Usuario o contraseña incorrectos.' });
-        }
-    });
-});
-
-// Endpoint para verificar sesión activa (compatible con /api/user-session y /api/sesion-usuario)
-app.get('/api/user-session', (req, res) => {
-    if (req.session && req.session.usuario) {
-        res.json({
-            authenticated: true,
-            user: req.session.usuario // Mantiene la compatibilidad con el frontend actual
-        });
-    } else {
-        res.json({
-            authenticated: false
-        });
-    }
-});
-
-
 
 
 // ==========================================
@@ -500,6 +410,21 @@ app.get('/api/alumnos/buscar/:cedula', (req, res) => {
 // RUTAS PARA EL MÓDULO DE ALUMNOS (CALLBACKS - TABLA: alumno)
 // ==========================================
 
+
+
+// LISTAR ALUMNOS
+app.get('/api/alumnos', (req, res) => {
+    // Se usa CALLBACK (err, results) porque db es un Pool estándar
+    const query = 'SELECT id, cedula, nombre, codigo_carrera, descripcion_carrera FROM alumno ORDER BY cedula ASC';
+    db.query(query, (err, results) => {
+        if (err) {
+            console.error('Error al obtener alumnos:', err);
+            return res.status(500).json({ success: false, message: 'Error en el servidor al consultar alumnos.' });
+        }
+        res.json({ success: true, data: results });
+    });
+});
+
 // BUSCAR ALUMNO POR CÉDULA
 app.get('/api/alumnos/buscar/:cedula', (req, res) => {
     const cedulaBusqueda = decodeURIComponent(req.params.cedula);
@@ -526,6 +451,7 @@ app.get('/api/alumnos/buscar/:cedula', (req, res) => {
 app.post('/api/alumnos', (req, res) => {
     const { cedula, nombre, codigo_carrera, descripcion_carrera } = req.body;
 
+    // 1. Validar campos obligatorios
     if (!cedula || !cedula.trim() || !nombre || !nombre.trim() || !codigo_carrera || !codigo_carrera.trim()) {
         return res.status(400).json({
             success: false,
@@ -535,6 +461,7 @@ app.post('/api/alumnos', (req, res) => {
 
     const cedulaLimpia = cedula.trim();
 
+    // 2. Verificar duplicado (Callback)
     db.query('SELECT id FROM alumno WHERE cedula = ?', [cedulaLimpia], (err, existente) => {
         if (err) {
             console.error('Error al verificar duplicado:', err);
@@ -548,6 +475,7 @@ app.post('/api/alumnos', (req, res) => {
             });
         }
 
+        // 3. Insertar (Callback) - Tabla: alumno
         const sqlInsert = 'INSERT INTO alumno (cedula, nombre, codigo_carrera, descripcion_carrera) VALUES (?, ?, ?, ?)';
         db.query(sqlInsert, [cedulaLimpia, nombre.trim(), codigo_carrera.trim(), (descripcion_carrera || '').trim()], (err, result) => {
             if (err) {
@@ -569,6 +497,7 @@ app.put('/api/alumnos/:id', (req, res) => {
     const { id } = req.params;
     const { cedula, nombre, codigo_carrera, descripcion_carrera } = req.body;
 
+    // 1. Validar campos
     if (!cedula || !cedula.trim() || !nombre || !nombre.trim() || !codigo_carrera || !codigo_carrera.trim()) {
         return res.status(400).json({
             success: false,
@@ -578,6 +507,7 @@ app.put('/api/alumnos/:id', (req, res) => {
 
     const cedulaLimpia = cedula.trim();
 
+    // 2. Verificar que la cédula no pertenezca a OTRO alumno (Callback)
     db.query('SELECT id FROM alumno WHERE cedula = ? AND id != ?', [cedulaLimpia, id], (err, existente) => {
         if (err) {
             console.error('Error al verificar duplicado en UPDATE:', err);
@@ -591,6 +521,7 @@ app.put('/api/alumnos/:id', (req, res) => {
             });
         }
 
+        // 3. Actualizar (Callback) - Tabla: alumno
         const sqlUpdate = 'UPDATE alumno SET cedula = ?, nombre = ?, codigo_carrera = ?, descripcion_carrera = ? WHERE id = ?';
         db.query(sqlUpdate, [cedulaLimpia, nombre.trim(), codigo_carrera.trim(), (descripcion_carrera || '').trim(), id], (err, result) => {
             if (err) {
@@ -610,11 +541,13 @@ app.put('/api/alumnos/:id', (req, res) => {
     });
 });
 
+
 // Endpoint para eliminar alumno
 app.delete('/api/alumnos/:id', async(req, res) => {
     const alumnoId = req.params.id;
 
     try {
+        // 1. Verificación opcional de dependencias en tablas asociadas
         try {
             const [calificaciones] = await db.promise().query(
                 'SELECT COUNT(*) as total FROM calificaciones WHERE alumno_id = ?', [alumnoId]
@@ -626,8 +559,11 @@ app.delete('/api/alumnos/:id', async(req, res) => {
                     message: 'El alumno tiene registros asociados y no puede ser eliminado.'
                 });
             }
-        } catch (e) {}
+        } catch (e) {
+            // Se ignora si la columna/tabla no existe o no aplica
+        }
 
+        // 2. ELIMINACIÓN EN LA TABLA CORRECTA (alumno)
         const [resultadoEliminacion] = await db.promise().query(
             'DELETE FROM alumno WHERE id = ?', [alumnoId]
         );
@@ -703,6 +639,7 @@ app.delete('/api/tareas/:id', (req, res) => {
     });
 });
 
+
 // RUTA CORRECCIONES
 
 app.get('/api/control_correcciones', async(req, res) => {
@@ -725,12 +662,15 @@ app.get('/api/control_correcciones', async(req, res) => {
 // RUTAS PARA EL MÓDULO DE ASESORÍAS
 // ==========================================
 
+
 app.get('/asesoria', (req, res) => {
     if (!req.session || !req.session.usuario) {
         return res.redirect('/');
     }
     res.sendFile(path.join(__dirname, 'views', 'asesoria.html'));
 });
+
+
 
 app.get('/api/control_asesoria', (req, res) => {
     const query = 'SELECT * FROM control_asesoria ORDER BY id DESC';
@@ -742,6 +682,9 @@ app.get('/api/control_asesoria', (req, res) => {
         res.json({ success: true, data: results });
     });
 });
+
+
+
 
 app.post('/api/control_asesoria', (req, res) => {
     const {
@@ -800,6 +743,11 @@ app.post('/api/control_asesoria', (req, res) => {
     });
 });
 
+// ==========================================
+// RUTAS PARA EL MÓDULO DE ASESORÍAS (COMPLEMENTO)
+// ==========================================
+
+// RUTA PARA ACTUALIZAR UNA ASESORÍA (EDITAR)
 app.put('/api/control_asesoria/:id', (req, res) => {
     const id = req.params.id;
     const {
@@ -837,8 +785,10 @@ app.put('/api/control_asesoria/:id', (req, res) => {
     });
 });
 
+// RUTA PARA ELIMINAR UNA ASESORÍA
 app.delete('/api/control_asesoria/:id', (req, res) => {
     const id = req.params.id;
+
     const deleteQuery = 'DELETE FROM control_asesoria WHERE id = ?';
 
     db.query(deleteQuery, [id], (err, result) => {
@@ -855,6 +805,12 @@ app.delete('/api/control_asesoria/:id', (req, res) => {
     });
 });
 
+
+
+
+
+
+
 // Ruta para registrar una nueva corrección
 app.post('/api/control_correcciones', async(req, res) => {
     try {
@@ -869,6 +825,7 @@ app.post('/api/control_correcciones', async(req, res) => {
             fecha
         } = req.body;
 
+        // Validar que los campos principales no estén vacíos
         if (!cedula_alumno || !codigo_materia || !tipo_correccion || !cedula_asesor) {
             return res.status(400).json({
                 success: false,
@@ -876,6 +833,7 @@ app.post('/api/control_correcciones', async(req, res) => {
             });
         }
 
+        // Si la fecha viene del cliente, se usa; de lo contrario, se genera en el servidor
         const fechaRegistro = fecha ? new Date(fecha) : new Date();
 
         const query = `
@@ -901,6 +859,12 @@ app.post('/api/control_correcciones', async(req, res) => {
         res.status(500).json({ success: false, message: 'Error en el servidor al guardar la corrección' });
     }
 });
+
+
+/***********Funcionando   ************************************************* */
+
+
+
 
 // ==========================================
 // API PARA EL REPORTE DE CONTROL DE ASESORÍAS
@@ -937,6 +901,10 @@ app.get('/api/controlasesoria', (req, res) => {
     });
 });
 
+//===================================================
+//RUTA PARA REPORTE DE CORRECCIONES
+//==================================================
+
 // ==========================================
 // API PARA EL REPORTE DE CONTROL DE CORRECCIONES
 // ==========================================
@@ -946,6 +914,7 @@ app.get('/reporcorrecciones', (req, res) => {
 });
 
 app.get('/api/reporcorrecciones', (req, res) => {
+    // Validar que la sesión exista y contenga los datos del usuario
     if (!req.session || !req.session.usuario) {
         return res.status(401).json({ success: false, message: 'No autorizado. Inicie sesión.' });
     }
@@ -953,6 +922,7 @@ app.get('/api/reporcorrecciones', (req, res) => {
     const cedulaAsesorSesion = req.session.usuario.cedula;
     const { fecha_desde, fecha_hasta } = req.query;
 
+    // Consulta filtrando estrictamente por la cédula del asesor de la sesión
     let query = `
         SELECT id, cedula_alumno, nombre_alumno, codigo_carrera, codigo_materia, tipo_correccion, fecha 
         FROM control_correcciones 
@@ -960,6 +930,7 @@ app.get('/api/reporcorrecciones', (req, res) => {
     `;
     let params = [cedulaAsesorSesion];
 
+    // Aplicar filtro por rango de fechas utilizando DATE() para ignorar la hora
     if (fecha_desde && fecha_hasta && fecha_desde.trim() !== '' && fecha_hasta.trim() !== '') {
         query += ` AND DATE(fecha) BETWEEN ? AND ?`;
         params.push(fecha_desde, fecha_hasta);
@@ -974,6 +945,47 @@ app.get('/api/reporcorrecciones', (req, res) => {
         }
         res.json({ success: true, data: results });
     });
+});
+// Ruta POST para registrar una nueva corrección
+app.post('/api/control_correcciones', async(req, res) => {
+    try {
+        const {
+            cedula_alumno,
+            nombre_alumno,
+            codigo_carrera,
+            codigo_materia,
+            tipo_correccion,
+            cedula_asesor,
+            nombre_asesor,
+            fecha
+        } = req.body;
+
+        if (!cedula_alumno || !codigo_materia || !tipo_correccion) {
+            return res.status(400).json({ success: false, message: 'Faltan campos obligatorios en el servidor.' });
+        }
+
+        const query = `
+            INSERT INTO control_correcciones 
+            (cedula_alumno, nombre_alumno, codigo_carrera, codigo_materia, tipo_correccion, cedula_asesor, nombre_asesor, fecha) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+
+        await db.execute(query, [
+            cedula_alumno,
+            nombre_alumno,
+            codigo_carrera,
+            codigo_materia,
+            tipo_correccion,
+            cedula_asesor,
+            nombre_asesor,
+            fecha
+        ]);
+
+        res.json({ success: true, message: 'Corrección registrada con éxito' });
+    } catch (error) {
+        console.error("Error al guardar la corrección:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
 });
 
 // Ruta PUT para actualizar una corrección existente por su ID
@@ -997,7 +1009,7 @@ app.put('/api/control_correcciones/:id', async(req, res) => {
             WHERE id = ?
         `;
 
-        await db.promise().execute(query, [
+        await db.execute(query, [
             cedula_alumno,
             nombre_alumno,
             codigo_carrera,
@@ -1020,8 +1032,9 @@ app.put('/api/control_correcciones/:id', async(req, res) => {
 app.delete('/api/control_correcciones/:id', async(req, res) => {
     try {
         const { id } = req.params;
+
         const query = `DELETE FROM control_correcciones WHERE id = ?`;
-        await db.promise().execute(query, [id]);
+        await db.execute(query, [id]);
 
         res.json({ success: true, message: 'Registro eliminado correctamente' });
     } catch (error) {
@@ -1110,6 +1123,7 @@ app.post('/api/calificaciones-alumnos', async(req, res) => {
     }
 });
 
+// ENDPOINT: Actualizar las notas de los objetivos y la calificación final de un alumno
 app.put('/api/calificaciones-alumnos/objetivos', async(req, res) => {
     const { calificacion_codigo, cedula_alumno, objetivos, nota_final, nota_final_letra } = req.body;
 
@@ -1122,6 +1136,7 @@ app.put('/api/calificaciones-alumnos/objetivos', async(req, res) => {
         const codigoLimpio = calificacion_codigo.replace(/[^a-zA-Z0-9_]/g, '');
         const nombreTabla = `calificacion_${codigoLimpio}`;
 
+        // 1. Consultar el número de objetivos (numobj) de la materia en la base de datos
         const [materiaRows] = await connection.query(
             'SELECT numobj FROM materia WHERE codigo = ?', [calificacion_codigo]
         );
@@ -1131,9 +1146,11 @@ app.put('/api/calificaciones-alumnos/objetivos', async(req, res) => {
         }
 
         const totalObjetivos = parseInt(materiaRows[0].numobj) || 0;
+
         let camposSet = [];
         let valoresSet = [];
 
+        // 2. Generar dinámicamente las columnas obj1, obj2... hasta numobj basándose en la BD
         for (let i = 1; i <= totalObjetivos; i++) {
             const nombreObj = `obj${i}`;
             camposSet.push(`\`${nombreObj}\` = ?`);
@@ -1149,15 +1166,18 @@ app.put('/api/calificaciones-alumnos/objetivos', async(req, res) => {
             valoresSet.push(valNumerico);
         }
 
+        // 3. Añadir nota final y letra
         camposSet.push('`nota_final` = ?');
         valoresSet.push(parseFloat(nota_final) || 0);
 
         camposSet.push('`nota_final_letra` = ?');
         valoresSet.push(nota_final_letra || '');
 
+        // 4. Agregar la cédula del alumno para el WHERE
         valoresSet.push(cedula_alumno);
 
         const queryUpdate = `UPDATE \`${nombreTabla}\` SET ${camposSet.join(', ')} WHERE cedula_alumno = ?`;
+
         const [resultado] = await connection.query(queryUpdate, valoresSet);
 
         if (resultado.affectedRows === 0) {
@@ -1174,7 +1194,6 @@ app.put('/api/calificaciones-alumnos/objetivos', async(req, res) => {
         res.status(500).json({ success: false, message: err.message });
     }
 });
-
 app.get('/api/sesion-usuario', (req, res) => {
     if (req.session && req.session.usuario) {
         res.json({ success: true, nombre: req.session.usuario.nombre || req.session.usuario });
@@ -1183,11 +1202,14 @@ app.get('/api/sesion-usuario', (req, res) => {
     }
 });
 
+// Endpoint para obtener únicamente el número de objetivos de la materia desde su código
 app.get('/api/materias-objetivos/:codigoMateria', async(req, res) => {
     const { codigoMateria } = req.params;
 
     try {
         const connection = db.promise();
+
+        // Consultar la tabla materia usando el código para obtener el numobj
         const [materiaRows] = await connection.query(
             'SELECT id, codigo, descripcion, numobj, minaprueba FROM materia WHERE codigo = ?', [codigoMateria]
         );
@@ -1197,6 +1219,7 @@ app.get('/api/materias-objetivos/:codigoMateria', async(req, res) => {
         }
 
         const materia = materiaRows[0];
+
         res.json({
             success: true,
             numobj: parseInt(materia.numobj) || 0,
@@ -1210,6 +1233,8 @@ app.get('/api/materias-objetivos/:codigoMateria', async(req, res) => {
     }
 });
 
+
+// ENDPOINT: Eliminar al alumno y su fila de la tabla calificacion_(codigo materia)
 app.delete('/api/calificaciones-alumnos/:codigoMateria/:cedulaAlumno', async(req, res) => {
     const { codigoMateria, cedulaAlumno } = req.params;
 
@@ -1240,11 +1265,20 @@ app.delete('/api/calificaciones-alumnos/:codigoMateria/:cedulaAlumno', async(req
     }
 });
 
+
+
+
 app.get('/api/objetivos-materia/:codigo', async(req, res) => {
     try {
         const { codigo } = req.params;
+        console.log("Buscando objetivos para el código de materia en MySQL:", codigo);
+
         const query = 'SELECT id, materia_codigo, nro_objetivo, peso FROM objetivo_materia WHERE materia_codigo = ? ORDER BY nro_objetivo ASC';
+
+        // Agregamos .promise() para que acepte async/await
         const [rows] = await db.promise().query(query, [codigo]);
+
+        console.log("Filas encontradas en MySQL:", rows);
         res.json({ success: true, data: rows });
     } catch (error) {
         console.error("Error en endpoint de objetivos:", error);
@@ -1255,7 +1289,11 @@ app.get('/api/objetivos-materia/:codigo', async(req, res) => {
 app.post('/api/calcular-definitiva', async(req, res) => {
     try {
         const { codigo_materia, peso_acumulado } = req.body;
+        console.log("Calculando definitiva para materia:", codigo_materia, "con peso acumulado:", peso_acumulado);
+
+        // Consultamos la tabla 'calificaciones' usando el código de materia y el peso acumulado
         const query = 'SELECT calificacion_definitiva FROM calificaciones WHERE cod_materia = ? AND peso_acumulado = ? LIMIT 1';
+
         const [rows] = await db.promise().query(query, [codigo_materia, peso_acumulado]);
 
         if (rows.length > 0) {
@@ -1269,6 +1307,7 @@ app.post('/api/calcular-definitiva', async(req, res) => {
     }
 });
 
+// Ruta para el Reporte de Calificaciones
 app.get('/reporcalificaciones', (req, res) => {
     res.sendFile(path.join(__dirname, 'views', 'reporcalificaciones.html'));
 });
@@ -1328,6 +1367,7 @@ app.post('/api/tipo_asesoria', (req, res) => {
     }
 
     const { codigo_ase, descripcion_asesoria } = req.body;
+
     if (!codigo_ase || !descripcion_asesoria) {
         return res.status(400).json({ success: false, message: 'Faltan datos obligatorios' });
     }
@@ -1349,6 +1389,7 @@ app.put('/api/tipo_asesoria/:id', (req, res) => {
 
     const { id } = req.params;
     const { codigo_ase, descripcion_asesoria } = req.body;
+
     const sql = 'UPDATE tipoasesoria SET codigo_ase = ?, descripcion_asesoria = ? WHERE id = ?';
     db.query(sql, [codigo_ase, descripcion_asesoria, id], (err, result) => {
         if (err) {
@@ -1380,6 +1421,20 @@ app.delete('/api/tipo_asesoria/:id', (req, res) => {
         res.json({ success: true, message: 'Tipo de asesoría eliminado exitosamente' });
     });
 });
+
+// ==========================================
+// RUTA Y CRUD COMPLETO: CONTROL DE TRABAJOS (TP / PTG)
+// ==========================================
+
+
+
+app.get('/control_tptsptg.html', (req, res) => {
+    if (!req.session || !req.session.usuario) {
+        return res.redirect('/');
+    }
+    res.sendFile(path.join(__dirname, 'views', 'control_tptsptg.html'));
+});
+
 
 // ==========================================
 // RUTA Y CRUD COMPLETO PARA EL MÓDULO CORRECCIONES
@@ -1419,6 +1474,7 @@ app.post('/api/correcciones', async(req, res) => {
     }
 
     const { codigo, descripcion } = req.body;
+
     if (!codigo || !descripcion) {
         return res.status(400).json({ success: false, message: 'Faltan campos obligatorios.' });
     }
@@ -1474,13 +1530,112 @@ app.delete('/api/correcciones/:id', async(req, res) => {
     }
 });
 
-// Ruta para servir la vista del reporte consolidado
+
+app.post('/api/control_correcciones', async(req, res) => {
+    try {
+        const {
+            cedula_alumno,
+            nombre_alumno,
+            codigo_carrera,
+            codigo_materia,
+            tipo_correccion,
+            cedula_asesor,
+            nombre_asesor,
+            fecha
+        } = req.body;
+
+        // Validación básica en el servidor
+        if (!cedula_alumno || !codigo_materia || !tipo_correccion) {
+            return res.status(400).json({ success: false, message: 'Faltan campos obligatorios en el servidor.' });
+        }
+
+        const query = `
+            INSERT INTO control_correcciones 
+            (cedula_alumno, nombre_alumno, codigo_carrera, codigo_materia, tipo_correccion, cedula_asesor, nombre_asesor, fecha) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+
+        // Ajusta db.execute o db.query según tu gestor de base de datos (MySQL/PostgreSQL)
+        await db.execute(query, [
+            cedula_alumno,
+            nombre_alumno,
+            codigo_carrera,
+            codigo_materia,
+            tipo_correccion,
+            cedula_asesor,
+            nombre_asesor,
+            fecha
+        ]);
+
+        res.json({ success: true, message: 'Corrección registrada con éxito' });
+    } catch (error) {
+        console.error("Error al guardar la corrección:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+app.put('/api/control_correcciones/:id', async(req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            cedula_alumno,
+            nombre_alumno,
+            codigo_carrera,
+            codigo_materia,
+            tipo_correccion,
+            cedula_asesor,
+            nombre_asesor,
+            fecha
+        } = req.body;
+
+        const query = `
+            UPDATE control_correcciones 
+            SET cedula_alumno = ?, nombre_alumno = ?, codigo_carrera = ?, codigo_materia = ?, tipo_correccion = ?, cedula_asesor = ?, nombre_asesor = ?, fecha = ? 
+            WHERE id = ?
+        `;
+
+        await db.execute(query, [
+            cedula_alumno,
+            nombre_alumno,
+            codigo_carrera,
+            codigo_materia,
+            tipo_correccion,
+            cedula_asesor,
+            nombre_asesor,
+            fecha,
+            id
+        ]);
+
+        res.json({ success: true, message: 'Corrección actualizada con éxito' });
+    } catch (error) {
+        console.error("Error al actualizar la corrección:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+app.delete('/api/control_correcciones/:id', async(req, res) => {
+    try {
+        const { id } = req.params;
+
+        const query = `DELETE FROM control_correcciones WHERE id = ?`;
+        await db.execute(query, [id]);
+
+        res.json({ success: true, message: 'Registro eliminado correctamente' });
+    } catch (error) {
+        console.error("Error al eliminar la corrección:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Ruta para servir la vista del reporte consolidado en server.js
 app.get('/reporconsolidado', (req, res) => {
     if (!req.session || !req.session.usuario) {
         return res.redirect('/');
     }
     res.sendFile(path.join(__dirname, 'views', 'reporconsolidado.html'));
 });
+// ==========================================
+// RUTA PARA EL REPORTE CONSOLIDADO DE ACTIVIDADES
+// ==========================================
 
 app.get('/api/reporte_actividades', (req, res) => {
     if (!req.session || !req.session.usuario) {
@@ -1488,10 +1643,12 @@ app.get('/api/reporte_actividades', (req, res) => {
     }
 
     const { inicio, fin } = req.query;
+
     if (!inicio || !fin) {
         return res.status(400).json({ success: false, message: 'Debe proporcionar una fecha de inicio y fin.' });
     }
 
+    // Conteo agrupado por tipo_asesoria
     const queryAsesorias = `
         SELECT tipo_asesoria, COUNT(*) AS cantidad 
         FROM control_asesoria 
@@ -1499,6 +1656,7 @@ app.get('/api/reporte_actividades', (req, res) => {
         GROUP BY tipo_asesoria
     `;
 
+    // Conteo agrupado directamente por tipo_correccion de la tabla control_correcciones
     const queryCorrecciones = `
         SELECT tipo_correccion, COUNT(*) AS cantidad 
         FROM control_correcciones 
@@ -1527,8 +1685,93 @@ app.get('/api/reporte_actividades', (req, res) => {
     });
 });
 
-// Inicialización del servidor
+
+
+
+app.get('/form_reporte_asesoria', (req, res) => {
+    if (!req.session || !req.session.usuario) {
+        return res.redirect('back');
+    }
+
+    res.sendFile(path.join(__dirname, 'views', 'form_reporte_asesoria.html'));
+});
+
+
+
+// RUTA ACCESIBLE DESDE EL MENÚ
+app.get('/reporte/asesorias', async(req, res) => {
+    try {
+        console.log('--- DATOS EN SESIÓN ---', req.session);
+
+        const usuarioSesion = req.session ? req.session.usuario : null;
+
+        const cedulaAsesor = (req.session && req.session.cedula) || (usuarioSesion && usuarioSesion.cedula);
+        const nombreAsesor = (req.session && req.session.nombre) || (usuarioSesion && usuarioSesion.nombre) || 'Asesor Académico';
+
+        if (!req.session || !cedulaAsesor) {
+            console.error('Error: No se encontró la cédula en req.session');
+            return res.status(401).send('Sesión no válida.');
+        }
+
+        const { fecha_inicio, fecha_fin } = req.query;
+
+        if (!fecha_inicio || !fecha_fin) {
+            return res.status(400).send('Debe seleccionar el rango de fechas.');
+        }
+
+        const query = `
+            SELECT 
+                DATE_FORMAT(fecha, '%d/%m/%Y') AS fecha,
+                cedula,
+                nombre_alumno,
+                codigo_carrera,
+                codigo_materia,
+                tipo_asesoria
+            FROM control_asesoria
+            WHERE cedula_asesor = ? 
+              AND fecha BETWEEN ? AND ?
+            ORDER BY fecha ASC
+        `;
+
+        const [filas] = await db.execute(query, [cedulaAsesor, fecha_inicio, fecha_fin]);
+
+        const rutaLogo = path.join(__dirname, 'public', 'jpg', 'logouna.jpg');
+        let logoBase64 = '';
+        if (fs.existsSync(rutaLogo)) {
+            const bitmap = fs.readFileSync(rutaLogo);
+            logoBase64 = `data:image/jpeg;base64,${bitmap.toString('base64')}`;
+        }
+
+        const pdfBuffer = await generarPDFAsesorias({
+            logoPath: logoBase64,
+            fecha_inicio: new Date(fecha_inicio + 'T00:00:00').toLocaleDateString('es-VE'),
+            fecha_fin: new Date(fecha_fin + 'T00:00:00').toLocaleDateString('es-VE'),
+            asesorias: filas,
+            nombre_asesor: nombreAsesor,
+            cedula_asesor: cedulaAsesor
+        });
+
+        // Configuración de cabeceras HTTP y envío seguro mediante res.send
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="Reporte_Asesorias_${cedulaAsesor}.pdf"`);
+        res.setHeader('Content-Length', pdfBuffer.length);
+
+        return res.send(pdfBuffer);
+
+    } catch (error) {
+        console.error('Error al generar el PDF:', error);
+        res.status(500).send('Error interno generando el reporte.');
+    }
+});
+
+
+
+
+
+// Asegurar que la variable PORT esté declarada antes del listen
 const PORT = process.env.PORT || 3000;
+// ===================================================
+// === ESTO DEBE IR AL FINAL DE TU SERVER.JS ===
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Servidor ejecutándose en el puerto ${PORT}`);
 });
