@@ -5,8 +5,6 @@ const path = require('path');
 const fs = require('fs');
 const app = express();
 const session = require('express-session');
-
-
 if (process.env.NODE_ENV !== 'production') {
     require('dotenv').config();
 }
