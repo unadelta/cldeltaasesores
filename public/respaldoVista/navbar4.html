@@ -70,18 +70,11 @@
     </div>
 </nav>
 
-<!-- Script autónomo adaptado para entorno local y de red -->
+<!-- Script autónomo para el Navbar sincronizado -->
 <script>
     (function() {
-        // Se utiliza la API nativa de JavaScript para detectar el origen actual (ej. http://localhost:3000 o http://192.168.1.50:3000)
-        // permitiendo que el fetch responda correctamente tanto en pruebas locales como en la red interna.
-        const baseURL = window.location.origin;
-
-        fetch(`${baseURL}/api/user-session`)
-            .then(res => {
-                if (!res.ok) throw new Error('No autorizado o error de red');
-                return res.json();
-            })
+        fetch('/api/user-session')
+            .then(res => res.json())
             .then(sesion => {
                 const spanUsuario = document.getElementById('nombreUsuario') || document.getElementById('usuarioAsesorLogueado');
                 if (spanUsuario && sesion.authenticated && sesion.user) {
@@ -91,7 +84,7 @@
                 }
             })
             .catch(err => {
-                console.warn("Aviso de sesión en navbar (Local/Red):", err.message);
+                console.error("Error al obtener sesión en el navbar:", err);
                 const spanUsuario = document.getElementById('nombreUsuario') || document.getElementById('usuarioAsesorLogueado');
                 if (spanUsuario) spanUsuario.textContent = 'Sesión no disponible';
             });
