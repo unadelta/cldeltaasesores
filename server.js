@@ -56,7 +56,8 @@ const pool = mysql.createPool({
     queueLimit: 0,
     connectTimeout: 10000 // 10 segundos de límite para evitar que se quede congelado
 });
-
+// 👉 AGREGA ESTA LÍNEA AQUÍ:
+const db = pool;
 // Prueba explícita de conexión al arrancar el servidor
 pool.getConnection((err, connection) => {
     if (err) {
