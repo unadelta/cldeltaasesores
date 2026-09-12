@@ -10,7 +10,7 @@ const session = require('express-session');
 if (process.env.NODE_ENV !== 'production') {
     require('dotenv').config();
 }
-
+/*
 const connectionString = process.env.MYSQL_URL || process.env.DATABASE_URL;
 
 const pool = connectionString ?
@@ -42,7 +42,42 @@ pool.getConnection((err, connection) => {
 });
 
 module.exports = db;
+*/
 
+//const mysql = require('mysql2');
+
+// Configuración del pool usando las variables de entorno
+const pool = mysql.createPool({
+    host: process.env.MYSQLHOST,
+    user: process.env.MYSQLUSER,
+    password: process.env.MYSQLPASSWORD,
+    database: process.env.MYSQLDATABASE,
+    port: process.env.MYSQLPORT || 3306,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+    connectTimeout: 10000 // 10 segundos de límite para evitar que se quede congelado
+});
+
+// Prueba explícita de conexión al arrancar el servidor
+pool.getConnection((err, connection) => {
+    if (err) {
+        console.error('❌ ERROR: No se pudo conectar a la base de datos de Railway:', err.message);
+        if (err.code === 'PROTOCOL_CONNECTION_LOST') {
+            console.error('La conexión con la base de datos fue cerrada.');
+        }
+        if (err.code === 'ER_CON_COUNT_ERROR') {
+            console.error('La base de datos tiene demasiadas conexiones.');
+        }
+        if (err.code === 'ECONNREFUSED') {
+            console.error('La conexión fue rechazada. Revisa el host y el puerto.');
+        }
+    } else {
+        console.log('✅ ¡ÉXITO! Conexión exitosa a la base de datos MySQL en Railway.');
+        // Es muy importante liberar la conexión de vuelta al pool
+        connection.release();
+    }
+});
 
 
 // ==========================================
