@@ -5,6 +5,24 @@ const path = require('path');
 const fs = require('fs');
 const app = express();
 const session = require('express-session');
+
+//Respaldo BD
+const cors = require('cors');
+require('dotenv').config(); // Muy importante para las credenciales
+//Respaldobd
+
+
+// --- IMPORTANTE: Middlewares globales ---
+app.use(cors());
+app.use(express.json()); // Necesario para recibir JSON del frontend
+
+// --- Importar las rutas de administración de DB ---
+// Asumiendo que creaste el archivo en ./routes/db_admin.routes.js
+const dbAdminRoutes = require('./routes/db_admin.routes');
+
+
+//Repaldo BD
+
 if (process.env.NODE_ENV !== 'production') {
     require('dotenv').config();
 }
@@ -1606,6 +1624,39 @@ app.get('/api/reporte_actividades', (req, res) => {
         });
     });
 });
+
+
+
+app.use('/api/db', dbAdminRoutes);
+
+
+// --- Ruta de prueba ---
+app.get('/', (req, res) => {
+    res.send('Servidor API Asesores UNA funcionando.');
+});
+
+// server.js
+
+// ... (después de configurar express.static y express.json)
+
+// ==========================================
+// RUTA PARA SERVIR LA INTERFAZ DE ADMIN DB
+// ==========================================
+app.get('/admin_db', (req, res) => {
+    // IMPORTANTE: Primero debes proteger esta ruta.
+    // Descomenta el middleware de autenticación de admin que tengas.
+    // Ejemplo: if (!req.session.usuario || req.session.usuario.rol !== 'admin') return res.redirect('/');
+
+    // Asumiendo que admin_db.html está en la carpeta 'views'
+    res.sendFile(path.join(__dirname, 'views', 'admin_db.html'));
+});
+
+// ... (más abajo deben estar las rutas de la API que ya creamos)
+app.use('/api/db', dbAdminRoutes);
+
+// ...
+
+
 
 // Inicialización del servidor
 const PORT = process.env.PORT || 3000;

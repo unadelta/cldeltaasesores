@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administración de Base de Datos - Asesores UNA</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+</head>
+
+<body class="bg-light">
+
+    <!-- Incluir tu navbar aquí -->
+    <div id="navbar-placeholder"></div>
+
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-10">
+
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2><i class="bi bi-database-gear text-danger me-2"></i>Módulo de Administración de Base de Datos</h2>
+                    <span class="badge bg-warning text-dark p-2 fs-6">Solo Administradores</span>
+                </div>
+
+                <div class="alert alert-danger border-start border-5 border-danger" role="alert">
+                    <h4 class="alert-heading"><i class="bi bi-exclamation-triangle-fill me-2"></i>¡Atención!</h4>
+                    <p class="mb-0">Estas herramientas afectan directamente la integridad de los datos del sistema. Asegúrese de realizar respaldos antes de aplicar cualquier actualización.</p>
+                </div>
+
+                <div class="row g-4 mt-2">
+
+                    <!-- TARJETA 1: RESPALDO -->
+                    <div class="col-md-6">
+                        <div class="card h-100 shadow-sm border-0">
+                            <div class="card-header bg-primary text-white py-3">
+                                <h5 class="card-title mb-0"><i class="bi bi-cloud-arrow-down-fill me-2"></i>Respaldo de Base de Datos</h5>
+                            </div>
+                            <div class="card-body d-flex flex-column justify-content-between p-4">
+                                <p class="card-text text-muted">Genera un archivo SQL completo de la base de datos actual (estructura y datos) y lo descarga a su disco local.</p>
+                                <div class="text-center">
+                                    <div id="spinnerRespaldo" class="spinner-border text-primary d-none" role="status">
+                                        <span class="visually-hidden">Generando...</span>
+                                    </div>
+                                    <button id="btnGenerarRespaldo" class="btn btn-lg btn-primary w-100" onclick="generarRespaldo()">
+                                        <i class="bi bi-download me-2"></i>Generar y Descargar Respaldo
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-footer text-muted small">
+                                Archivo: `backup_asesores_YYYY-MM-DD.sql`
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TARJETA 2: UPDATE -->
+                    <div class="col-md-6">
+                        <div class="card h-100 shadow-sm border-0">
+                            <div class="card-header bg-danger text-white py-3">
+                                <h5 class="card-title mb-0"><i class="bi bi-upload me-2"></i>Actualizar Base de Datos</h5>
+                            </div>
+                            <div class="card-body d-flex flex-column p-4">
+                                <p class="card-text text-muted">Suba un archivo `.sql` para ejecutar cambios en la estructura (tablas nuevas, campos) o inserciones masivas.</p>
+
+                                <div class="mb-3">
+                                    <label for="archivoSql" class="form-label fw-semibold">Seleccionar archivo SQL:</label>
+                                    <input class="form-control" type="file" id="archivoSql" accept=".sql" required>
+                                    <div class="form-text text-danger">El archivo debe ser confiable y estar probado.</div>
+                                </div>
+
+                                <div class="text-center mt-auto">
+                                    <div id="spinnerUpdate" class="spinner-border text-danger d-none" role="status">
+                                        <span class="visually-hidden">Ejecutando...</span>
+                                    </div>
+                                    <button id="btnEjecutarUpdate" class="btn btn-lg btn-danger w-100" onclick="ejecutarUpdate()">
+                                        <i class="bi bi-play-circle-fill me-2"></i>Ejecutar Actualización
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        // --- LADO DEL CLIENTE (JS) ---
+
+        // 1. Generar Respaldo
+        async function generarRespaldo() {
+            const btn = document.getElementById('btnGenerarRespaldo');
+            const spinner = document.getElementById('spinnerRespaldo');
+
+            try {
+                // UI Loading
+                btn.classList.add('d-none');
+                spinner.classList.remove('d-none');
+
+                // Petición al servidor para descargar
+                const response = await fetch('/api/db/respaldo', {
+                    method: 'GET'
+                });
+
+                if (!response.ok) throw new Error('Error en el servidor al generar respaldo');
+
+                // Forzar descarga del blob recibido
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+
+                // Obtener nombre de archivo del header si existe, sino crear uno
+                const contentDisposition = response.headers.get('Content-Disposition');
+                let filename = 'backup_asesores.sql';
+                if (contentDisposition && contentDisposition.includes('filename=')) {
+                    filename = contentDisposition.split('filename=')[1].replace(/"/g, '');
+                }
+
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+
+                Swal.fire('¡Éxito!', 'Respaldo generado y descargado correctamente.', 'success');
+
+            } catch (error) {
+                console.error(error);
+                Swal.fire('Error', 'No se pudo generar el respaldo. Verifique los logs del servidor.', 'error');
+            } finally {
+                // UI Reset
+                btn.classList.remove('d-none');
+                spinner.classList.add('d-none');
+            }
+        }
+
+        // 2. Ejecutar Update
+        async function ejecutarUpdate() {
+            const fileInput = document.getElementById('archivoSql');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                Swal.fire('Atención', 'Por favor seleccione un archivo SQL.', 'warning');
+                return;
+            }
+
+            // Confirmación severa
+            const result = await Swal.fire({
+                title: '¿Está COMPLETAMENTE seguro?',
+                text: `Se ejecutará el archivo "${file.name}" en la base de datos de producción. Esta acción puede ser DESTRUCTIVA y no se puede deshacer automáticamente.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, ejecutar actualización',
+                cancelButtonText: 'Cancelar'
+            });
+
+            if (result.isConfirmed) {
+                const btn = document.getElementById('btnEjecutarUpdate');
+                const spinner = document.getElementById('spinnerUpdate');
+
+                try {
+                    // UI Loading
+                    btn.classList.add('d-none');
+                    spinner.classList.remove('d-none');
+
+                    const formData = new FormData();
+                    formData.append('sqlFile', file);
+
+                    const response = await fetch('/api/db/update', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        Swal.fire('¡Actualización Exitosa!', result.message || 'Los cambios se aplicaron correctamente.', 'success');
+                        fileInput.value = ''; // Limpiar input
+                    } else {
+                        // Mostrar error detallado del SQL
+                        Swal.fire({
+                            title: 'Error en la Actualización',
+                            html: `Hubo un error al ejecutar el script:<br><pre class="text-danger text-start mt-2 bg-light p-2" style="max-height:200px; overflow:auto;">${result.error || ''}</pre>`,
+                            icon: 'error',
+                            confirmButtonColor: '#0d6efd'
+                        });
+                    }
+
+                } catch (error) {
+                    console.error(error);
+                    Swal.fire('Error', 'Error de conexión al intentar subir el archivo.', 'error');
+                } finally {
+                    // UI Reset
+                    btn.classList.remove('d-none');
+                    spinner.classList.add('d-none');
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>
