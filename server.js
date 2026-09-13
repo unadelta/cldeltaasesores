@@ -855,12 +855,13 @@ app.post('/api/control_asesoria', (req, res) => {
     const checkQuery = `
         SELECT id FROM control_asesoria 
         WHERE cedula_alumno = ? 
+        AND nombre_alumno = ?
         AND codigo_materia = ? 
         AND tipo_asesoria = ?
         AND DATE(fecha_hora) = CURDATE()
     `;
 
-    db.query(checkQuery, [cedula_alumno, codigo_materia, tipo_asesoria], (err, results) => {
+    db.query(checkQuery, [cedula_alumno, nombre_alumno, codigo_materia, tipo_asesoria], (err, results) => {
         if (err) {
             console.error('Error al verificar duplicado:', err);
             return res.status(500).json({ success: false, message: 'Error interno del servidor' });
@@ -1016,7 +1017,7 @@ app.get('/api/controlasesoria', (req, res) => {
     const cedulaAsesorSesion = req.session.usuario.cedula;
     let { fecha_desde, fecha_hasta } = req.query;
 
-    let query = 'SELECT id, cedula_alumno, codigo_carrera, tipo_asesoria, codigo_materia, fecha_hora FROM control_asesoria WHERE cedula_asesor = ?';
+    let query = 'SELECT id, cedula_alumno,nombre_alumno, codigo_carrera, tipo_asesoria, codigo_materia, fecha_hora FROM control_asesoria WHERE cedula_asesor = ?';
     let params = [cedulaAsesorSesion];
 
     if (fecha_desde && fecha_hasta) {

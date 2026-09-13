@@ -262,16 +262,13 @@
         // ==============================================================================
 
         // A. Cargar Catálogo Maestro (con OPTGROUP visual)
-        // A. Cargar Catálogo Maestro (con OPTGROUP visual)
         async function inicializarCatalogo() {
-            const selectCodigo = document.getElementById('codigo_select');
+            const selectCodigo = document.getElementById('codigo');
             if (!selectCodigo) return;
-
             selectCodigo.innerHTML = '<option value="" selected disabled>Cargando catálogo...</option>';
 
             try {
-                // CORREGIDO: Se ajustó la ruta para que coincida exactamente con la del backend (/api/materia_una)
-                const res = await fetch('/api/materia_una');
+                const res = await fetch('/api/catalogo-materias'); // Debe devolver { success: true, data: [...] }
                 const data = await res.json();
 
                 if (data.success && Array.isArray(data.data)) {
@@ -286,7 +283,7 @@
                     catalogoMateriasGlobal.forEach(mat => {
                         const option = document.createElement('option');
                         option.value = mat.codigo; // El valor real (ej. '610')
-                        option.textContent = `${mat.codigo} - ${mat.descripcion}`; // Visual (ej. '610 - CONTADURIA')
+                        option.textContent = `${mat.codigo} -${mat.descripcion}`; // Visual (ej. '610 - CONTADURIA')
                         optgroup.appendChild(option);
                     });
 
@@ -300,6 +297,9 @@
                 selectCodigo.innerHTML = '<option value="" selected disabled>Error de conexión</option>';
             }
         }
+
+
+
         // B. Autocompletar campos visuales al cambiar el combobox
         function autocompletarMateria() {
             // CORREGIDO: Apuntar al nuevo ID del select principal
