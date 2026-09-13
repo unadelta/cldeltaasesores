@@ -9,29 +9,13 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <style>
-        /* .table-custom-header th {
+        .table-custom-header th {
             background-color: #cfe2ff !important;
             color: #000000 !important;
             font-size: 0.85rem !important;
             font-weight: 700 !important;
             text-align: center;
             vertical-align: middle;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-        */
-        
-        .table-custom-header th {
-            background-color: #1F91DC !important;
-            color: #ffffff !important;
-            font-size: 0.85rem !important;
-            font-weight: 700 !important;
-            text-align: center;
-            vertical-align: middle;
-            position: sticky;
-            top: 0;
-            z-index: 10;
         }
         
         .table-custom-header th:nth-child(2),
@@ -92,8 +76,8 @@
         </div>
 
         <div class="card border-0 shadow-sm mb-4">
-            <div class="card-body p-0">
-                <div class="table-responsive" style="max-height: 550px; overflow-y: auto;">
+            <div class="card-body p-2 p-md-3">
+                <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-custom-header" id="tablaCabecera">
                             <tr>
@@ -287,7 +271,7 @@
                     listaAlumnosGlobal = lista.sort((a, b) => {
                         const numA = parseInt((a.cedula || '').replace(/\D/g, '')) || 0;
                         const numB = parseInt((b.cedula || '').replace(/\D/g, '')) || 0;
-                        return numA - numB;
+                        return numA - numB; // 👈 Cambiado a ascendente
                     });
 
 
@@ -411,17 +395,16 @@
             if (!codigoSeleccionado) {
                 labelNombreMateria.textContent = '';
                 thead.innerHTML = `
-                            <tr>
-                                style="background-color: #1F91DC !important; color: #ffffff !important; font-size: 0.85rem !important; font-weight: 700 !important; position: sticky; top: 0; z-index: 10;"
-                                <th>Items</th>
-                                <th class="text-start">Apellido y nombre</th>
-                                <th class="text-start">Cédula</th>
-                                <th class="text-start">Cod. Carrera</th>
-                                <th>Calificación</th>
-                                <th>Descripción</th>
-                                <th class="text-center">Acciones</th>
-                            </tr>
-                        `;
+                    <tr>
+                        <th>Items</th>
+                        <th class="text-start">Apellido y nombre</th>
+                        <th class="text-start">Cédula</th>
+                        <th class="text-start">Cod. Carrera</th>
+                        <th>Calificación</th>
+                        <th>Descripción</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                `;
                 tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">Seleccione una materia para ver los objetivos y calificaciones.</td></tr>`;
                 return;
             }
@@ -442,17 +425,17 @@
                 }
 
                 thead.innerHTML = `
-                            <tr>
-                                <th>Items</th>
-                                <th class="text-start">Apellido y nombre</th>
-                                <th class="text-start">Cédula</th>
-                                <th class="text-start">Cod. Carrera</th>
-                                ${thObjetivosHtml}
-                                <th>Calificación</th>
-                                <th>Descripción</th>
-                                <th class="text-center">Acciones</th>
-                            </tr>
-                        `;
+                    <tr>
+                        <th>Items</th>
+                        <th class="text-start">Apellido y nombre</th>
+                        <th class="text-start">Cédula</th>
+                        <th class="text-start">Cod. Carrera</th>
+                        ${thObjetivosHtml}
+                        <th>Calificación</th>
+                        <th>Descripción</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                `;
 
                 tbody.innerHTML = `<tr><td colspan="${7 + numObj}" class="text-center text-muted py-4">Cargando registros del semestre ${semestreSeleccionado}...</td></tr>`;
 
@@ -460,11 +443,9 @@
                     const res = await fetch(`/api/calificaciones/${codigoSeleccionado}?semestre=${encodeURIComponent(semestreSeleccionado)}`);
                     const resultado = await res.json();
                     listaAlumnosActuales = resultado.success ? resultado.data : [];
+
                     if (listaAlumnosActuales.length > 0) {
                         tbody.innerHTML = '';
-
-                        // 1. Inicializamos el contador en 1 antes del bucle
-                        let contadorItem = 1;
 
                         for (const item of listaAlumnosActuales) {
                             let tdObjetivosHtml = '';
@@ -484,8 +465,7 @@
 
                             tbody.innerHTML += `
                                 <tr data-id="${item.id}">
-                                    <!-- 2. Mostramos el contador ascendente y lo incrementamos -->
-                                    <td>${contadorItem++}</td>
+                                    <td>${item.id}</td>
                                     <td class="text-start">${item.nombre_alumno || '-'}</td>
                                     <td class="text-start">${item.cedula_alumno || '-'}</td>
                                     <td class="text-start">${codCarreraAlumno}</td>
@@ -500,9 +480,8 @@
                                             <i class="bi bi-trash-fill"></i>
                                         </button>
                                     </td>
-                                </tr>`; /**/
+                                </tr>`;
                         }
-
                     } else {
                         let colspanTotal = 7 + numObj;
                         tbody.innerHTML = `<tr><td colspan="${colspanTotal}" class="text-center text-muted py-4">No hay alumnos registrados para esta materia en el semestre ${semestreSeleccionado}.</td></tr>`;
@@ -514,10 +493,70 @@
             }
         }
 
+        async function editarCalificacion(btnElement, idAlumno) {
+            const codigoSeleccionado = document.getElementById('filtroCodigoMateria').value;
+            const materiaEncontrada = listaMateriasGlobal.find(m => m.codigo === codigoSeleccionado);
+            const alumno = listaAlumnosActuales.find(a => String(a.id) === String(idAlumno));
 
+            if (!materiaEncontrada) {
+                Swal.fire('Error', 'No se encontró la materia seleccionada.', 'error');
+                return;
+            }
 
+            const fila = btnElement.closest('tr');
+            const nombreTabla = fila.cells[1].textContent.trim();
+            const cedulaTabla = fila.cells[2].textContent.trim();
 
-        // Resto de la función para pintar el tbody...
+            document.getElementById('calificacionId').value = idAlumno;
+            document.getElementById('modalNombreAlumno').textContent = nombreTabla || 'Sin Nombre';
+            document.getElementById('modalCedulaAlumno').textContent = `Cédula: ${cedulaTabla || 'N/A'}`;
+
+            const contenedorObjetivos = document.getElementById('contenedorObjetivosModal');
+            contenedorObjetivos.innerHTML = '<div class="text-center text-muted py-2" style="font-size: 0.8rem;">Cargando pesos...</div>';
+            modalCalificacionInstance.show();
+
+            let listaObjetivosPesos = [];
+            try {
+                const resObjetivos = await fetch(`/api/objetivos-materia/${codigoSeleccionado}`);
+                const dataObjetivos = await resObjetivos.json();
+
+                if (dataObjetivos && dataObjetivos.success && Array.isArray(dataObjetivos.data)) {
+                    listaObjetivosPesos = dataObjetivos.data;
+                } else if (Array.isArray(dataObjetivos)) {
+                    listaObjetivosPesos = dataObjetivos;
+                }
+            } catch (e) {
+                console.error("Error al obtener pesos de objetivos:", e);
+            }
+
+            contenedorObjetivos.innerHTML = '';
+            const numObj = parseInt(materiaEncontrada.numobj) || 0;
+
+            for (let i = 1; i <= numObj; i++) {
+                const valorActual = (alumno && (alumno[`obj${i}`] !== undefined ? alumno[`obj${i}`] : alumno[`obj_${i}`])) !== undefined ?
+                    (alumno[`obj${i}`] !== undefined ? alumno[`obj${i}`] : alumno[`obj_${i}`]) : 0;
+
+                const objEncontrado = listaObjetivosPesos.find(o => parseInt(o.nro_objetivo, 10) === i);
+                const pesoObj = objEncontrado ? parseFloat(objEncontrado.peso) : 0;
+
+                contenedorObjetivos.innerHTML += `
+                    <div class="d-flex align-items-center justify-content-between mb-1 p-1 bg-white border rounded-0">
+                        <div>
+                            <span class="fw-semibold text-dark" style="font-size: 0.8rem;">Objetivo ${i}</span>
+                            <span class="text-muted ms-1" style="font-size: 0.75rem;">(Peso: <span class="obj-peso">${pesoObj}</span>)</span>
+                        </div>
+                        <div style="width: 80px;">
+                            <select class="form-select form-select-sm input-objetivo py-0 px-1" style="font-size: 0.8rem;" data-nro="${i}" onchange="recalcularNotaFinal()">
+                                <option value="0" ${valorActual == 0 ? 'selected' : ''}>0</option>
+                                <option value="1" ${valorActual == 1 ? 'selected' : ''}>1</option>
+                            </select>
+                        </div>
+                    </div>
+                `;
+            }
+
+            recalcularNotaFinal();
+        }
 
         async function recalcularNotaFinal() {
             const filasObjetivos = document.querySelectorAll('#contenedorObjetivosModal > div');

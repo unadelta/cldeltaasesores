@@ -8,6 +8,73 @@ const session = require('express-session');
 if (process.env.NODE_ENV !== 'production') {
     require('dotenv').config();
 }
+/*
+const connectionString = process.env.MYSQL_URL || process.env.DATABASE_URL;
+
+const pool = connectionString ?
+    mysql.createPool(connectionString) :
+    mysql.createPool({
+        host: process.env.MYSQLHOST || process.env.MYSQL_HOST || 'localhost',
+        user: process.env.MYSQLUSER || process.env.MYSQL_USER || 'root',
+        password: (process.env.MYSQLPASSWORD || process.env.MYSQL_PASSWORD || '').trim(),
+        database: process.env.MYSQLDATABASE || process.env.MYSQL_DATABASE || 'asesores',
+        port: process.env.MYSQLPORT || process.env.MYSQL_PORT || 3306,
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0
+    });
+
+// Configuración Máster: 'db' procesará promesas limpias para bloques async/await
+const db = pool.promise();
+// Adjuntamos el pool clásico para proteger tus callbacks (.query tradicionales)
+db.pool = pool;
+
+// Verificar salud de la conexión al arrancar sin tumbar la app si hay reintentos
+pool.getConnection((err, connection) => {
+    if (err) {
+        console.error('❌ Error crítico al obtener conexión del Pool MySQL:', err.message);
+    } else {
+        console.log('✅ Conexión exitosa a la base de datos MySQL (Pool activo).');
+        connection.release();
+    }
+});
+
+module.exports = db;
+*/
+
+//const mysql = require('mysql2');
+/*
+// Configuración del pool usando las variables de entorno
+const pool = mysql.createPool({
+    host: process.env.MYSQLHOST,
+    user: process.env.MYSQLUSER,
+    password: process.env.MYSQLPASSWORD,
+    database: process.env.MYSQLDATABASE,
+    port: process.env.MYSQLPORT || 3306,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+    connectTimeout: 10000 // 10 segundos de límite para evitar que se quede congelado
+});
+// 👉 AGREGA ESTA LÍNEA AQUÍ:
+const db = pool;
+*/
+/*
+const pool = mysql.createPool({
+    host: process.env.MYSQLHOST || 'localhost',
+    user: process.env.MYSQLUSER || 'root',
+    password: process.env.MYSQLPASSWORD || '', // Coloca tu contraseña local si tienes una (ej: '123456')
+    database: process.env.MYSQLDATABASE || 'asesores', // 👈 Aquí se define 'asesores' por defecto a nivel local
+    port: process.env.MYSQLPORT || 3306,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+    connectTimeout: 10000 // 10 segundos de límite para evitar que se quede congelado
+});
+
+// Definir la variable db para que funcione en todo el servidor con el pool
+const db = pool;
+*/
 const pool = mysql.createPool({
     host: process.env.MYSQLHOST || process.env.DB_HOST || 'localhost',
     user: process.env.MYSQLUSER || process.env.DB_USER || 'root',
@@ -38,7 +105,7 @@ pool.getConnection((err, connection) => {
             console.error('La conexión fue rechazada. Revisa el host y el puerto.');
         }
     } else {
-        console.log('✅ ¡ÉXITO! Conexión exitosa a la base de datos MySQL .');
+        console.log('✅ ¡ÉXITO! Conexión exitosa a la base de datos MySQL en Railway.');
         // Es muy importante liberar la conexión de vuelta al pool
         connection.release();
     }

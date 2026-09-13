@@ -34,7 +34,7 @@
                 <button class="btn btn-success" onclick="abrirModalAlumno()"><i class="bi bi-plus-circle me-1"></i> Registrar Nuevo Alumno</button>
             </div>
         </div>
-        <!--
+
         <div class="card border-0 shadow-sm">
             <div class="card-body">
                 <div class="table-responsive">
@@ -58,40 +58,7 @@
                 </div>
             </div>
         </div>
-         -->
-
-        <div class="card border-0 shadow-sm">
-            <!-- Quitamos el padding del card-body para que la tabla llegue a los bordes si es necesario, o dejamos un estilo controlado -->
-            <div class="card-body p-0">
-                <!-- 1. Limitamos la altura de la tabla y activamos el scroll vertical con max-height y overflow-y -->
-                <div class="table-responsive" style="max-height: 550px; overflow-y: auto;">
-                    <table class="table table-hover align-middle mb-0">
-                        <!-- 2. Añadimos la clase 'sticky-top' y forzamos el posicionamiento con CSS para que se quede fija -->
-                        <thead class="table-dark sticky-top" style="top: 0; z-index: 10;">
-                            <tr>
-                                <th style="width: 5%;">N°</th>
-                                <th style="width: 15%;">Cédula</th>
-                                <th style="width: 30%;">Nombre y Apellido</th>
-                                <th style="width: 10%;">Código de Carrera</th>
-                                <th style="width: 30%;">Descripción</th>
-                                <th style="width: 10%;" class="text-center">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tablaAlumnos">
-                            <tr>
-                                <td colspan="6" class="text-center text-muted py-4">Cargando registros...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-
     </div>
-
-
-
 
     <!-- MODAL REGISTRAR / EDITAR ALUMNO -->
     <div class="modal fade" id="modalAlumno" tabindex="-1" aria-hidden="true">

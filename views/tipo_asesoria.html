@@ -12,47 +12,8 @@
 </head>
 
 <body class="bg-light">
-
     <!-- NAVBAR PRINCIPAL -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
-        <div class="container-fluid">
-            <a class="navbar-brand fw-bold d-flex align-items-center" href="/dashboard">
-                <img src="/jpg/logouna.jpg" alt="Logo UNA" height="35" class="bg-white rounded p-1 me-2 shadow-sm" onerror="this.style.display='none'">
-                <span>Asesores UNA</span>
-            </a>
-            <div class="collapse navbar-collapse" id="navbarNavDropdown">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    <li class="nav-item"><a class="nav-link" href="/dashboard">Inicio</a></li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle text-white fw-semibold active" href="#" data-bs-toggle="dropdown">Administrador</a>
-                        <ul class="dropdown-menu shadow">
-                            <li><a class="dropdown-item" href="/asesor">Asesores</a></li>
-                            <li><a class="dropdown-item" href="/carrera">Carreras</a></li>
-                            <li><a class="dropdown-item" href="/materia">Materias</a></li>
-                            <li><a class="dropdown-item" href="/tarea">Tareas</a></li>
-                            <li><a class="dropdown-item active fw-bold" href="/tipo_asesoria">Tipo Asesoría</a></li>
-                        </ul>
-                    </li>
-                    <li class="nav-item"><a class="nav-link text-white" href="/alumno"><i class="bi bi-mortarboard-fill me-1"></i> Alumnos</a></li>
-                    <li class="nav-item"><a class="nav-link text-white" href="/asesoria"><i class="bi bi-journal-text me-1"></i> Asesorías</a></li>
-                    <li class="nav-item"><a class="nav-link text-white" href="/tarea"><i class="bi bi-list-task me-1"></i> Tareas</a></li>
-                </ul>
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle text-white fw-semibold" href="#" data-bs-toggle="dropdown">Reportes</a>
-                    <ul class="dropdown-menu shadow">
-                        <li><a class="dropdown-item" href=/reporasesoria>Reporte Asesorias</a></li>
-                        <li><a class="dropdown-item" href="#">Reporte Calificaciones</a></li>
-
-                    </ul>
-                </li>
-                <div class="d-flex align-items-center text-white ms-auto">
-                    <span class="me-2"><i class="bi bi-person-circle"></i></span>
-                    <span id="nombreUsuario" class="me-3 fw-semibold">Cargando...</span>
-                    <button onclick="window.location.href='/'" class="btn btn-outline-light btn-sm"><i class="bi bi-box-arrow-right me-1"></i> Salir</button>
-                </div>
-            </div>
-        </div>
-    </nav>
+    <div id="navbar-container"></div>
 
     <!-- CONTENIDO PRINCIPAL -->
     <div class="container mt-4">
@@ -301,6 +262,27 @@
                 });
             }
         }
+
+        //  Script independiente para cargar el HTML del Navbar y rellenar el usuario al inyectarlo
+        document.addEventListener("DOMContentLoaded", function() {
+            fetch('/views/navbar.html')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('navbar-container').innerHTML = data;
+
+                    // Consultar y pintar el nombre del usuario en sesión después de que el navbar aparezca en el DOM
+                    fetch('/api/user-session')
+                        .then(res => res.json())
+                        .then(sesion => {
+                            const spanUsuario = document.getElementById('nombreUsuario');
+                            if (spanUsuario && sesion.authenticated && sesion.user) {
+                                spanUsuario.textContent = sesion.user.nombre || sesion.user.usuario;
+                            }
+                        })
+                        .catch(err => console.error("Error al obtener sesión de usuario en el navbar:", err));
+                })
+                .catch(err => console.error("Error al cargar el navbar:", err));
+        });
     </script>
 </body>
 
