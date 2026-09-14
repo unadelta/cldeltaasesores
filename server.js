@@ -1630,12 +1630,12 @@ app.get('/api/reporte_actividades', (req, res) => {
 
 app.use('/api/db', dbAdminRoutes);
 
-
+/*
 // --- Ruta de prueba ---
 app.get('/', (req, res) => {
     res.send('Servidor API Asesores UNA funcionando.');
 });
-
+*/
 // server.js
 
 // ... (después de configurar express.static y express.json)
@@ -1656,9 +1656,46 @@ app.get('/admin_db', (req, res) => {
 app.use('/api/db', dbAdminRoutes);
 
 // ...
+//Salida del sistema
 
 
+// Ruta para manejar el cierre de sesión
+// ==========================================
+// RUTA DE CIERRE DE SESIÓN (LOGOUT)
+// ==========================================
 
+app.get('/logout', (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            console.error('❌ Error al destruir la sesión:', err);
+        }
+        // Limpiar la cookie de sesión configurada en express-session
+        res.clearCookie('session_cookie_id');
+        // Redirigir al login
+        res.redirect('/');
+    });
+});
+/*
+// Ruta para cerrar sesión de forma segura
+app.get('/logout', (req, res) => {
+    console.log("Hola en el sistema");
+    // 1. Destruimos la sesión en el servidor
+    req.session.destroy((err) => {
+        if (err) {
+            console.error("Error al cerrar sesión:", err);
+            return res.status(500).send("Error al salir del sistema");
+        }
+
+        // 2. Limpiamos la cookie del navegador por seguridad
+        res.clearCookie('connect.sid');
+
+        // 3. Redirigimos al usuario a la pantalla de login (cambia 'login.html' por tu archivo real)
+        // Si tu login está en la raíz de la carpeta pública:
+        //res.redirect('/login.html');
+        res.sendFile(path.join(__dirname, 'views', 'login.html'))
+    });
+});
+*/
 // Inicialización del servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
