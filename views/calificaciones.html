@@ -519,6 +519,66 @@
 
         // Resto de la función para pintar el tbody...
 
+        // FUNCIÓN PARA ABRIR EL MODAL Y CARGAR LOS OBJETIVOS DEL ALUMNO
+        async function editarCalificacion(btn, idAlumno) {
+            const item = listaAlumnosActuales.find(a => String(a.id) === String(idAlumno));
+            if (!item) {
+                Swal.fire('Error', 'No se encontró la información del alumno.', 'error');
+                return;
+            }
+
+            // 1. Rellenar datos básicos en el modal
+            document.getElementById('calificacionId').value = item.id;
+            document.getElementById('modalNombreAlumno').textContent = item.nombre_alumno || 'Sin Nombre';
+            document.getElementById('modalCedulaAlumno').textContent = `Cédula: ${item.cedula_alumno || '--'}`;
+
+            const codigoMateria = document.getElementById('filtroCodigoMateria').value;
+            const materiaEncontrada = listaMateriasGlobal.find(m => m.codigo === codigoMateria);
+
+            const contenedorObj = document.getElementById('contenedorObjetivosModal');
+            contenedorObj.innerHTML = '';
+
+            if (materiaEncontrada && Array.isArray(materiaEncontrada.objetivos)) {
+                // Ordenar objetivos por número
+                materiaEncontrada.objetivos.sort((a, b) => a.nro_objetivo - b.nro_objetivo);
+
+                materiaEncontrada.objetivos.forEach(obj => {
+                    const nroObj = obj.nro_objetivo;
+                    const pesoObj = parseFloat(obj.peso) || 0;
+
+                    // Obtener la nota actual que tenga el alumno en este objetivo
+                    const notaActual = item[`obj${nroObj}`] !== undefined ? item[`obj${nroObj}`] : (item[`obj_${nroObj}`] || 0);
+
+                    contenedorObj.innerHTML += `
+                        <div class="row align-items-center bg-white p-2 border rounded-0 m-0 mb-2">
+                            <div class="col-7 p-0">
+                                <label class="form-label fw-bold text-dark mb-0" style="font-size: 0.8rem;">
+                                    Obj ${nroObj} (Peso: <span class="obj-peso text-muted">${pesoObj.toFixed(2)}</span>):
+                                </label>
+                            </div>
+                            <div class="col-5 pe-0">
+                                <select class="form-select form-select-sm text-center fw-bold input-objetivo" data-nro="${nroObj}" onchange="recalcularNotaFinal()">
+                                    <option value="0" ${notaActual == 0 ? 'selected' : ''}>0 - No Logrado</option>
+                                    <option value="1" ${notaActual == 1 ? 'selected' : ''}>1 - Logrado</option>
+                                </select>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                contenedorObj.innerHTML = '<p class="text-danger small text-center">No se encontraron los objetivos de esta materia.</p>';
+            }
+
+            // 2. Calcular los valores iniciales dentro del modal
+            await recalcularNotaFinal();
+
+            // 3. Mostrar el modal de calificaciones
+            modalCalificacionInstance.show();
+        }
+
+
+
+
         async function recalcularNotaFinal() {
             const filasObjetivos = document.querySelectorAll('#contenedorObjetivosModal > div');
             let pesosAcumuladosParcial = 0;
