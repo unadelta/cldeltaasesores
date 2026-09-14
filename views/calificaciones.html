@@ -263,7 +263,14 @@
 
                 const lista = data.success ? data.data : data;
                 if (Array.isArray(lista)) {
+                    // Ordenar las materias por código en orden ascendente (soporta números y texto)
+                    lista.sort((a, b) => String(a.codigo).localeCompare(String(b.codigo), undefined, {
+                        numeric: true,
+                        sensitivity: 'base'
+                    }));
+
                     listaMateriasGlobal = lista;
+
                     lista.forEach(m => {
                         const codigo = m.codigo;
                         const descripcion = m.descripcion || '';
@@ -274,6 +281,8 @@
                 console.error("Error al cargar materias:", error);
             }
         }
+
+
 
         async function cargarTodosLosAlumnos() {
             try {
