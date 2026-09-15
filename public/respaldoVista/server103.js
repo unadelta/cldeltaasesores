@@ -62,6 +62,72 @@ pool.getConnection((err, connection) => {
     }
 });
 
+
+// ==========================================
+// CONFIGURACIÓN DE LA BASE DE DATOS MYSQL
+// ==========================================
+/*
+const db = mysql.createPool({
+    host: process.env.MYSQLHOST || process.env.DB_HOST || 'localhost',
+    user: process.env.MYSQLUSER || process.env.DB_USER || 'root',
+    password: (process.env.MYSQLPASSWORD || process.env.DB_PASSWORD || '').trim(),
+    database: process.env.MYSQLDATABASE || process.env.DB_NAME || 'asesores',
+    port: process.env.MYSQLPORT || process.env.DB_PORT || 3306,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+});
+
+// Verificación inicial para Pool
+db.getConnection((err, connection) => {
+    if (err) {
+        console.error('❌ Error al conectar a la base de datos:', err.message);
+    } else {
+        console.log('✅ Conectado exitosamente a la base de datos MySQL (Pool).');
+        connection.release(); // Obligatorio liberar la conexión de prueba
+    }
+});
+*/
+
+
+/*
+// Conexión para inicializar el script SQL
+const dbInit = mysql.createConnection({
+    host: process.env.MYSQLHOST || 'localhost',
+    user: process.env.MYSQLUSER || 'root',
+    password: (process.env.MYSQLPASSWORD || '').trim(),
+    database: process.env.MYSQLDATABASE || 'railway',
+    port: process.env.MYSQLPORT || 3306,
+    multipleStatements: true // Permite ejecutar múltiples consultas SQL a la vez
+});
+
+dbInit.connect((err) => {
+    if (err) {
+        console.error('❌ Error al conectar para inicializar la BD:', err.message);
+        return;
+    }
+
+    // Ruta de tu archivo sql en el repositorio
+    const sqlFilePath = path.join(__dirname, 'asesores.sql');
+
+    if (fs.existsSync(sqlFilePath)) {
+        const sqlScript = fs.readFileSync(sqlFilePath, 'utf8');
+
+        dbInit.query(sqlScript, (error, results) => {
+            if (error) {
+                console.error('⚠️ Error al ejecutar el script sql (puede que ya existan las tablas):', error.message);
+            } else {
+                console.log('✅ Base de datos y tablas transferidas/creadas exitosamente desde asesores.sql');
+            }
+            dbInit.end();
+        });
+    } else {
+        console.log('⚠️ No se encontró el archivo asesores.sql en la ruta del proyecto.');
+        dbInit.end();
+    }
+});
+
+*/
 // Configuración de Middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -1573,61 +1639,45 @@ app.get('/', (req, res) => {
 // ==========================================
 // RUTA DE VISTA PARA GESTIÓN DE MATERIAS
 // ==========================================
-
-
-
 app.get('/control_materia', (req, res) => {
-    // Valida si el usuario tiene sesión activa usando 'usuario'
-    if (!req.session || !req.session.usuario) {
+    // Valida si el usuario tiene sesión activa (siguiendo el estándar de tus otras vistas)
+    if (!req.session || !req.session.user) {
         return res.redirect('/');
     }
-
-    res.sendFile(path.join(__dirname, 'views', 'control_materia.html'));
-});
-
-// Ruta para la vista HTML de control de materias
-app.get('/control_materia', (req, res) => {
-    // Valida si el usuario tiene sesión activa usando 'usuario'
-    if (!req.session || !req.session.usuario) {
-        return res.redirect('/');
-    }
-    res.sendFile(path.join(__dirname, 'views', 'control_materia.html'));
+    // Asegúrate de ajustar la ruta de tu archivo HTML según la estructura de tu proyecto (ej: __dirname + '/views/control_materia.html')
+    res.sendFile(__dirname + '/views/control_materia.html');
 });
 
 
 // ==========================================
-// ENDPOINTS API PARA LA TABLA 'materia_una' (MYSQL - CALLBACKS)
+// ENDPOINTS API PARA LA TABLA 'materia_una' (MYSQL)
 // ==========================================
 
-// 1. OBTENER TODAS LAS MATERIAS
-app.get('/api/materiauna', (req, res) => {
-    const query = 'SELECT id, codigo, descripcion FROM materia_una';
-
-    pool.query(query, (err, results) => {
-        if (err) {
-            console.error("❌ Error al obtener materias de MySQL:", err);
-            return res.status(500).json({ success: false, message: "Error en el servidor" });
-        }
-        res.json({ success: true, data: results });
-    });
+// 1. OBTENER TODAS LAS MATERIAS (Ordenadas por código o ID)
+app.get('/api/materia_una', async(req, res) => {
+    try {
+        // Consulta SQL para obtener todos los registros de la tabla
+        const [rows] = await pool.query('SELECT id, codigo, descripcion FROM materia_una ORDER BY codigo ASC');
+        res.json({ success: true, data: rows });
+    } catch (error) {
+        console.error('❌ Error al obtener materias de MySQL:', error);
+        res.status(500).json({ success: false, message: 'Error interno al obtener las materias.' });
+    }
 });
 
 
-// 2. REGISTRAR NUEVA MATERIA (Con validación de código duplicado)
-app.post('/api/materiauna', (req, res) => {
-    const { codigo, descripcion } = req.body;
+// 2. REGISTRAR NUEVA MATERIA (Con validación estricta de código duplicado)
+app.post('/api/materia_una', async(req, res) => {
+    try {
+        const { codigo, descripcion } = req.body;
 
-    if (!codigo || !descripcion) {
-        return res.status(400).json({ success: false, message: 'El código y la descripción son obligatorios.' });
-    }
-
-    // Verificar si el código ya existe
-    pool.query('SELECT id FROM materia_una WHERE codigo = ?', [codigo], (err, existing) => {
-        if (err) {
-            console.error('❌ Error al verificar código duplicado:', err);
-            return res.status(500).json({ success: false, message: 'Error en el servidor' });
+        // Validación básica de campos vacíos
+        if (!codigo || !descripcion) {
+            return res.status(400).json({ success: false, message: 'El código y la descripción son obligatorios.' });
         }
 
+        // Verificar si el código ya existe en la base de datos
+        const [existing] = await pool.query('SELECT id FROM materia_una WHERE codigo = ?', [codigo]);
         if (existing.length > 0) {
             return res.status(400).json({
                 success: false,
@@ -1635,39 +1685,36 @@ app.post('/api/materiauna', (req, res) => {
             });
         }
 
-        // Insertar la nueva materia
-        pool.query('INSERT INTO materia_una (codigo, descripcion) VALUES (?, ?)', [codigo, descripcion], (err, result) => {
-            if (err) {
-                console.error('❌ Error al registrar materia en MySQL:', err);
-                return res.status(500).json({ success: false, message: 'Error interno al registrar la materia.' });
-            }
+        // Insertar la nueva materia en MySQL
+        const [result] = await pool.query(
+            'INSERT INTO materia_una (codigo, descripcion) VALUES (?, ?)', [codigo, descripcion]
+        );
 
-            res.json({
-                success: true,
-                message: 'Materia registrada exitosamente',
-                insertId: result.insertId
-            });
+        res.json({
+            success: true,
+            message: 'Materia registrada exitosamente',
+            insertId: result.insertId
         });
-    });
+
+    } catch (error) {
+        console.error('❌ Error al registrar materia en MySQL:', error);
+        res.status(500).json({ success: false, message: 'Error interno al registrar la materia.' });
+    }
 });
 
 
 // 3. ACTUALIZAR MATERIA EXISTENTE
-app.put('/api/materiauna/:id', (req, res) => {
-    const { id } = req.params;
-    const { codigo, descripcion } = req.body;
+app.put('/api/materia_una/:id', async(req, res) => {
+    try {
+        const { id } = req.params;
+        const { codigo, descripcion } = req.body;
 
-    if (!codigo || !descripcion) {
-        return res.status(400).json({ success: false, message: 'El código y la descripción son obligatorios.' });
-    }
-
-    // Verificar si otro registro diferente ya está usando el código
-    pool.query('SELECT id FROM materia_una WHERE codigo = ? AND id != ?', [codigo, id], (err, existing) => {
-        if (err) {
-            console.error('❌ Error al verificar código duplicado en actualización:', err);
-            return res.status(500).json({ success: false, message: 'Error en el servidor' });
+        if (!codigo || !descripcion) {
+            return res.status(400).json({ success: false, message: 'El código y la descripción son obligatorios.' });
         }
 
+        // Verificar si otro registro diferente ya está usando el código que se quiere actualizar
+        const [existing] = await pool.query('SELECT id FROM materia_una WHERE codigo = ? AND id != ?', [codigo, id]);
         if (existing.length > 0) {
             return res.status(400).json({
                 success: false,
@@ -1675,40 +1722,47 @@ app.put('/api/materiauna/:id', (req, res) => {
             });
         }
 
-        // Ejecutar actualización
-        pool.query('UPDATE materia_una SET codigo = ?, descripcion = ? WHERE id = ?', [codigo, descripcion, id], (err, result) => {
-            if (err) {
-                // <-- AQUÍ ESTÁ EL CAMBIO CLAVE PARA VER EL ERROR EN CONSOLA -->
-                console.error('❌ ERROR REAL DE MYSQL AL ACTUALIZAR:', err);
-                return res.status(500).json({ success: false, message: 'Error en BD: ' + err.message });
-            }
+        // Ejecutar actualización en MySQL
+        const [result] = await pool.query(
+            'UPDATE materia_una SET codigo = ?, descripcion = ? WHERE id = ?', [codigo, descripcion, id]
+        );
 
-            if (result.affectedRows === 0) {
-                return res.status(404).json({ success: false, message: 'No se encontró la materia a actualizar.' });
-            }
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: 'No se encontró la materia a actualizar.' });
+        }
 
-            res.json({ success: true, message: 'Materia actualizada exitosamente' });
-        });
-    });
+        res.json({ success: true, message: 'Materia actualizada exitosamente' });
+
+    } catch (error) {
+        console.error('❌ Error al actualizar materia en MySQL:', error);
+        res.status(500).json({ success: false, message: 'Error interno al actualizar la materia.' });
+    }
 });
 
-// 4. ELIMINAR MATERIA
-app.delete('/api/materiauna/:id', (req, res) => {
-    const { id } = req.params;
 
-    pool.query('DELETE FROM materia_una WHERE id = ?', [id], (err, result) => {
-        if (err) {
-            console.error('❌ Error al eliminar materia en MySQL:', err);
-            return res.status(500).json({ success: false, message: 'Error interno al eliminar la materia.' });
-        }
+// 4. ELIMINAR MATERIA
+app.delete('/api/materia_una/:id', async(req, res) => {
+    try {
+        const { id } = req.params;
+
+        const [result] = await pool.query('DELETE FROM materia_una WHERE id = ?', [id]);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ success: false, message: 'No se encontró la materia a eliminar.' });
         }
 
         res.json({ success: true, message: 'Materia eliminada exitosamente' });
-    });
+
+    } catch (error) {
+        console.error('❌ Error al eliminar materia en MySQL:', error);
+        res.status(500).json({ success: false, message: 'Error interno al eliminar la materia.' });
+    }
 });
+
+
+
+
+
 
 
 

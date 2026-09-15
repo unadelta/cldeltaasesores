@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Materias - Asesores UNA</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+
+<body style="background-color: #1F91DC !important;">
+    <!-- NAVBAR PRINCIPAL -->
+    <div id="navbar-container"></div>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="container mt-4 mb-5">
+        <div class="row mb-3 align-items-center">
+            <div class="col-sm-6">
+                <h3 class="fw-bold text-white"><i class="bi bi-book me-2"></i>Módulo de Gestión de Materias</h3>
+            </div>
+            <div class="col-sm-6 text-sm-end mt-2 mt-sm-0">
+                <button class="btn btn-success" onclick="abrirModalMateria()">
+                    <i class="bi bi-plus-circle me-1"></i> Registrar Nueva Materia
+                </button>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-0">
+                <div class="table-responsive" style="max-height: 550px; overflow-y: auto;">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-dark sticky-top" style="top: 0; z-index: 10;">
+                            <tr>
+                                <th style="width: 70px;">Item</th>
+                                <th style="width: 150px;">Código</th>
+                                <th>Descripción de la Materia</th>
+                                <th class="text-center" style="width: 120px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaMaterias">
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">Cargando registros...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL REGISTRAR / EDITAR MATERIA -->
+    <div class="modal fade" id="modalMateria" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="formMateria" onsubmit="guardarMateria(event)">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title" id="modalTituloLabel">Registrar Nueva Materia</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Input oculto para manejar el ID en modo edición -->
+                        <input type="hidden" id="materiaId">
+
+                        <!-- Código de Materia -->
+                        <div class="mb-3">
+                            <label for="codigoMateria" class="form-label fw-semibold">Código de la Materia</label>
+                            <input type="text" class="form-control" id="codigoMateria" placeholder="Ej. 101, 502..." required>
+                            <div class="form-text" id="mensajeCodigo">Ingrese un código único para la materia.</div>
+                        </div>
+
+                        <!-- Descripción de Materia -->
+                        <div class="mb-3">
+                            <label for="descripcionMateria" class="form-label fw-semibold">Descripción / Nombre</label>
+                            <textarea class="form-control" id="descripcionMateria" rows="3" placeholder="Nombre completo de la materia..." required></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" id="btnGuardarMateria">Guardar Materia</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let modalMateriaInstance = null;
+        let asesorActual = {};
+        let listaMateriasGlobal = [];
+        let modoEdicion = false;
+        let codigoOriginalEdicion = "";
+
+        document.addEventListener("DOMContentLoaded", async() => {
+            modalMateriaInstance = new bootstrap.Modal(document.getElementById('modalMateria'));
+
+            // Cargar navbar
+            try {
+                const resNav = await fetch('/views/navbar.html');
+                if (resNav.ok) {
+                    const navHtml = await resNav.text();
+                    document.getElementById('navbar-container').innerHTML = navHtml;
+                }
+            } catch (err) {
+                console.error("Aviso: No se pudo cargar la navbar:", err);
+            }
+
+            await inicializarDatos();
+        });
+
+        async function inicializarDatos() {
+            try {
+                const resUser = await fetch('/api/user-session');
+                if (!resUser.ok) {
+                    window.location.href = '/';
+                    return;
+                }
+                const dataUser = await resUser.json();
+                if (dataUser.authenticated) {
+                    asesorActual = dataUser.user;
+                } else {
+                    window.location.href = '/';
+                    return;
+                }
+            } catch (e) {
+                console.error("Error al obtener sesión:", e);
+                window.location.href = '/';
+                return;
+            }
+
+            await cargarControlMaterias();
+        }
+
+        function abrirModalMateria() {
+            document.getElementById('formMateria').reset();
+            document.getElementById('materiaId').value = '';
+            document.getElementById('codigoMateria').removeAttribute('readonly');
+            document.getElementById('modalTituloLabel').textContent = 'Registrar Nueva Materia';
+
+            modoEdicion = false;
+            codigoOriginalEdicion = "";
+
+            const mensajeCodigo = document.getElementById('mensajeCodigo');
+            mensajeCodigo.textContent = 'Ingrese un código único para la materia.';
+            mensajeCodigo.className = 'form-text text-muted';
+
+            modalMateriaInstance.show();
+        }
+
+        async function cargarControlMaterias() {
+            const tbody = document.getElementById('tablaMaterias');
+            try {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm" role="status"></span> Actualizando registros...</td></tr>';
+
+                const res = await fetch('/api/materiauna');
+                if (res.status === 401) {
+                    window.location.href = '/';
+                    return;
+                }
+
+                const data = await res.json();
+
+                // Normalizar la obtención de la lista según la respuesta del backend
+                if (Array.isArray(data)) {
+                    listaMateriasGlobal = data;
+                } else if (data.success && Array.isArray(data.data)) {
+                    listaMateriasGlobal = data.data;
+                } else if (data.materias && Array.isArray(data.materias)) {
+                    listaMateriasGlobal = data.materias;
+                } else {
+                    listaMateriasGlobal = [];
+                }
+
+                tbody.innerHTML = '';
+
+                if (listaMateriasGlobal.length > 0) {
+                    let contadorItems = 1;
+
+                    listaMateriasGlobal.forEach(item => {
+                        const registroId = item.id || item._id || '';
+                        const codigo = item.codigo || '';
+                        const descripcion = item.descripcion || '';
+
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td class="fw-bold text-muted">${contadorItems++}</td>
+                            <td><span class="badge bg-secondary">${codigo}</span></td>
+                            <td class="fw-semibold">${descripcion}</td>
+                            <td class="text-center text-nowrap">
+                                <button class="btn btn-sm btn-outline-primary me-1" onclick="editarMateria('${registroId}')" title="Editar">
+                                    <i class="bi bi-pencil-square"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="eliminarMateria('${registroId}', '${codigo}')" title="Eliminar">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4">No hay materias registradas.</td></tr>`;
+                }
+            } catch (error) {
+                console.error("Error al cargar materias:", error);
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center text-danger py-4">Error al conectar con el servidor para obtener datos.</td></tr>`;
+            }
+        }
+
+        function editarMateria(id) {
+            const registro = listaMateriasGlobal.find(item => (item.id == id || item._id == id));
+            if (!registro) {
+                Swal.fire('Error', 'No se encontró el registro para editar.', 'error');
+                return;
+            }
+
+            modoEdicion = true;
+            codigoOriginalEdicion = registro.codigo;
+
+            document.getElementById('materiaId').value = id;
+            document.getElementById('modalTituloLabel').textContent = 'Editar Materia';
+
+            const inputCodigo = document.getElementById('codigoMateria');
+            inputCodigo.value = registro.codigo || '';
+
+            document.getElementById('descripcionMateria').value = registro.descripcion || '';
+
+            const mensajeCodigo = document.getElementById('mensajeCodigo');
+            mensajeCodigo.textContent = 'Modificando materia seleccionada.';
+            mensajeCodigo.className = 'form-text text-primary fw-semibold';
+
+            modalMateriaInstance.show();
+        }
+
+        async function guardarMateria(e) {
+            e.preventDefault();
+
+            const btnGuardar = document.getElementById('btnGuardarMateria');
+            const idRegistro = document.getElementById('materiaId').value;
+            const codigoIngresado = document.getElementById('codigoMateria').value.trim();
+            const descripcionIngresada = document.getElementById('descripcionMateria').value.trim();
+
+            // Validación local de código duplicado
+            if (!modoEdicion || (modoEdicion && codigoIngresado !== codigoOriginalEdicion)) {
+                const existe = listaMateriasGlobal.some(m => m.codigo && m.codigo.toLowerCase() === codigoIngresado.toLowerCase());
+                if (existe) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Código duplicado',
+                        text: `El código de materia "${codigoIngresado}" ya se encuentra registrado en la base de datos.`
+                    });
+                    return;
+                }
+            }
+
+            btnGuardar.disabled = true;
+            btnGuardar.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
+
+            const data = {
+                codigo: codigoIngresado,
+                descripcion: descripcionIngresada
+            };
+
+            const url = modoEdicion ? `/api/materiauna/${idRegistro}` : '/api/materiauna';
+            const method = modoEdicion ? 'PUT' : 'POST';
+
+            try {
+                const res = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await res.json();
+
+                if (res.ok && (result.success || result.id || result._id)) {
+                    modalMateriaInstance.hide();
+                    await Swal.fire({
+                        icon: 'success',
+                        title: '¡Éxito!',
+                        text: modoEdicion ? 'La materia se ha actualizado correctamente.' : 'La materia se ha registrado correctamente.',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    await cargarControlMaterias();
+                } else {
+                    Swal.fire('Atención', result.message || 'No se pudo completar la operación.', 'warning');
+                }
+            } catch (error) {
+                console.error("Error al guardar/actualizar materia:", error);
+                Swal.fire('Error de Conexión', 'No se pudo conectar con el servidor.', 'error');
+            } finally {
+                btnGuardar.disabled = false;
+                btnGuardar.textContent = 'Guardar Materia';
+            }
+        }
+
+        async function eliminarMateria(id, codigo) {
+            const confirmacion = await Swal.fire({
+                title: '¿Estás seguro?',
+                text: `Se eliminará la materia con código "${codigo}" de forma permanente.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            });
+
+            if (confirmacion.isConfirmed) {
+                try {
+                    const res = await fetch(`/api/materiauna/${id}`, {
+                        method: 'DELETE'
+                    });
+
+                    const result = await res.json();
+
+                    if (res.ok) {
+                        Swal.fire('¡Eliminado!', 'La materia ha sido eliminada correctamente.', 'success');
+                        await cargarControlMaterias();
+                    } else {
+                        Swal.fire('Error', result.message || 'No se pudo eliminar el registro en el servidor.', 'error');
+                    }
+                } catch (error) {
+                    console.error("Error al eliminar materia:", error);
+                    Swal.fire('Error de Conexión', 'No se pudo conectar con el servidor.', 'error');
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>
