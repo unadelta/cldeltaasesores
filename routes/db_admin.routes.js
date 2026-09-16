@@ -13,14 +13,17 @@ const upload = multer({
     limits: { fileSize: 10 * 1024 * 1024 } // Limitar a 10MB por seguridad
 });
 
-// --- CONFIGURACIÓN DB (Usando variables de entorno) ---
+
+// --- CONFIGURACIÓN DB (Soporte para variables de Railway y locales) ---
 const dbConfig = {
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'asesores',
-    port: process.env.DB_PORT || 3306
+    host: process.env.DB_HOST || process.env.MYSQLHOST || 'localhost',
+    user: process.env.DB_USER || process.env.MYSQLUSER || 'root',
+    password: process.env.DB_PASSWORD || process.env.MYSQLPASSWORD || '',
+    database: process.env.DB_NAME || process.env.MYSQLDATABASE || 'asesores',
+    port: process.env.DB_PORT || process.env.MYSQLPORT || 3306
 };
+
+
 
 // Middleware para asegurar que solo el admin acceda a estas rutas
 // router.use(adminAuthMiddleware); 
