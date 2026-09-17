@@ -28,7 +28,7 @@ const dbConfig = {
 };
 
 // Middleware para asegurar que solo el admin acceda a estas rutas
-// router.use(adminAuthMiddleware); 
+// router.use(adminAuthMiddleware);
 
 
 // ==========================================
@@ -37,6 +37,7 @@ const dbConfig = {
 // ==========================================
 // RUTA 1: Generar y Descargar Respaldo (Sin comandos del sistema, apto para Railway)
 // ==========================================
+/*
 router.get('/respaldo', async(req, res) => {
     try {
         const dateStr = moment().format('YYYY-MM-DD_HH-mm');
@@ -87,6 +88,94 @@ router.get('/respaldo', async(req, res) => {
 
     } catch (error) {
         console.error('Error crítico al generar respaldo:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al generar respaldo.',
+            error: error.message
+        });
+    }
+});
+*/
+
+// ==========================================
+// RUTA 1: Generar y Descargar Respaldo (Generador Nativo 100% Robusto)
+// ==========================================
+router.get('/respaldo', async(req, res) => {
+    let connection;
+    try {
+        const dateStr = moment().format('YYYY-MM-DD_HH-mm');
+        const fileName = `backup_asesores_${dateStr}.sql`;
+        const backupDir = path.join(__dirname, '../../public/respaldo');
+        const fullPath = path.join(backupDir, fileName);
+
+        if (!fs.existsSync(backupDir)) {
+            fs.mkdirSync(backupDir, { recursive: true });
+        }
+
+        // Conectarnos usando mysql2/promise con SSL
+        connection = await mysql.createConnection({
+            host: dbConfig.host,
+            port: Number(dbConfig.port),
+            user: dbConfig.user,
+            password: dbConfig.password,
+            database: dbConfig.database,
+            ssl: { rejectUnauthorized: false }
+        });
+
+        let sqlDump = `-- Respaldo de Base de Datos: ${dbConfig.database}\n`;
+        sqlDump += `-- Fecha: ${moment().format('YYYY-MM-DD HH:mm:ss')}\n\n`;
+        sqlDump += `SET FOREIGN_KEY_CHECKS=0;\n\n`;
+
+        // Obtener todas las tablas de la base de datos
+        const [tablesRows] = await connection.query('SHOW TABLES');
+        const tableKeyName = Object.keys(tablesRows[0])[0];
+
+        for (const row of tablesRows) {
+            const tableName = row[tableKeyName];
+
+            // Estructura de la tabla
+            const [createTableRows] = await connection.query(`SHOW CREATE TABLE \`${tableName}\``);
+            sqlDump += `DROP TABLE IF EXISTS \`${tableName}\`;\n`;
+            sqlDump += `${createTableRows[0]['Create Table']};\n\n`;
+
+            // Datos de la tabla
+            const [dataRows] = await connection.query(`SELECT * FROM \`${tableName}\``);
+            if (dataRows.length > 0) {
+                for (const dataRow of dataRows) {
+                    const columns = Object.keys(dataRow).map(c => `\`${c}\``).join(', ');
+                    const values = Object.values(dataRow).map(val => {
+                        if (val === null) return 'NULL';
+                        if (typeof val === 'number') return val;
+                        if (val instanceof Date) return `'${moment(val).format('YYYY-MM-DD HH:mm:ss')}'`;
+                        return `'${String(val).replace(/'/g, "''").replace(/\\/g, "\\\\")}'`;
+                    }).join(', ');
+
+                    sqlDump += `INSERT INTO \`${tableName}\` (${columns}) VALUES (${values});\n`;
+                }
+                sqlDump += `\n`;
+            }
+        }
+
+        sqlDump += `SET FOREIGN_KEY_CHECKS=1;\n`;
+
+        // Escribir el archivo físico
+        fs.writeFileSync(fullPath, sqlDump, 'utf8');
+        await connection.end();
+
+        console.log(`Respaldo nativo creado exitosamente en: ${fullPath}`);
+
+        // Forzar descarga en el navegador
+        res.download(fullPath, fileName, (err) => {
+            if (err) console.error('Error en descarga:', err);
+
+            fs.unlink(fullPath, (unlinkErr) => {
+                if (unlinkErr) console.error('Error al eliminar respaldo temporal:', unlinkErr);
+            });
+        });
+
+    } catch (error) {
+        if (connection) await connection.end().catch(() => {});
+        console.error('Error crítico al generar respaldo nativo:', error);
         res.status(500).json({
             success: false,
             message: 'Error al generar respaldo.',
