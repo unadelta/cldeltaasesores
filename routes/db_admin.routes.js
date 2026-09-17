@@ -34,6 +34,9 @@ const dbConfig = {
 // ==========================================
 // RUTA 1: Generar y Descargar Respaldo (Sin comandos del sistema, apto para Railway)
 // ==========================================
+// ==========================================
+// RUTA 1: Generar y Descargar Respaldo (Sin comandos del sistema, apto para Railway)
+// ==========================================
 router.get('/respaldo', async(req, res) => {
     try {
         const dateStr = moment().format('YYYY-MM-DD_HH-mm');
@@ -74,10 +77,13 @@ router.get('/respaldo', async(req, res) => {
 
             // Limpieza: Eliminar archivo temporal de la carpeta public/respaldo después de la descarga
             fs.unlink(fullPath, (unlinkErr) => {
-                if (unlinkErr) console.error('Error al eliminar respaldo temporal:', unlinkErr);
-                else console.log('Respaldo temporal eliminado de public/respaldo.');
+                if (unlinkErr) {
+                    console.error('Error al eliminar respaldo temporal:', unlinkErr);
+                } else {
+                    console.log('Respaldo temporal eliminado de public/respaldo.');
+                }
             });
-        });
+        }); // <-- Este paréntesis y llave cierran correctamente a res.download
 
     } catch (error) {
         console.error('Error crítico al generar respaldo:', error);
@@ -88,8 +94,6 @@ router.get('/respaldo', async(req, res) => {
         });
     }
 });
-
-
 // ==========================================
 // RUTA 2: Ejecutar Update desde archivo SQL
 // ==========================================

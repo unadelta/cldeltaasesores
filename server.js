@@ -1745,67 +1745,6 @@ app.get('/logout', (req, res) => {
         res.redirect('/');
     });
 });
-/*
-//Respaldo BD
-// ==========================================
-// RUTA 1: Generar y Descargar Respaldo (Sin dependencias del sistema operativo)
-// ==========================================
-router.get('/respaldo', async (req, res) => {
-    try {
-        const dateStr = moment().format('YYYY-MM-DD_HH-mm');
-        const fileName = `backup_asesores_${dateStr}.sql`;
-        const backupDir = path.join(__dirname, '../../temp_backups');
-        const fullPath = path.join(backupDir, fileName);
-
-        // Crear carpeta temporal si no existe
-        if (!fs.existsSync(backupDir)) {
-            fs.mkdirSync(backupDir, { recursive: true });
-        }
-
-        // Importación dinámica o directa del paquete mysqldump (asegúrate de instalarlo con npm i mysqldump)
-        //const mysqldump = require('mysqldump');
-
-        // Genera el respaldo usando la conexión directa de Node.js (Funciona perfecto en Railway)
-        const dumpResult = await mysqldump({
-            connection: {
-                host: dbConfig.host,
-                port: Number(dbConfig.port),
-                user: dbConfig.user,
-                password: dbConfig.password,
-                database: dbConfig.database,
-            },
-        });
-
-        // Guardar el contenido SQL en el archivo temporal
-        fs.writeFileSync(fullPath, dumpResult.dump.sql);
-
-        console.log(`Respaldo creado exitosamente en: ${fullPath}`);
-
-        // Forzar descarga en el navegador
-        res.download(fullPath, fileName, (err) => {
-            if (err) {
-                console.error('Error en descarga:', err);
-            }
-
-            // Limpieza: Eliminar archivo temporal después de la descarga
-            fs.unlink(fullPath, (unlinkErr) => {
-                if (unlinkErr) console.error('Error al eliminar respaldo temporal:', unlinkErr);
-                else console.log('Respaldo temporal eliminado.');
-            });
-        });
-
-    } catch (error) {
-        console.error('Error crítico al generar respaldo:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Error al generar respaldo.', 
-            error: error.message 
-        });
-    }
-});
-*/
-
-
 
 
 // Inicialización del servidor
