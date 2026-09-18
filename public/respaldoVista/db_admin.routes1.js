@@ -114,21 +114,42 @@ router.get('/respaldo', async(req, res) => {
         });
     }
 });
-
 // ==========================================
-// RUTA 2: Ejecutar Actualización (Update desde archivo SQL)
+// RUTA 2: Ejecutar Update desde archivo SQL (Definitivo)
 // ==========================================
 router.post('/update', upload.single('sqlFile'), async(req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ success: false, message: 'No se subió archivo.' });
+    }
+
+    const uploadedFilePath = req.file.path;
+    const originalName = req.file.originalname;
+
+    console.log(`Iniciando actualización inteligente de DB con archivo: ${originalName}`);
+
     let connection;
     try {
-        if (!req.file) {
-            return res.status(400).json({ success: false, message: 'No se ha subido ningún archivo SQL.' });
-        }
+        let sqlContent = fs.readFileSync(uploadedFilePath, 'utf8');
 
-        const filePath = req.file.path;
-        const sqlScript = fs.readFileSync(filePath, 'utf8');
+        // 1. Convertir los INSERT en INSERT IGNORE para sumar los nuevos sin duplicar
+        sqlContent = sqlContent.replace(/INSERT INTO/gi, 'INSERT IGNORE INTO');
 
-        // Crear conexión con multipleStatements y SSL para Railway
+        // 2. FILTRADO LÍNEA POR LÍNEA: Eliminamos cualquier línea relacionada con DROP, CREATE o LOCKS
+        // para que MySQL jamás intente recrear la tabla ni de errores de que ya existe.
+        const lines = sqlContent.split('\n');
+        const filteredLines = lines.filter(line => {
+            const upperLine = line.trim().toUpperCase();
+            if (upperLine.startsWith('DROP TABLE')) return false;
+            if (upperLine.startsWith('CREATE TABLE')) return false;
+            if (upperLine.startsWith('LOCK TABLES')) return false;
+            if (upperLine.startsWith('UNLOCK TABLES')) return false;
+            // Ocultar líneas secundarias de la estructura de creación si el dump las separa
+            if (upperLine.startsWith('(`') || (upperLine.startsWith('ENGINE='))) return false;
+            return true;
+        });
+
+        sqlContent = filteredLines.join('\n');
+
         connection = await mysql.createConnection({
             host: dbConfig.host,
             port: Number(dbConfig.port),
@@ -136,33 +157,42 @@ router.post('/update', upload.single('sqlFile'), async(req, res) => {
             password: dbConfig.password,
             database: dbConfig.database,
             multipleStatements: true,
-            ssl: { rejectUnauthorized: false }
+            ssl: {
+                rejectUnauthorized: false
+            }
         });
 
-        // Ejecutar el script SQL completo
-        await connection.query(sqlScript);
+        await connection.query(sqlContent);
         await connection.end();
 
-        // Eliminar archivo temporal subido
-        fs.unlinkSync(filePath);
+        // Limpieza: Eliminar archivo subido temporalmente
+        fs.unlink(uploadedFilePath, (unlinkErr) => {
+            if (unlinkErr) console.error('Error al eliminar archivo de update temporal:', unlinkErr);
+        });
 
+        console.log('Actualización de DB completada exitosamente.');
         res.json({
             success: true,
-            message: 'La base de datos se ha actualizado correctamente con el archivo SQL.'
+            message: `El archivo "${originalName}" se procesó e integró correctamente en la base de datos.`
         });
 
     } catch (error) {
+        console.error(`Error ejecutando update SQL: ${error}`);
+
         if (connection) await connection.end().catch(() => {});
-        if (req.file && fs.existsSync(req.file.path)) {
-            fs.unlinkSync(req.file.path);
+
+        if (fs.existsSync(uploadedFilePath)) {
+            fs.unlinkSync(uploadedFilePath);
         }
-        console.error('Error al ejecutar actualización SQL:', error);
+
         res.status(500).json({
             success: false,
-            message: 'Error al ejecutar la actualización en la base de datos.',
+            message: 'Error crítico al ejecutar el script SQL.',
             error: error.message
         });
     }
 });
+
+
 
 module.exports = router;
