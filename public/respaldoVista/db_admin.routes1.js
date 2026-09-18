@@ -4,47 +4,45 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 const moment = require('moment');
-
-// --- IMPORTACIONES CLAVE QUE FALTABAN ---
-const mysqldump = require('mysqldump');
 const mysql = require('mysql2/promise');
 
-// const adminAuthMiddleware = require('../middlewares/adminAuth'); // IMPLEMENTAR ESTO
+// Ajusta esta ruta si tu archivo de configuración de base de datos está en otra carpeta
+const dbConfig = require('../config/db');
 
-// Configuración de Multer para guardar temporalmente el archivo SQL subido
-const upload = multer({
-    dest: 'uploads/',
-    limits: { fileSize: 10 * 1024 * 1024 } // Limitar a 10MB por seguridad
+// Configuración de Multer para la subida temporal de archivos SQL (Actualizaciones)
+const uploadDir = path.join(process.cwd(), 'public', 'uploads');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        cb(null, `update_${Date.now()}${path.extname(file.originalname)}`);
+    }
 });
-
-
-// --- CONFIGURACIÓN DB (Soporte para variables de Railway y locales) ---
-const dbConfig = {
-    host: process.env.DB_HOST || process.env.MYSQLHOST || 'localhost',
-    user: process.env.DB_USER || process.env.MYSQLUSER || 'root',
-    password: process.env.DB_PASSWORD || process.env.MYSQLPASSWORD || '',
-    database: process.env.DB_NAME || process.env.MYSQLDATABASE || 'asesores',
-    port: process.env.DB_PORT || process.env.MYSQLPORT || 3306
-};
-
-
+const upload = multer({ storage: storage });
 
 // ==========================================
-// RUTA 1: Generar y Descargar Respaldo (Generador Nativo 100% Robusto)
+// RUTA 1: Generar y Descargar Respaldo (Nativo y Robusto)
 // ==========================================
 router.get('/respaldo', async(req, res) => {
     let connection;
     try {
         const dateStr = moment().format('YYYY-MM-DD_HH-mm');
         const fileName = `backup_asesores_${dateStr}.sql`;
-        const backupDir = path.join(__dirname, '../../public/respaldo');
+
+        // Usar ruta absoluta segura basada en process.cwd() para Railway
+        const backupDir = path.join(process.cwd(), 'public', 'respaldo');
         const fullPath = path.join(backupDir, fileName);
 
         if (!fs.existsSync(backupDir)) {
             fs.mkdirSync(backupDir, { recursive: true });
         }
 
-        // Conectarnos usando mysql2/promise con SSL
+        // Conectarnos usando mysql2/promise con soporte SSL para Railway
         connection = await mysql.createConnection({
             host: dbConfig.host,
             port: Number(dbConfig.port),
@@ -90,16 +88,17 @@ router.get('/respaldo', async(req, res) => {
 
         sqlDump += `SET FOREIGN_KEY_CHECKS=1;\n`;
 
-        // Escribir el archivo físico
+        // Escribir el archivo físico en la ruta absoluta
         fs.writeFileSync(fullPath, sqlDump, 'utf8');
         await connection.end();
 
         console.log(`Respaldo nativo creado exitosamente en: ${fullPath}`);
 
-        // Forzar descarga en el navegador
+        // Forzar descarga en el navegador del cliente
         res.download(fullPath, fileName, (err) => {
             if (err) console.error('Error en descarga:', err);
 
+            // Limpieza: Eliminar archivo temporal después de la descarga
             fs.unlink(fullPath, (unlinkErr) => {
                 if (unlinkErr) console.error('Error al eliminar respaldo temporal:', unlinkErr);
             });
@@ -115,60 +114,52 @@ router.get('/respaldo', async(req, res) => {
         });
     }
 });
+
 // ==========================================
-// RUTA 2: Ejecutar Update desde archivo SQL
+// RUTA 2: Ejecutar Actualización (Update desde archivo SQL)
 // ==========================================
 router.post('/update', upload.single('sqlFile'), async(req, res) => {
-    if (!req.file) {
-        return res.status(400).json({ success: false, message: 'No se subió archivo.' });
-    }
-
-    const uploadedFilePath = req.file.path;
-    const originalName = req.file.originalname;
-
-    console.log(`Iniciando actualización de DB con archivo: ${originalName}`);
-
+    let connection;
     try {
-        const sqlContent = fs.readFileSync(uploadedFilePath, 'utf8');
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'No se ha subido ningún archivo SQL.' });
+        }
 
-        // Conexión usando mysql2 con soporte SSL y múltiples sentencias permitidas
-        const connection = await mysql.createConnection({
+        const filePath = req.file.path;
+        const sqlScript = fs.readFileSync(filePath, 'utf8');
+
+        // Crear conexión con multipleStatements y SSL para Railway
+        connection = await mysql.createConnection({
             host: dbConfig.host,
             port: Number(dbConfig.port),
             user: dbConfig.user,
             password: dbConfig.password,
             database: dbConfig.database,
             multipleStatements: true,
-            ssl: {
-                rejectUnauthorized: false
-            }
+            ssl: { rejectUnauthorized: false }
         });
 
-        await connection.query(sqlContent);
+        // Ejecutar el script SQL completo
+        await connection.query(sqlScript);
         await connection.end();
 
-        // Limpieza: Eliminar archivo subido temporalmente
-        fs.unlink(uploadedFilePath, (unlinkErr) => {
-            if (unlinkErr) console.error('Error al eliminar archivo de update temporal:', unlinkErr);
-        });
+        // Eliminar archivo temporal subido
+        fs.unlinkSync(filePath);
 
-        console.log('Actualización de DB completada exitosamente.');
         res.json({
             success: true,
-            message: `El archivo "${originalName}" se ejecutó correctamente en la base de datos.`
+            message: 'La base de datos se ha actualizado correctamente con el archivo SQL.'
         });
 
     } catch (error) {
-        console.error(`Error ejecutando update SQL: ${error}`);
-
-        // Limpiar archivo temporal en caso de error
-        if (fs.existsSync(uploadedFilePath)) {
-            fs.unlinkSync(uploadedFilePath);
+        if (connection) await connection.end().catch(() => {});
+        if (req.file && fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
         }
-
+        console.error('Error al ejecutar actualización SQL:', error);
         res.status(500).json({
             success: false,
-            message: 'Error crítico al ejecutar el script SQL.',
+            message: 'Error al ejecutar la actualización en la base de datos.',
             error: error.message
         });
     }
