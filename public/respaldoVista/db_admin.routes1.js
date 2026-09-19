@@ -115,7 +115,7 @@ router.get('/respaldo', async(req, res) => {
     }
 });
 // ==========================================
-// RUTA 2: Ejecutar Update desde archivo SQL (Ultra Segura)
+// RUTA 2: Ejecutar Update desde archivo SQL (Bloques Multilínea Limpios)
 // ==========================================
 router.post('/update', upload.single('sqlFile'), async(req, res) => {
     if (!req.file) {
@@ -125,7 +125,7 @@ router.post('/update', upload.single('sqlFile'), async(req, res) => {
     const uploadedFilePath = req.file.path;
     const originalName = req.file.originalname;
 
-    console.log(`Iniciando actualización radical de DB con archivo: ${originalName}`);
+    console.log(`Iniciando actualización limpia de DB con archivo: ${originalName}`);
 
     let connection;
     try {
@@ -134,19 +134,16 @@ router.post('/update', upload.single('sqlFile'), async(req, res) => {
         // 1. Convertir los INSERT en INSERT IGNORE para sumar los nuevos sin duplicar
         sqlContent = sqlContent.replace(/INSERT INTO/gi, 'INSERT IGNORE INTO');
 
-        // 2. FILTRADO RADICAL POR LÍNEA: 
-        // Si cualquier línea del archivo contiene la palabra CREATE o DROP, la borramos por completo.
-        const lines = sqlContent.split(/\r?\n/);
-        const cleanLines = lines.filter(line => {
-            const upper = line.toUpperCase();
-            if (upper.includes('CREATE TABLE')) return false;
-            if (upper.includes('DROP TABLE')) return false;
-            if (upper.includes('LOCK TABLES')) return false;
-            if (upper.includes('UNLOCK TABLES')) return false;
-            return true;
-        });
+        // 2. ELIMINAR BLOQUES COMPLETOS MULTILÍNEA DE DROP Y CREATE TABLE
+        // Esto borra todo el bloque desde "DROP TABLE..." hasta el punto y coma (;)
+        sqlContent = sqlContent.replace(/DROP\s+TABLE[\s\S]*?;/gi, '');
 
-        sqlContent = cleanLines.join('\n');
+        // Esto borra todo el bloque desde "CREATE TABLE..." hasta el paréntesis de cierre y el punto y coma ();\s*
+        sqlContent = sqlContent.replace(/CREATE\s+TABLE[\s\S]*?\);\s*/gi, '');
+
+        // 3. Limpieza adicional por seguridad de cualquier comando de bloqueo de tablas
+        sqlContent = sqlContent.replace(/LOCK\s+TABLES[\s\S]*?;/gi, '');
+        sqlContent = sqlContent.replace(/UNLOCK\s+TABLES[\s\S]*?;/gi, '');
 
         connection = await mysql.createConnection({
             host: dbConfig.host,
