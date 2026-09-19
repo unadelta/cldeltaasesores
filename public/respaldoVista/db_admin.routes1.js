@@ -116,171 +116,81 @@ router.get('/respaldo', async(req, res) => {
 });
 
 // ==========================================
-// RUTA 2: Sincronización Segura y Neutralización de Estructuras
+// RUTA 2: Sincronización con Diagnóstico de Texto
 // ==========================================
 router.post('/update', upload.single('sqlFile'), async(req, res) => {
-            if (!req.file) {
-                return res.status(400).json({ success: false, message: 'No se subió archivo.' });
+    if (!req.file) {
+        return res.status(400).json({ success: false, message: 'No se subió archivo.' });
+    }
+
+    const uploadedFilePath = req.file.path;
+    const originalName = req.file.originalname;
+
+    console.log(`--- PROCESANDO ARCHIVO: ${originalName} ---`);
+
+    let connection;
+    try {
+        let sqlContent = fs.readFileSync(uploadedFilePath, 'utf8');
+
+        // Mostramos un fragmento en la consola de Node para verificar si leyó el archivo real
+        console.log("Primeros 100 caracteres del archivo leídos:", sqlContent.substring(0, 100));
+
+        // 1. Limpieza agresiva de cualquier estructura CREATE o DROP
+        sqlContent = sqlContent.replace(/CREATE\s+TABLE[\s\S]*?;/gi, '');
+        sqlContent = sqlContent.replace(/DROP\s+TABLE[\s\S]*?;/gi, '');
+        sqlContent = sqlContent.replace(/LOCK\s+TABLES[\s\S]*?;/gi, '');
+        sqlContent = sqlContent.replace(/UNLOCK\s+TABLES[\s\S]*?;/gi, '');
+
+        // 2. Transformar INSERT INTO en INSERT IGNORE INTO
+        sqlContent = sqlContent.replace(/INSERT INTO/gi, 'INSERT IGNORE INTO');
+
+        // Verificamos si después de limpiar aún queda la palabra CREATE por alguna extraña razón
+        if (sqlContent.toUpperCase().includes('CREATE TABLE')) {
+            console.error("¡ALERTA! El contenido procesado aún contiene 'CREATE TABLE'.");
+        }
+
+        // 3. Conectarnos a la base de datos
+        connection = await mysql.createConnection({
+            host: dbConfig.host,
+            port: Number(dbConfig.port),
+            user: dbConfig.user,
+            password: dbConfig.password,
+            database: dbConfig.database,
+            multipleStatements: true,
+            ssl: {
+                rejectUnauthorized: false
             }
+        });
 
-            const uploadedFilePath = req.file.path;
-            const originalName = req.file.originalname;
+        // 4. Ejecutar el SQL purgado
+        await connection.query(sqlContent);
+        await connection.end();
 
-            console.log(`Procesando archivo SQL con neutralización total de estructuras: ${originalName}`);
+        // Limpieza del archivo temporal
+        fs.unlink(uploadedFilePath, (unlinkErr) => {
+            if (unlinkErr) console.error('Error al eliminar archivo temporal:', unlinkErr);
+        });
 
-            let connection;
-            try {
-                let sqlContent = fs.readFileSync(uploadedFilePath, 'utf8');
+        console.log('Sincronización completada exitosamente.');
+        res.json({
+            success: true,
+            message: `El archivo "${originalName}" se sincronizó correctamente.`
+        });
 
-                // 1. NEUTRALIZACIÓN AGRESIVA: Reemplazar cualquier texto que contenga CREATE TABLE por comentarios vacíos
-                // Esto evita que cualquier comando de creación oculto o multilínea llegue a ejecutarse.
-                sqlContent = sqlContent.replace(/CREATE\s+TABLE[\s\S]*?(?:ENGINE=[^;]*?;|\);)/gi, '');
-                sqlContent = sqlContent.replace(/DROP\s+TABLE[\s\S]*?;/gi, '');
+    } catch (error) {
+        console.error(`Error detallado en la sincronización SQL:`, error);
 
-                // 2. Dividir instrucción por instrucción
-                const statements = sqlContent.split(';');
-                const dataStatements = [];
+        if (connection) await connection.end().catch(() => {});
 
-                for (let stmt of statements) {
-                    const trimmed = stmt.trim();
-                    if (!trimmed) continue;
+        if (fs.existsSync(uploadedFilePath)) {
+            fs.unlinkSync(uploadedFilePath);
+        }
 
-                    const upper = trimmed.toUpperCase();
-
-                    // Filtrar y aceptar únicamente operaciones de datos, asegurando que NO contengan la palabra CREATE por seguridad
-                    if ((upper.startsWith('INSERT INTO') || upper.startsWith('REPLACE INTO') || upper.startsWith('UPDATE')) && !upper.includes('CREATE')) {
-                        let processedStmt = trimmed;
-
-                        // Transformar INSERT INTO en INSERT IGNORE INTO para prevenir errores de duplicados
-                        if (upper.startsWith('INSERT INTO')) {
-                            processedStmt = processedStmt.replace(/INSERT INTO/gi, 'INSERT IGNORE INTO');
-                        }
-
-                        dataStatements.push(processedStmt);
-                    }
-                }
-
-                if (dataStatements.length === 0) {
-                    return res.status(400).json({
-                        success: false,
-                        message: 'El archivo SQL no contiene sentencias de datos válidas o limpias para sincronizar.'
-                    });
-                }
-
-                const finalSql = dataStatements.join(';\n') + ';';
-
-                // 3. Conectarnos a la base de datos
-                connection = await mysql.createConnection({
-                    host: dbConfig.host,
-                    port: Number(dbConfig.port),
-                    user: dbConfig.user,
-                    password: dbConfig.password,
-                    database: dbConfig.database,
-                    multipleStatements: true,
-                    ssl: {
-                        rejectUnauthorized: false
-                    }
-                });
-
-                // 4. Ejecutar las sentencias de datos depuradas
-                await connection.query(finalSql);
-                await connection.end();
-
-                // Limpieza del archivo temporal
-                fs.unlink(uploadedFilePath, (unlinkErr) => {
-                    if (unlinkErr) console.error('Error al eliminar archivo temporal:', unlinkErr);
-                });
-
-                console.log('Sincronización de datos completada exitosamente.');
-                res.json({
-                    success: true,
-                    message: `El archivo "${originalName}" se procesó e integró correctamente en las tablas existentes.`
-                });
-
-            } catch (error) {
-                console.error(`Error en la sincronización SQL: ${error}`);
-
-                if (connection) await connection.end().catch(() => {});
-
-                if (fs.existsSync(uploadedFilePath)) {
-                    fs.unlinkSync(uploadedFilePath);
-                }
-
-                res.status(500).json({
-                    success: false,
-                    message: 'Error al procesar la sincronización de datos.',
-                    error: error.message
-                });
-                // ==========================================
-                // RUTA 2: Sincronización Definitiva (Limpieza Global por Expresión Regular)
-                // ==========================================
-                router.post('/update', upload.single('sqlFile'), async(req, res) => {
-                    if (!req.file) {
-                        return res.status(400).json({ success: false, message: 'No se subió archivo.' });
-                    }
-
-                    const uploadedFilePath = req.file.path;
-                    const originalName = req.file.originalname;
-
-                    console.log(`Iniciando limpieza global de estructura para: ${originalName}`);
-
-                    let connection;
-                    try {
-                        let sqlContent = fs.readFileSync(uploadedFilePath, 'utf8');
-
-                        // 1. ELIMINACIÓN QUIRÚRGICA GLOBAL: 
-                        // Esta expresión busca la palabra CREATE TABLE y borra todo a su paso hasta encontrar el punto y coma final, 
-                        // sin importar saltos de línea ni cómo esté formateado el archivo.
-                        sqlContent = sqlContent.replace(/CREATE\s+TABLE\s+[\s\S]*?;/gi, '');
-                        sqlContent = sqlContent.replace(/DROP\s+TABLE\s+[\s\S]*?;/gi, '');
-                        sqlContent = sqlContent.replace(/LOCK\s+TABLES\s+[\s\S]*?;/gi, '');
-                        sqlContent = sqlContent.replace(/UNLOCK\s+TABLES\s+[\s\S]*?;/gi, '');
-
-                        // 2. Transformar de manera segura cualquier INSERT INTO en INSERT IGNORE INTO
-                        sqlContent = sqlContent.replace(/INSERT INTO/gi, 'INSERT IGNORE INTO');
-
-                        // 3. Conectarnos a la base de datos
-                        connection = await mysql.createConnection({
-                            host: dbConfig.host,
-                            port: Number(dbConfig.port),
-                            user: dbConfig.user,
-                            password: dbConfig.password,
-                            database: dbConfig.database,
-                            multipleStatements: true,
-                            ssl: {
-                                rejectUnauthorized: false
-                            }
-                        });
-
-                        // 4. Ejecutar el contenido ya completamente purgado de estructuras
-                        await connection.query(sqlContent);
-                        await connection.end();
-
-                        // Limpieza del archivo temporal
-                        fs.unlink(uploadedFilePath, (unlinkErr) => {
-                            if (unlinkErr) console.error('Error al eliminar archivo temporal:', unlinkErr);
-                        });
-
-                        console.log('Sincronización completada exitosamente.');
-                        res.json({
-                            success: true,
-                            message: `El archivo "${originalName}" se sincronizó correctamente con las tablas existentes.`
-                        });
-
-                    } catch (error) {
-                        console.error(`Error en la sincronización SQL: ${error}`);
-
-                        if (connection) await connection.end().catch(() => {});
-
-                        if (fs.existsSync(uploadedFilePath)) {
-                            fs.unlinkSync(uploadedFilePath);
-                        }
-
-                        res.status(500).json({
-                            success: false,
-                            message: 'Error al procesar la sincronización de datos.',
-                            error: error.message
-                        });
-                    }
-                });
-            }); module.exports = router;
+        res.status(500).json({
+            success: false,
+            message: 'Error al procesar la sincronización de datos.',
+            error: error.message
+        });
+    }
+});
+module.exports = router;
