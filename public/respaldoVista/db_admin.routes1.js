@@ -115,10 +115,7 @@ router.get('/respaldo', async(req, res) => {
     }
 });
 // ==========================================
-// RUTA 2: Ejecutar Update desde archivo SQL (Definitivo)
-// ==========================================
-// ==========================================
-// RUTA 2: Ejecutar Update desde archivo SQL (Filtro Robusto)
+// RUTA 2: Ejecutar Update desde archivo SQL (Seguro y Limpio)
 // ==========================================
 router.post('/update', upload.single('sqlFile'), async(req, res) => {
     if (!req.file) {
@@ -137,10 +134,11 @@ router.post('/update', upload.single('sqlFile'), async(req, res) => {
         // 1. Convertir los INSERT en INSERT IGNORE para no duplicar y sumar los nuevos
         sqlContent = sqlContent.replace(/INSERT INTO/gi, 'INSERT IGNORE INTO');
 
-        // 2. ELIMINAR BLOQUES CREATE TABLE COMPLETOS: 
-        // Esto borra desde "CREATE TABLE `alumno`" hasta el cierre "ENGINE=..." para evitar conflictos.
+        // 2. ELIMINAR COMPLETAMENTE cualquier instrucción CREATE TABLE o DROP TABLE del script
+        sqlContent = sqlContent.replace(/DROP TABLE[\s\S]*?;/gi, '');
+        sqlContent = sqlContent.replace(/CREATE TABLE[\s\S]*?\n\);\n/gi, '');
+        // Limpieza adicional de líneas sueltas de estructura por si acaso
         sqlContent = sqlContent.replace(/CREATE TABLE[\s\S]*?;/gi, '');
-        sqlContent = sqlContent.replace(/DROP TABLE (IF EXISTS )?[\s\S]*?;/gi, '');
 
         connection = await mysql.createConnection({
             host: dbConfig.host,
@@ -184,6 +182,4 @@ router.post('/update', upload.single('sqlFile'), async(req, res) => {
         });
     }
 });
-
-
 module.exports = router;
