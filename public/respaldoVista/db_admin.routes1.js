@@ -116,7 +116,7 @@ router.get('/respaldo', async(req, res) => {
 });
 
 // ==========================================
-// RUTA 2: Sincronización General de Datos desde SQL (Genérico y Seguro)
+// RUTA 2: Sincronización General de Datos desde SQL (Regex Definitivo)
 // ==========================================
 router.post('/update', upload.single('sqlFile'), async(req, res) => {
     if (!req.file) {
@@ -126,43 +126,26 @@ router.post('/update', upload.single('sqlFile'), async(req, res) => {
     const uploadedFilePath = req.file.path;
     const originalName = req.file.originalname;
 
-    console.log(`Iniciando sincronización de datos en DB con archivo: ${originalName}`);
+    console.log(`Iniciando limpieza y sincronización de DB con archivo: ${originalName}`);
 
     let connection;
     try {
         let sqlContent = fs.readFileSync(uploadedFilePath, 'utf8');
 
-        // 1. FILTRADO GENÉRICO DE ESTRUCTURA:
-        // Eliminamos por completo cualquier bloque CREATE TABLE o DROP TABLE sin importar la tabla que sea,
-        // ya que las tablas deben existir previamente y solo nos interesan los datos.
-        const lines = sqlContent.split(/\r?\n/);
-        const cleanLines = [];
-        let skipping = false;
+        // 1. ELIMINACIÓN TOTAL DE ESTRUCTURAS (GENÉRICO):
+        // Borra cualquier bloque DROP TABLE ... ;
+        sqlContent = sqlContent.replace(/DROP\s+TABLE[\s\S]*?;/gi, '');
 
-        for (let line of lines) {
-            const upper = line.trim().toUpperCase();
+        // Borra cualquier bloque CREATE TABLE ... hasta su cierre de motor (ENGINE=...) o punto y coma final
+        sqlContent = sqlContent.replace(/CREATE\s+TABLE[\s\S]*?ENGINE=[^;]*?;/gi, '');
+        sqlContent = sqlContent.replace(/CREATE\s+TABLE[\s\S]*?\);\s*/gi, '');
 
-            // Detectar inicio de bloques estructurales o de bloqueo para omitirlos
-            if (upper.startsWith('CREATE TABLE') || upper.startsWith('DROP TABLE') || upper.startsWith('LOCK TABLES') || upper.startsWith('UNLOCK TABLES')) {
-                skipping = true;
-                continue;
-            }
+        // Limpiar comandos de bloqueo de tablas si los hubiera
+        sqlContent = sqlContent.replace(/LOCK\s+TABLES[\s\S]*?;/gi, '');
+        sqlContent = sqlContent.replace(/UNLOCK\s+TABLES[\s\S]*?;/gi, '');
 
-            if (skipping) {
-                // El bloque de estructura termina cuando encuentra el cierre o el motor de la tabla
-                if (line.trim().endsWith(';') || upper.includes('ENGINE=')) {
-                    skipping = false;
-                }
-                continue;
-            }
-
-            cleanLines.push(line);
-        }
-
-        sqlContent = cleanLines.join('\n');
-
-        // 2. Transformar de forma genérica cualquier INSERT INTO en INSERT IGNORE INTO 
-        // para que sume/actualice los registros nuevos sin duplicar ni romper llaves únicas.
+        // 2. Transformar de forma genérica cualquier INSERT INTO en INSERT IGNORE INTO
+        // para que integre registros nuevos sin duplicar ni romper datos existentes.
         sqlContent = sqlContent.replace(/INSERT INTO/gi, 'INSERT IGNORE INTO');
 
         // 3. Conectarnos a la base de datos
@@ -178,7 +161,7 @@ router.post('/update', upload.single('sqlFile'), async(req, res) => {
             }
         });
 
-        // 4. Ejecutar únicamente las sentencias de datos puras
+        // 4. Ejecutar exclusivamente las sentencias de datos puras
         await connection.query(sqlContent);
         await connection.end();
 
@@ -187,7 +170,7 @@ router.post('/update', upload.single('sqlFile'), async(req, res) => {
             if (unlinkErr) console.error('Error al eliminar archivo temporal:', unlinkErr);
         });
 
-        console.log('Sincronización de datos completada exitosamente.');
+        console.log('Sincronización general completada exitosamente.');
         res.json({
             success: true,
             message: `El archivo "${originalName}" se sincronizó correctamente con las tablas existentes.`
@@ -209,4 +192,5 @@ router.post('/update', upload.single('sqlFile'), async(req, res) => {
         });
     }
 });
+
 module.exports = router;
