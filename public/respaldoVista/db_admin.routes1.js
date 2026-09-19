@@ -114,8 +114,9 @@ router.get('/respaldo', async(req, res) => {
         });
     }
 });
+
 // ==========================================
-// RUTA 2: Ejecutar Update desde archivo SQL (Filtro por Líneas Infalible)
+// RUTA 2: Sincronización General de Datos desde SQL (Genérico y Seguro)
 // ==========================================
 router.post('/update', upload.single('sqlFile'), async(req, res) => {
     if (!req.file) {
@@ -125,42 +126,34 @@ router.post('/update', upload.single('sqlFile'), async(req, res) => {
     const uploadedFilePath = req.file.path;
     const originalName = req.file.originalname;
 
-    console.log(`Iniciando actualización segura de DB con archivo: ${originalName}`);
+    console.log(`Iniciando sincronización de datos en DB con archivo: ${originalName}`);
 
     let connection;
     try {
         let sqlContent = fs.readFileSync(uploadedFilePath, 'utf8');
 
-        // Procesar línea por línea para limpiar la estructura y dejar solo los datos
+        // 1. FILTRADO GENÉRICO DE ESTRUCTURA:
+        // Eliminamos por completo cualquier bloque CREATE TABLE o DROP TABLE sin importar la tabla que sea,
+        // ya que las tablas deben existir previamente y solo nos interesan los datos.
         const lines = sqlContent.split(/\r?\n/);
         const cleanLines = [];
-        let skippingCreateTable = false;
+        let skipping = false;
 
         for (let line of lines) {
             const upper = line.trim().toUpperCase();
 
-            // Ignorar comandos de borrado o bloqueo de tablas
-            if (upper.startsWith('DROP TABLE')) continue;
-            if (upper.startsWith('LOCK TABLES')) continue;
-            if (upper.startsWith('UNLOCK TABLES')) continue;
-
-            // Detectar inicio de creación de tabla y omitir todo su bloque multilínea
-            if (upper.startsWith('CREATE TABLE')) {
-                skippingCreateTable = true;
+            // Detectar inicio de bloques estructurales o de bloqueo para omitirlos
+            if (upper.startsWith('CREATE TABLE') || upper.startsWith('DROP TABLE') || upper.startsWith('LOCK TABLES') || upper.startsWith('UNLOCK TABLES')) {
+                skipping = true;
                 continue;
             }
 
-            if (skippingCreateTable) {
-                // El bloque de creación termina cuando encuentra el motor de la tabla o el cierre
-                if (upper.includes('ENGINE=') || line.trim() === ');') {
-                    skippingCreateTable = false;
+            if (skipping) {
+                // El bloque de estructura termina cuando encuentra el cierre o el motor de la tabla
+                if (line.trim().endsWith(';') || upper.includes('ENGINE=')) {
+                    skipping = false;
                 }
                 continue;
-            }
-
-            // Transformar cualquier INSERT INTO en INSERT IGNORE INTO para sumar sin duplicar
-            if (upper.startsWith('INSERT INTO')) {
-                line = line.replace(/INSERT INTO/gi, 'INSERT IGNORE INTO');
             }
 
             cleanLines.push(line);
@@ -168,6 +161,11 @@ router.post('/update', upload.single('sqlFile'), async(req, res) => {
 
         sqlContent = cleanLines.join('\n');
 
+        // 2. Transformar de forma genérica cualquier INSERT INTO en INSERT IGNORE INTO 
+        // para que sume/actualice los registros nuevos sin duplicar ni romper llaves únicas.
+        sqlContent = sqlContent.replace(/INSERT INTO/gi, 'INSERT IGNORE INTO');
+
+        // 3. Conectarnos a la base de datos
         connection = await mysql.createConnection({
             host: dbConfig.host,
             port: Number(dbConfig.port),
@@ -180,22 +178,23 @@ router.post('/update', upload.single('sqlFile'), async(req, res) => {
             }
         });
 
+        // 4. Ejecutar únicamente las sentencias de datos puras
         await connection.query(sqlContent);
         await connection.end();
 
         // Limpieza: Eliminar archivo subido temporalmente
         fs.unlink(uploadedFilePath, (unlinkErr) => {
-            if (unlinkErr) console.error('Error al eliminar archivo de update temporal:', unlinkErr);
+            if (unlinkErr) console.error('Error al eliminar archivo temporal:', unlinkErr);
         });
 
-        console.log('Actualización de DB completada exitosamente.');
+        console.log('Sincronización de datos completada exitosamente.');
         res.json({
             success: true,
-            message: `El archivo "${originalName}" se procesó e integró correctamente en la base de datos.`
+            message: `El archivo "${originalName}" se sincronizó correctamente con las tablas existentes.`
         });
 
     } catch (error) {
-        console.error(`Error ejecutando update SQL: ${error}`);
+        console.error(`Error ejecutando sincronización SQL: ${error}`);
 
         if (connection) await connection.end().catch(() => {});
 
@@ -205,7 +204,7 @@ router.post('/update', upload.single('sqlFile'), async(req, res) => {
 
         res.status(500).json({
             success: false,
-            message: 'Error crítico al ejecutar el script SQL.',
+            message: 'Error al procesar la sincronización de datos.',
             error: error.message
         });
     }
