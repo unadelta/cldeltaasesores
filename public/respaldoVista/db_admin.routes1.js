@@ -115,7 +115,7 @@ router.get('/respaldo', async(req, res) => {
     }
 });
 // ==========================================
-// RUTA 2: Ejecutar Update desde archivo SQL (Seguro y Limpio)
+// RUTA 2: Ejecutar Update desde archivo SQL (Ultra Segura)
 // ==========================================
 router.post('/update', upload.single('sqlFile'), async(req, res) => {
     if (!req.file) {
@@ -125,20 +125,28 @@ router.post('/update', upload.single('sqlFile'), async(req, res) => {
     const uploadedFilePath = req.file.path;
     const originalName = req.file.originalname;
 
-    console.log(`Iniciando actualización inteligente de DB con archivo: ${originalName}`);
+    console.log(`Iniciando actualización radical de DB con archivo: ${originalName}`);
 
     let connection;
     try {
         let sqlContent = fs.readFileSync(uploadedFilePath, 'utf8');
 
-        // 1. Convertir los INSERT en INSERT IGNORE para no duplicar y sumar los nuevos
+        // 1. Convertir los INSERT en INSERT IGNORE para sumar los nuevos sin duplicar
         sqlContent = sqlContent.replace(/INSERT INTO/gi, 'INSERT IGNORE INTO');
 
-        // 2. ELIMINAR COMPLETAMENTE cualquier instrucción CREATE TABLE o DROP TABLE del script
-        sqlContent = sqlContent.replace(/DROP TABLE[\s\S]*?;/gi, '');
-        sqlContent = sqlContent.replace(/CREATE TABLE[\s\S]*?\n\);\n/gi, '');
-        // Limpieza adicional de líneas sueltas de estructura por si acaso
-        sqlContent = sqlContent.replace(/CREATE TABLE[\s\S]*?;/gi, '');
+        // 2. FILTRADO RADICAL POR LÍNEA: 
+        // Si cualquier línea del archivo contiene la palabra CREATE o DROP, la borramos por completo.
+        const lines = sqlContent.split(/\r?\n/);
+        const cleanLines = lines.filter(line => {
+            const upper = line.toUpperCase();
+            if (upper.includes('CREATE TABLE')) return false;
+            if (upper.includes('DROP TABLE')) return false;
+            if (upper.includes('LOCK TABLES')) return false;
+            if (upper.includes('UNLOCK TABLES')) return false;
+            return true;
+        });
+
+        sqlContent = cleanLines.join('\n');
 
         connection = await mysql.createConnection({
             host: dbConfig.host,
