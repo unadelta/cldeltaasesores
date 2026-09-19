@@ -114,9 +114,8 @@ router.get('/respaldo', async(req, res) => {
         });
     }
 });
-
 // ==========================================
-// RUTA 2: Sincronización General de Datos desde SQL (Regex Definitivo)
+// RUTA 2: Sincronización por Sentencias (Filtrado Inteligente)
 // ==========================================
 router.post('/update', upload.single('sqlFile'), async(req, res) => {
     if (!req.file) {
@@ -126,29 +125,45 @@ router.post('/update', upload.single('sqlFile'), async(req, res) => {
     const uploadedFilePath = req.file.path;
     const originalName = req.file.originalname;
 
-    console.log(`Iniciando limpieza y sincronización de DB con archivo: ${originalName}`);
+    console.log(`Procesando archivo SQL instrucción por instrucción: ${originalName}`);
 
     let connection;
     try {
-        let sqlContent = fs.readFileSync(uploadedFilePath, 'utf8');
+        const sqlContent = fs.readFileSync(uploadedFilePath, 'utf8');
 
-        // 1. ELIMINACIÓN TOTAL DE ESTRUCTURAS (GENÉRICO):
-        // Borra cualquier bloque DROP TABLE ... ;
-        sqlContent = sqlContent.replace(/DROP\s+TABLE[\s\S]*?;/gi, '');
+        // 1. Dividir el archivo SQL instrucción por instrucción usando el punto y coma (;)
+        const statements = sqlContent.split(';');
+        const cleanStatements = [];
 
-        // Borra cualquier bloque CREATE TABLE ... hasta su cierre de motor (ENGINE=...) o punto y coma final
-        sqlContent = sqlContent.replace(/CREATE\s+TABLE[\s\S]*?ENGINE=[^;]*?;/gi, '');
-        sqlContent = sqlContent.replace(/CREATE\s+TABLE[\s\S]*?\);\s*/gi, '');
+        for (let stmt of statements) {
+            const trimmed = stmt.trim();
+            if (!trimmed) continue;
 
-        // Limpiar comandos de bloqueo de tablas si los hubiera
-        sqlContent = sqlContent.replace(/LOCK\s+TABLES[\s\S]*?;/gi, '');
-        sqlContent = sqlContent.replace(/UNLOCK\s+TABLES[\s\S]*?;/gi, '');
+            const upper = trimmed.toUpperCase();
 
-        // 2. Transformar de forma genérica cualquier INSERT INTO en INSERT IGNORE INTO
-        // para que integre registros nuevos sin duplicar ni romper datos existentes.
-        sqlContent = sqlContent.replace(/INSERT INTO/gi, 'INSERT IGNORE INTO');
+            // 2. Descartar cualquier sentencia que tenga relación con crear, borrar o bloquear tablas
+            if (
+                upper.includes('CREATE TABLE') ||
+                upper.includes('DROP TABLE') ||
+                upper.includes('LOCK TABLES') ||
+                upper.includes('UNLOCK TABLES')
+            ) {
+                continue; // Se omite esta sentencia para proteger las tablas existentes
+            }
 
-        // 3. Conectarnos a la base de datos
+            // 3. Transformar INSERT INTO en INSERT IGNORE INTO para evitar duplicados y sumar registros
+            let processedStmt = trimmed;
+            if (upper.startsWith('INSERT INTO')) {
+                processedStmt = processedStmt.replace(/INSERT INTO/gi, 'INSERT IGNORE INTO');
+            }
+
+            cleanStatements.push(processedStmt);
+        }
+
+        // Volver a unir las sentencias limpias
+        const finalSql = cleanStatements.join(';\n') + ';';
+
+        // 4. Conectarnos a la base de datos
         connection = await mysql.createConnection({
             host: dbConfig.host,
             port: Number(dbConfig.port),
@@ -161,23 +176,23 @@ router.post('/update', upload.single('sqlFile'), async(req, res) => {
             }
         });
 
-        // 4. Ejecutar exclusivamente las sentencias de datos puras
-        await connection.query(sqlContent);
+        // 5. Ejecutar exclusivamente las sentencias de datos puras
+        await connection.query(finalSql);
         await connection.end();
 
-        // Limpieza: Eliminar archivo subido temporalmente
+        // Limpieza del archivo temporal
         fs.unlink(uploadedFilePath, (unlinkErr) => {
             if (unlinkErr) console.error('Error al eliminar archivo temporal:', unlinkErr);
         });
 
-        console.log('Sincronización general completada exitosamente.');
+        console.log('Sincronización de datos completada exitosamente.');
         res.json({
             success: true,
-            message: `El archivo "${originalName}" se sincronizó correctamente con las tablas existentes.`
+            message: `El archivo "${originalName}" se procesó e integró correctamente en las tablas existentes.`
         });
 
     } catch (error) {
-        console.error(`Error ejecutando sincronización SQL: ${error}`);
+        console.error(`Error en la sincronización SQL: ${error}`);
 
         if (connection) await connection.end().catch(() => {});
 
@@ -192,5 +207,4 @@ router.post('/update', upload.single('sqlFile'), async(req, res) => {
         });
     }
 });
-
 module.exports = router;
