@@ -117,6 +117,9 @@ router.get('/respaldo', async(req, res) => {
 // ==========================================
 // RUTA 2: Ejecutar Update desde archivo SQL (Definitivo)
 // ==========================================
+// ==========================================
+// RUTA 2: Ejecutar Update desde archivo SQL (Filtro Robusto)
+// ==========================================
 router.post('/update', upload.single('sqlFile'), async(req, res) => {
     if (!req.file) {
         return res.status(400).json({ success: false, message: 'No se subió archivo.' });
@@ -131,24 +134,13 @@ router.post('/update', upload.single('sqlFile'), async(req, res) => {
     try {
         let sqlContent = fs.readFileSync(uploadedFilePath, 'utf8');
 
-        // 1. Convertir los INSERT en INSERT IGNORE para sumar los nuevos sin duplicar
+        // 1. Convertir los INSERT en INSERT IGNORE para no duplicar y sumar los nuevos
         sqlContent = sqlContent.replace(/INSERT INTO/gi, 'INSERT IGNORE INTO');
 
-        // 2. FILTRADO LÍNEA POR LÍNEA: Eliminamos cualquier línea relacionada con DROP, CREATE o LOCKS
-        // para que MySQL jamás intente recrear la tabla ni de errores de que ya existe.
-        const lines = sqlContent.split('\n');
-        const filteredLines = lines.filter(line => {
-            const upperLine = line.trim().toUpperCase();
-            if (upperLine.startsWith('DROP TABLE')) return false;
-            if (upperLine.startsWith('CREATE TABLE')) return false;
-            if (upperLine.startsWith('LOCK TABLES')) return false;
-            if (upperLine.startsWith('UNLOCK TABLES')) return false;
-            // Ocultar líneas secundarias de la estructura de creación si el dump las separa
-            if (upperLine.startsWith('(`') || (upperLine.startsWith('ENGINE='))) return false;
-            return true;
-        });
-
-        sqlContent = filteredLines.join('\n');
+        // 2. ELIMINAR BLOQUES CREATE TABLE COMPLETOS: 
+        // Esto borra desde "CREATE TABLE `alumno`" hasta el cierre "ENGINE=..." para evitar conflictos.
+        sqlContent = sqlContent.replace(/CREATE TABLE[\s\S]*?;/gi, '');
+        sqlContent = sqlContent.replace(/DROP TABLE (IF EXISTS )?[\s\S]*?;/gi, '');
 
         connection = await mysql.createConnection({
             host: dbConfig.host,
@@ -192,7 +184,6 @@ router.post('/update', upload.single('sqlFile'), async(req, res) => {
         });
     }
 });
-
 
 
 module.exports = router;
