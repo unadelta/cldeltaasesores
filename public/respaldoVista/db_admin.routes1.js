@@ -115,7 +115,7 @@ router.get('/respaldo', async(req, res) => {
     }
 });
 // ==========================================
-// RUTA 2: Ejecutar Update desde archivo SQL (Bloques Multilínea Limpios)
+// RUTA 2: Ejecutar Update desde archivo SQL (Filtro por Líneas Infalible)
 // ==========================================
 router.post('/update', upload.single('sqlFile'), async(req, res) => {
     if (!req.file) {
@@ -125,25 +125,48 @@ router.post('/update', upload.single('sqlFile'), async(req, res) => {
     const uploadedFilePath = req.file.path;
     const originalName = req.file.originalname;
 
-    console.log(`Iniciando actualización limpia de DB con archivo: ${originalName}`);
+    console.log(`Iniciando actualización segura de DB con archivo: ${originalName}`);
 
     let connection;
     try {
         let sqlContent = fs.readFileSync(uploadedFilePath, 'utf8');
 
-        // 1. Convertir los INSERT en INSERT IGNORE para sumar los nuevos sin duplicar
-        sqlContent = sqlContent.replace(/INSERT INTO/gi, 'INSERT IGNORE INTO');
+        // Procesar línea por línea para limpiar la estructura y dejar solo los datos
+        const lines = sqlContent.split(/\r?\n/);
+        const cleanLines = [];
+        let skippingCreateTable = false;
 
-        // 2. ELIMINAR BLOQUES COMPLETOS MULTILÍNEA DE DROP Y CREATE TABLE
-        // Esto borra todo el bloque desde "DROP TABLE..." hasta el punto y coma (;)
-        sqlContent = sqlContent.replace(/DROP\s+TABLE[\s\S]*?;/gi, '');
+        for (let line of lines) {
+            const upper = line.trim().toUpperCase();
 
-        // Esto borra todo el bloque desde "CREATE TABLE..." hasta el paréntesis de cierre y el punto y coma ();\s*
-        sqlContent = sqlContent.replace(/CREATE\s+TABLE[\s\S]*?\);\s*/gi, '');
+            // Ignorar comandos de borrado o bloqueo de tablas
+            if (upper.startsWith('DROP TABLE')) continue;
+            if (upper.startsWith('LOCK TABLES')) continue;
+            if (upper.startsWith('UNLOCK TABLES')) continue;
 
-        // 3. Limpieza adicional por seguridad de cualquier comando de bloqueo de tablas
-        sqlContent = sqlContent.replace(/LOCK\s+TABLES[\s\S]*?;/gi, '');
-        sqlContent = sqlContent.replace(/UNLOCK\s+TABLES[\s\S]*?;/gi, '');
+            // Detectar inicio de creación de tabla y omitir todo su bloque multilínea
+            if (upper.startsWith('CREATE TABLE')) {
+                skippingCreateTable = true;
+                continue;
+            }
+
+            if (skippingCreateTable) {
+                // El bloque de creación termina cuando encuentra el motor de la tabla o el cierre
+                if (upper.includes('ENGINE=') || line.trim() === ');') {
+                    skippingCreateTable = false;
+                }
+                continue;
+            }
+
+            // Transformar cualquier INSERT INTO en INSERT IGNORE INTO para sumar sin duplicar
+            if (upper.startsWith('INSERT INTO')) {
+                line = line.replace(/INSERT INTO/gi, 'INSERT IGNORE INTO');
+            }
+
+            cleanLines.push(line);
+        }
+
+        sqlContent = cleanLines.join('\n');
 
         connection = await mysql.createConnection({
             host: dbConfig.host,
