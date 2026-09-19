@@ -114,8 +114,9 @@ router.get('/respaldo', async(req, res) => {
         });
     }
 });
+
 // ==========================================
-// RUTA 2: Sincronización por Sentencias (Filtrado Inteligente)
+// RUTA 2: Sincronización Estricta de Datos (Solo Datos Puros)
 // ==========================================
 router.post('/update', upload.single('sqlFile'), async(req, res) => {
     if (!req.file) {
@@ -125,15 +126,15 @@ router.post('/update', upload.single('sqlFile'), async(req, res) => {
     const uploadedFilePath = req.file.path;
     const originalName = req.file.originalname;
 
-    console.log(`Procesando archivo SQL instrucción por instrucción: ${originalName}`);
+    console.log(`Procesando archivo SQL para extraer solo datos: ${originalName}`);
 
     let connection;
     try {
         const sqlContent = fs.readFileSync(uploadedFilePath, 'utf8');
 
-        // 1. Dividir el archivo SQL instrucción por instrucción usando el punto y coma (;)
+        // Dividir el archivo instrucción por instrucción usando el punto y coma (;)
         const statements = sqlContent.split(';');
-        const cleanStatements = [];
+        const dataStatements = [];
 
         for (let stmt of statements) {
             const trimmed = stmt.trim();
@@ -141,29 +142,31 @@ router.post('/update', upload.single('sqlFile'), async(req, res) => {
 
             const upper = trimmed.toUpperCase();
 
-            // 2. Descartar cualquier sentencia que tenga relación con crear, borrar o bloquear tablas
-            if (
-                upper.includes('CREATE TABLE') ||
-                upper.includes('DROP TABLE') ||
-                upper.includes('LOCK TABLES') ||
-                upper.includes('UNLOCK TABLES')
-            ) {
-                continue; // Se omite esta sentencia para proteger las tablas existentes
-            }
+            // FILTRO ESTRICTO: Quedarnos únicamente con las sentencias de inserción o modificación de datos.
+            // Esto descarta automáticamente cualquier CREATE, DROP, ALTER, LOCK, etc., sin importar la tabla.
+            if (upper.startsWith('INSERT INTO') || upper.startsWith('REPLACE INTO') || upper.startsWith('UPDATE')) {
+                let processedStmt = trimmed;
 
-            // 3. Transformar INSERT INTO en INSERT IGNORE INTO para evitar duplicados y sumar registros
-            let processedStmt = trimmed;
-            if (upper.startsWith('INSERT INTO')) {
-                processedStmt = processedStmt.replace(/INSERT INTO/gi, 'INSERT IGNORE INTO');
-            }
+                // Transformar INSERT INTO en INSERT IGNORE INTO para prevenir errores de duplicados si ya existen registros
+                if (upper.startsWith('INSERT INTO')) {
+                    processedStmt = processedStmt.replace(/INSERT INTO/gi, 'INSERT IGNORE INTO');
+                }
 
-            cleanStatements.push(processedStmt);
+                dataStatements.push(processedStmt);
+            }
         }
 
-        // Volver a unir las sentencias limpias
-        const finalSql = cleanStatements.join(';\n') + ';';
+        if (dataStatements.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'El archivo SQL no contiene sentencias de datos válidas para sincronizar.'
+            });
+        }
 
-        // 4. Conectarnos a la base de datos
+        // Unir únicamente las sentencias de datos limpias
+        const finalSql = dataStatements.join(';\n') + ';';
+
+        // Conectarnos a la base de datos
         connection = await mysql.createConnection({
             host: dbConfig.host,
             port: Number(dbConfig.port),
@@ -176,7 +179,7 @@ router.post('/update', upload.single('sqlFile'), async(req, res) => {
             }
         });
 
-        // 5. Ejecutar exclusivamente las sentencias de datos puras
+        // Ejecutar únicamente los comandos de datos puros
         await connection.query(finalSql);
         await connection.end();
 
