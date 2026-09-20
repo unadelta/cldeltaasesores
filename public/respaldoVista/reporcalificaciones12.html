@@ -166,9 +166,6 @@
 
 <body class="orientacion-horizontal">
 
-    <!-- NAVBAR PRINCIPAL (Se cargará dinámicamente) -->
-    <div id="navbar-container" class="no-print"></div>
-
     <!-- BARRA DE ACCIONES Y FILTROS (No se imprime) -->
     <div class="container my-3 no-print">
         <div class="card shadow-sm border-0 p-3 bg-white">
@@ -222,31 +219,21 @@
         let descripcionMateriaGlobal = "";
 
         document.addEventListener("DOMContentLoaded", async() => {
-            // 1. Cargar Navbar y extraer sesión de usuario de forma sincronizada
-            try {
-                const resNavbar = await fetch('/views/navbar.html');
-                if (resNavbar.ok) {
-                    document.getElementById('navbar-container').innerHTML = await resNavbar.text();
-                }
-
-                const resSesion = await fetch('/api/user-session');
-                if (resSesion.ok) {
-                    const sesion = await resSesion.json();
-                    if (sesion.authenticated && sesion.user) {
-                        const spanUsuario = document.getElementById('nombreUsuario');
-                        if (spanUsuario) {
-                            spanUsuario.textContent = sesion.user.nombre || sesion.user.usuario;
-                        }
-                        nombreAsesorActual = sesion.user.nombre || sesion.user.usuario || "Asesor Académico";
-                    }
-                }
-            } catch (err) {
-                console.error("Error al cargar el navbar o la sesión de usuario:", err);
-            }
-
-            // 2. Cargar materias en el combobox
+            await cargarSesionYDatos();
             await cargarMateriasEnCombobox();
         });
+
+        async function cargarSesionYDatos() {
+            try {
+                const res = await fetch('/api/user-session');
+                const data = await res.json();
+                if (data.authenticated && data.user) {
+                    nombreAsesorActual = data.user.nombre || data.user.usuario || "Asesor Académico";
+                }
+            } catch (e) {
+                console.error("Error al obtener la sesión:", e);
+            }
+        }
 
         async function cargarMateriasEnCombobox() {
             try {
@@ -320,12 +307,6 @@
 
             try {
                 const res = await fetch(`/api/calificaciones/${codigoSeleccionado}?semestre=${encodeURIComponent(semestreSeleccionado)}`);
-
-                if (res.status === 401) {
-                    window.location.href = '/';
-                    return;
-                }
-
                 const resultado = await res.json();
                 const listaAlumnos = resultado.success ? resultado.data : [];
 
@@ -474,15 +455,6 @@
 
                 contenedor.appendChild(paginaDiv);
             }
-        }
-
-        async function cerrarSesion() {
-            try {
-                await fetch('/api/logout', {
-                    method: 'POST'
-                });
-            } catch (e) {}
-            window.location.href = '/';
         }
     </script>
 </body>

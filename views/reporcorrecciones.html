@@ -165,13 +165,13 @@
 
 <body class="orientacion-horizontal">
 
+    <!-- NAVBAR PRINCIPAL (Se cargará dinámicamente) -->
+    <div id="navbar-container" class="no-print"></div>
+
     <!-- BARRA DE ACCIONES Y FILTRO DE FECHAS (No se imprime) -->
     <div class="container my-3 no-print">
         <div class="card shadow-sm border-0 p-3 bg-white">
             <div class="row align-items-end g-3">
-                <div class="col-md-2">
-                    <a href="/dashboard" class="btn btn-outline-secondary btn-sm w-100"><i class="bi bi-arrow-left me-1"></i> Dashboard</a>
-                </div>
                 <div class="col-md-2">
                     <label for="fechaDesde" class="form-label small fw-semibold mb-1">Fecha Desde:</label>
                     <input type="date" id="fechaDesde" class="form-control form-control-sm">
@@ -187,9 +187,9 @@
                         <option value="vertical">Vertical (Portrait)</option>
                     </select>
                 </div>
-                <div class="col-md-3 d-flex gap-2">
+                <div class="col-md-5 d-flex gap-2">
                     <button onclick="cargarReporteConFiltro()" class="btn btn-primary btn-sm w-100"><i class="bi bi-filter me-1"></i> Generar</button>
-                    <button onclick="window.print()" class="btn btn-success btn-sm" title="Imprimir"><i class="bi bi-printer-fill"></i></button>
+                    <button onclick="window.print()" class="btn btn-success btn-sm px-3" title="Imprimir"><i class="bi bi-printer-fill"></i> Imprimir</button>
                 </div>
             </div>
         </div>
@@ -210,22 +210,32 @@
         let listaDatosGlobal = [];
 
         document.addEventListener("DOMContentLoaded", async() => {
-            await cargarSesionYDatos();
-        });
-
-        async function cargarSesionYDatos() {
+            // 1. Cargar Navbar y extraer sesión de usuario de forma sincronizada
             try {
-                const resUser = await fetch('/api/user-session');
-                const dataUser = await resUser.json();
-                if (dataUser.authenticated && dataUser.user) {
-                    nombreAsesorActual = dataUser.user.nombre || "Asesor";
+                const resNavbar = await fetch('/views/navbar.html');
+                if (resNavbar.ok) {
+                    document.getElementById('navbar-container').innerHTML = await resNavbar.text();
+                }
+
+                // Obtener datos de la sesión del usuario logueado
+                const resSesion = await fetch('/api/user-session');
+                if (resSesion.ok) {
+                    const sesion = await resSesion.json();
+                    if (sesion.authenticated && sesion.user) {
+                        const spanUsuario = document.getElementById('nombreUsuario');
+                        if (spanUsuario) {
+                            spanUsuario.textContent = sesion.user.nombre || sesion.user.usuario;
+                        }
+                        nombreAsesorActual = sesion.user.nombre || sesion.user.usuario;
+                    }
                 }
             } catch (err) {
-                console.error("Error al obtener sesión:", err);
+                console.error("Error al cargar el navbar o la sesión de usuario:", err);
             }
 
+            // 2. Cargar datos iniciales del reporte con filtro
             await cargarReporteConFiltro();
-        }
+        });
 
         async function cargarReporteConFiltro() {
             const desde = document.getElementById('fechaDesde').value;
@@ -242,6 +252,12 @@
 
             try {
                 const res = await fetch(url);
+
+                if (res.status === 401) {
+                    window.location.href = '/';
+                    return;
+                }
+
                 const data = await res.json();
 
                 listaDatosGlobal = data.success ? data.data : (Array.isArray(data) ? data : []);
@@ -381,6 +397,15 @@
 
                 contenedor.appendChild(paginaDiv);
             }
+        }
+
+        async function cerrarSesion() {
+            try {
+                await fetch('/api/logout', {
+                    method: 'POST'
+                });
+            } catch (e) {}
+            window.location.href = '/';
         }
     </script>
 </body>
