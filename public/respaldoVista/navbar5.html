@@ -64,16 +64,19 @@
                 </li>
             </ul>
 
-            <!-- Sección Usuario / Salir (Sin línea superior) -->
-            <div class="d-flex align-items-center justify-content-between justify-content-lg-end text-white pt-2 pt-lg-0 mt-2 mt-lg-0 gap-2">
-                <div class="d-flex align-items-center border border-light rounded px-2 py-1 shadow-sm">
-                    <i class="bi bi-person-circle fs-6 me-2"></i>
-                    <span id="nombreUsuario" class="fw-semibold" style="font-size: 0.85rem;">Cargando...</span>
+            <!-- Sección Usuario / Salir -->
+            <div class="d-flex align-items-center justify-content-between justify-content-lg-end text-white pt-3 pt-lg-0 mt-2 mt-lg-0 border-top border-lg-0 border-light-50">
+                <div class="d-flex align-items-center me-3">
+                    <i class="bi bi-person-circle fs-5 me-2"></i>
+                    <span id="nombreUsuario" class="fw-semibold">Cargando...</span>
                 </div>
 
+
                 <button onclick="window.location.href='/logout'" class="btn btn-outline-light btn-sm shadow-sm">
-                    <i class="bi bi-box-arrow-right me-1"></i> Salir
-                </button>
+    <i class="bi bi-box-arrow-right me-1"></i> Salir
+</button>
+
+
             </div>
         </div>
     </div>
@@ -82,6 +85,8 @@
 <!-- Script autónomo adaptado para entorno local y de red -->
 <script>
     (function() {
+        // Se utiliza la API nativa de JavaScript para detectar el origen actual (ej. http://localhost:3000 o http://192.168.1.50:3000)
+        // permitiendo que el fetch responda correctamente tanto en pruebas locales como en la red interna.
         const baseURL = window.location.origin;
 
         fetch(`${baseURL}/api/user-session`)
