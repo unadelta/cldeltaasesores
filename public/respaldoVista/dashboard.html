@@ -67,10 +67,10 @@
             window.location.href = '/';
         }
 
-        // Cargar Navbar y Validar Sesión de forma optimizada
+        // Cargar Navbar y Validar Sesión en una sola ejecución optimizada
         document.addEventListener("DOMContentLoaded", async() => {
             try {
-                // 1. Cargar el HTML del Navbar
+                // 1. Cargar el HTML del Navbar desde la carpeta views
                 const navResponse = await fetch('/views/navbar.html');
                 if (!navResponse.ok) {
                     throw new Error(`No se pudo cargar el navbar (Estado: ${navResponse.status})`);
@@ -90,18 +90,16 @@
                         spanUsuario.textContent = sessionData.user.nombre || sessionData.user.usuario;
                     }
 
-                    // 3. Ocultar el menú de Administrador de forma segura
+                    // 3. Ocultar el menú de Administrador si el rol_id es 2 (o distinto de 1)
                     const menuAdmin = document.getElementById('menuAdministrador');
                     if (menuAdmin) {
-                        // Forzamos la conversión a número e imprimimos para depurar si es necesario
                         const rolId = Number(sessionData.user.rol_id);
                         console.log("Rol ID detectado en Dashboard:", rolId);
 
-                        // Si el rol es 2 o cualquier valor distinto de 1, lo ocultamos por completo
                         if (rolId === 2 || rolId !== 1) {
-                            menuAdmin.style.display = 'none';
+                            menuAdmin.style.setProperty('display', 'none', 'important');
                         } else {
-                            menuAdmin.style.display = 'block';
+                            menuAdmin.style.setProperty('display', 'block', 'important');
                         }
                     }
                 } else {

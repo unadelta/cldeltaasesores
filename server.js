@@ -146,6 +146,15 @@ app.get('/api/user-session', (req, res) => {
 });
 
 
+app.get('/api/sesion-usuario', (req, res) => {
+    if (req.session && req.session.usuario) {
+        res.json({ success: true, nombre: req.session.usuario.nombre || req.session.usuario });
+    } else {
+        res.json({ success: false, nombre: 'Invitado' });
+    }
+});
+
+
 
 
 // ==========================================
@@ -1208,13 +1217,10 @@ app.put('/api/calificaciones-alumnos/objetivos', async(req, res) => {
     }
 });
 
-app.get('/api/sesion-usuario', (req, res) => {
-    if (req.session && req.session.usuario) {
-        res.json({ success: true, nombre: req.session.usuario.nombre || req.session.usuario });
-    } else {
-        res.json({ success: false, nombre: 'Invitado' });
-    }
-});
+
+/*Sesión de usuario*/
+
+
 
 app.get('/api/materias-objetivos/:codigoMateria', async(req, res) => {
     const { codigoMateria } = req.params;

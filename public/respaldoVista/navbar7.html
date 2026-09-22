@@ -29,17 +29,19 @@
                         <li><a class="dropdown-item" href="/tarea"><i class="bi bi-check2-square me-2"></i>Tareas</a></li>
                         <li><a class="dropdown-item" href="/tipo_asesoria"><i class="bi bi-tags me-2"></i>Tipo Asesoría</a></li>
                         <li><a class="dropdown-item" href="/control_materia"><i class="bi bi-tags me-2"></i>Control Materias</a></li>
+
                     </ul>
                 </li>
 
-                <!-- Dropdown Administrador con ID para control de visibilidad -->
-                <li class="nav-item dropdown" id="menuAdministrador">
+                <!-- Dropdown Administrador -->
+                <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle text-white fw-semibold" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="bi bi-gear-fill me-1 d-lg-none"></i> Administrador
                     </a>
                     <ul class="dropdown-menu shadow border-0">
                         <li><a class="dropdown-item" href="/asesor"><i class="bi bi-person-badge me-2"></i>Asesores</a></li>
                         <li><a class="dropdown-item" href="/admin_db"><i class="bi bi-person-badge me-2"></i>Respaldo</a></li>
+
                     </ul>
                 </li>
 
@@ -62,7 +64,7 @@
                 </li>
             </ul>
 
-            <!-- Sección Usuario / Salir (Lado Derecho) -->
+            <!-- Sección Usuario / Salir (Sin línea superior) -->
             <div class="d-flex align-items-center justify-content-between justify-content-lg-end text-white pt-2 pt-lg-0 mt-2 mt-lg-0 gap-2">
                 <div class="d-flex align-items-center border border-light rounded px-2 py-1 shadow-sm">
                     <i class="bi bi-person-circle fs-6 me-2"></i>
@@ -76,3 +78,29 @@
         </div>
     </div>
 </nav>
+
+<!-- Script autónomo adaptado para entorno local y de red -->
+<script>
+    (function() {
+        const baseURL = window.location.origin;
+
+        fetch(`${baseURL}/api/user-session`)
+            .then(res => {
+                if (!res.ok) throw new Error('No autorizado o error de red');
+                return res.json();
+            })
+            .then(sesion => {
+                const spanUsuario = document.getElementById('nombreUsuario') || document.getElementById('usuarioAsesorLogueado');
+                if (spanUsuario && sesion.authenticated && sesion.user) {
+                    spanUsuario.textContent = sesion.user.nombre || sesion.user.usuario;
+                } else if (spanUsuario) {
+                    spanUsuario.textContent = 'Invitado';
+                }
+            })
+            .catch(err => {
+                console.warn("Aviso de sesión en navbar (Local/Red):", err.message);
+                const spanUsuario = document.getElementById('nombreUsuario') || document.getElementById('usuarioAsesorLogueado');
+                if (spanUsuario) spanUsuario.textContent = 'Sesión no disponible';
+            });
+    })();
+</script>
