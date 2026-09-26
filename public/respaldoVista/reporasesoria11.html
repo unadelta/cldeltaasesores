@@ -16,17 +16,12 @@
             height: 100%;
             margin: 0;
         }
-        /* Estilo para la cabecera institucional del reporte */
+        /* Estilo para la cabecera del reporte */
         
-        .institution-header {
+        .report-header {
             border-bottom: 2px solid #1F91DC;
             padding-bottom: 15px;
-            margin-bottom: 25px;
-        }
-        
-        .institution-logo {
-            max-height: 75px;
-            object-fit: contain;
+            margin-bottom: 20px;
         }
         /* Estilo para la sección de firma alineada a la derecha */
         
@@ -67,21 +62,8 @@
     <!-- CONTENIDO PRINCIPAL -->
     <div class="container mt-4 mb-5">
 
-        <!-- ENCABEZADO INSTITUCIONAL -->
-
-        <div class="row align-items-center institution-header">
-            <div class="col-2 text-center text-md-start">
-                <!-- Reemplaza el src con la ruta de tu logo institucional -->
-                <img src="/jpg/logouna.jpg" alt="Logo UNA" class="institution-logo">
-            </div>
-            <div class="col-10 text-center text-md-start">
-                <h4 class="fw-bold text-uppercase text-primary mb-0">Universidad Nacional Abierta</h4>
-                <h5 class="text-primary fw-semibold mb-0">Centro Local Delta Amacuro</h5>
-            </div>
-        </div>
-
         <!-- Título del Reporte y Botón Imprimir -->
-        <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+        <div class="d-flex justify-content-between align-items-center report-header no-print">
             <h3 class="fw-bold text-primary">
                 <i class="bi bi-file-earmark-text-fill me-2"></i>Reporte de Asesorías Realizadas
             </h3>
@@ -173,7 +155,7 @@
         let nombreAsesorActual = "Asesor de la Materia";
 
         document.addEventListener("DOMContentLoaded", async function() {
-            // 1. Cargar Navbar y extraer sesión de usuario de forma sincronizada
+            // 1. Cargar Navbar y extraer sesión de usuario de forma sincronizada (igual que reporconsolidado.html)
             try {
                 const resNavbar = await fetch('/views/navbar.html');
                 if (resNavbar.ok) {
@@ -185,11 +167,13 @@
                 if (resSesion.ok) {
                     const sesion = await resSesion.json();
                     if (sesion.authenticated && sesion.user) {
+                        // Nombre para la parte superior derecha (si existe el elemento en el navbar)
                         const spanUsuario = document.getElementById('nombreUsuario');
                         if (spanUsuario) {
                             spanUsuario.textContent = sesion.user.nombre || sesion.user.usuario;
                         }
 
+                        // Nombre para la firma en el pie de página
                         nombreAsesorActual = sesion.user.nombre || sesion.user.usuario;
                         const spanFirma = document.getElementById('nombreAsesorFirma');
                         if (spanFirma) {
