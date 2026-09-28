@@ -461,7 +461,7 @@ app.put('/api/materias/:codigoOriginal', async(req, res) => {
         res.status(500).json({ success: false, message: 'Error al actualizar la materia en la base de datos.' });
     }
 });
-
+/*
 app.delete('/api/materias/:codigo', async(req, res) => {
     const materiaCodigo = req.params.codigo;
     try {
@@ -480,6 +480,59 @@ app.delete('/api/materias/:codigo', async(req, res) => {
         res.status(500).json({ success: false, message: 'Error al eliminar la materia de la base de datos.' });
     }
 });
+*/
+app.delete('/api/materias/:codigo', async(req, res) => {
+    const materiaCodigo = req.params.codigo;
+    try {
+        const connection = db.promise();
+        const codigoLimpio = materiaCodigo.replace(/[^a-zA-Z0-9_]/g, '');
+        const nombreTabla = `calificacion_${codigoLimpio}`;
+
+        await connection.query(`DROP TABLE IF EXISTS \`${nombreTabla}\``);
+        await connection.query('DELETE FROM objetivo_materia WHERE materia_codigo = ?', [materiaCodigo]);
+        await connection.query('DELETE FROM calificaciones WHERE cod_materia = ?', [materiaCodigo]);
+        await connection.query('DELETE FROM materia WHERE codigo = ?', [materiaCodigo]);
+
+        res.json({ success: true, message: 'Materia y todos sus registros asociados eliminados correctamente.' });
+    } catch (err) {
+        console.error('Error al eliminar materia:', err);
+        res.status(500).json({ success: false, message: 'Error al eliminar la materia de la base de datos.' });
+    }
+});
+// Ruta del servidor para eliminar la materia por su código
+app.delete('/api/materias/:codigo', (req, res) => {
+    const codigoMateria = req.params.codigo;
+    const sqlDropTabla = `DROP TABLE IF EXISTS calificacion_${codigoMateria}`;
+
+    // 1. Eliminar la tabla dinámica de calificaciones asociada
+    db.query(sqlDropTabla)
+        .then(() => {
+            // 2. Eliminar todas las filas en la tabla 'materias' que coincidan con el código
+            return db.query('DELETE FROM materias WHERE codigo = ?', [codigoMateria]);
+        })
+        .then(([resultado]) => {
+            // 3. Eliminar registros dependientes en la tabla de objetivos
+            return db.query('DELETE FROM objetivos WHERE codigo = ?', [codigoMateria]);
+        })
+        .then(() => {
+            // Respuesta exitosa al frontend
+            return res.json({
+                success: true,
+                message: 'La asignatura y todos sus datos asociados fueron eliminados correctamente.'
+            });
+        })
+        .catch(error => {
+            // Control de errores
+            console.error("Error al eliminar la materia en el servidor:", error);
+            return res.status(500).json({
+                success: false,
+                message: 'Error al eliminar la materia de la base de datos.'
+            });
+        });
+});
+
+
+
 
 app.get('/api/materia_una', async(req, res) => {
     try {
