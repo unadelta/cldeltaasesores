@@ -101,6 +101,7 @@
         let nombreAsesorActual = "Asesor de la Carrera";
 
         document.addEventListener("DOMContentLoaded", async() => {
+            // Establecer por defecto el mes actual en los inputs de fecha
             const hoy = new Date();
             const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
             const ultimoDia = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).toISOString().split('T')[0];
@@ -108,6 +109,7 @@
             document.getElementById('fechaInicio').value = primerDia;
             document.getElementById('fechaFin').value = ultimoDia;
 
+            // Obtener datos del asesor actual para la firma
             try {
                 const resUser = await fetch('/api/user-session');
                 const dataUser = await resUser.json();
@@ -151,13 +153,9 @@
             const contenedor = document.getElementById('contenidoReporte');
             const {
                 asesorias,
-                correcciones,
-                por_asignatura,
-                asesorias_por_asignatura,
-                tipos_asesorias_definidos
+                correcciones
             } = data;
 
-            // 1. CONSOLIDADO DE ASESORÍAS
             let htmlAsesorias = '';
             if (asesorias && asesorias.length > 0) {
                 let totalAsesorias = 0;
@@ -192,48 +190,6 @@
                 htmlAsesorias = `<div class="alert alert-info py-2">No se registraron asesorías en el período seleccionado.</div>`;
             }
 
-            // 2. NUEVA SECCIÓN: CONSOLIDADOS ASESORÍAS POR ASIGNATURAS
-            let htmlAsesoriasPorAsignatura = '';
-            if (asesorias_por_asignatura && asesorias_por_asignatura.length > 0 && tipos_asesorias_definidos && tipos_asesorias_definidos.length > 0) {
-                // Generar encabezados de la tabla basados en los tipos de asesorías definidos
-                let headersTipos = tipos_asesorias_definidos.map(t => {
-                    const tipo = t.tipo_asesoria || t.nombre || t.descripcion;
-                    return `<th class="text-center">${tipo}</th>`;
-                }).join('');
-
-                // Generar las filas para cada código de materia
-                let filasAsesoriasAsig = asesorias_por_asignatura.map(item => {
-                    let celdasTipos = tipos_asesorias_definidos.map(t => {
-                        const tipo = t.tipo_asesoria || t.nombre || t.descripcion;
-                        return `<td class="text-center">${item[tipo] || 0}</td>`;
-                    }).join('');
-
-                    return `<tr>
-                        <td>${item.codigo_materia}</td>
-                        ${celdasTipos}
-                    </tr>`;
-                }).join('');
-
-                htmlAsesoriasPorAsignatura = `
-                    <h5 class="fw-bold text-dark mb-3 mt-4"><i class="bi bi-journal-check me-2"></i>Consolidado De Asesorías Por Asignaturas</h5>
-                    <div class="table-responsive mb-4">
-                        <table class="table table-bordered align-middle">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Código asignatura</th>
-                                    ${headersTipos}
-                                </tr>
-                            </thead>
-                            <tbody>${filasAsesoriasAsig}</tbody>
-                        </table>
-                    </div>`;
-            } else {
-                htmlAsesoriasPorAsignatura = `
-                    <h5 class="fw-bold text-dark mb-3 mt-4"><i class="bi bi-journal-check me-2"></i>Consolidados Asesorías Por Asignaturas</h5>
-                    <div class="alert alert-info py-2 mb-4">No se registraron asesorías por asignatura en el período seleccionado.</div>`;
-            }
-
-            // 3. CONSOLIDADO DE CORRECCIONES
             let htmlCorrecciones = '';
             if (correcciones && correcciones.length > 0) {
                 let totalCorrecciones = 0;
@@ -268,41 +224,7 @@
                 htmlCorrecciones = `<div class="alert alert-info py-2 mt-4">No se registraron correcciones en el período seleccionado.</div>`;
             }
 
-            // 4. CONSOLIDADOS POR ASIGNATURA (CORRECCIONES / TAREAS)
-            let htmlPorAsignatura = '';
-            if (por_asignatura && por_asignatura.length > 0) {
-                let filasAsig = por_asignatura.map(item => {
-                    return `<tr>
-                        <td>${item.codigo_materia}</td>
-                        <td class="text-center">${item.cantidad_tp || 0}</td>
-                        <td class="text-center">${item.cantidad_tsp || 0}</td>
-                        <td class="text-center">${item.cantidad_tg || 0}</td>
-                    </tr>`;
-                }).join('');
-
-                htmlPorAsignatura = `
-                    <h5 class="fw-bold text-dark mb-3 mt-4"><i class="bi bi-journal-text me-2"></i>Consolidado De Tareas Por Asignaturas</h5>
-                    <div class="table-responsive">
-                        <table class="table table-bordered align-middle">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Código asignatura</th>
-                                    <th class="text-center">Tp</th>
-                                    <th class="text-center">Tsp</th>
-                                    <th class="text-center">Tg</th>
-                                </tr>
-                            </thead>
-                            <tbody>${filasAsig}</tbody>
-                        </table>
-                    </div>`;
-            } else {
-                htmlPorAsignatura = `
-                    <h5 class="fw-bold text-dark mb-3 mt-4"><i class="bi bi-journal-text me-2"></i>Consolidado De Tareas Por Asignaturas</h5>
-                    <div class="alert alert-info py-2">No se registraron datos de tareas por asignatura en el período seleccionado.</div>`;
-            }
-
-            // Orden de inserción en el contenedor del reporte
-            contenedor.innerHTML = htmlAsesorias + htmlAsesoriasPorAsignatura + htmlCorrecciones + htmlPorAsignatura;
+            contenedor.innerHTML = htmlAsesorias + htmlCorrecciones;
         }
 
         // Cargar Navbar dinámicamente

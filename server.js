@@ -331,7 +331,7 @@ app.get('/materia', (req, res) => {
 app.get('/api/materias', async(req, res) => {
     try {
         const connection = db.promise();
-        const [materias] = await connection.query('SELECT codigo, descripcion, numobj, minaprueba FROM materia ORDER BY descripcion ASC');
+        const [materias] = await connection.query('SELECT codigo, descripcion, numobj, minaprueba FROM materia ORDER BY codigo ASC');
         const [objetivos] = await connection.query('SELECT materia_codigo, nro_objetivo, peso FROM objetivo_materia ORDER BY materia_codigo ASC, nro_objetivo ASC');
         const [calificaciones] = await connection.query('SELECT cod_materia, peso_acumulado, calificacion_definitiva FROM calificaciones ORDER BY cod_materia ASC, peso_acumulado ASC');
 
@@ -1521,6 +1521,8 @@ app.get('/reporconsolidado', (req, res) => {
     res.sendFile(path.join(__dirname, 'views', 'reporconsolidado.html'));
 });
 
+/* REPORTE DE ACTIVIDADES*/
+/*
 app.get('/api/reporte_actividades', (req, res) => {
     if (!req.session || !req.session.usuario) {
         return res.status(401).json({ success: false, message: 'No autorizado' });
@@ -1566,7 +1568,7 @@ app.get('/api/reporte_actividades', (req, res) => {
     });
 });
 
-
+*/
 
 app.use('/api/db', dbAdminRoutes);
 
@@ -1607,7 +1609,8 @@ app.get('/control_materia', (req, res) => {
 
 // 1. OBTENER TODAS LAS MATERIAS
 app.get('/api/materiauna', (req, res) => {
-    const query = 'SELECT id, codigo, descripcion FROM materia_una';
+    //const query = 'SELECT id, codigo, descripcion FROM materia_una';
+    const query = 'SELECT id, codigo, descripcion FROM materia_una ORDER BY codigo ASC';
 
     pool.query(query, (err, results) => {
         if (err) {
@@ -1751,7 +1754,140 @@ app.get('/logout', (req, res) => {
         res.redirect('/');
     });
 });
+/*
+app.get('/api/reporte_actividades', (req, res) => {
+    if (!req.session || !req.session.usuario) {
+        return res.status(401).json({ success: false, message: 'No autorizado' });
+    }
 
+    const { inicio, fin } = req.query;
+    if (!inicio || !fin) {
+        return res.status(400).json({ success: false, message: 'Debe proporcionar una fecha de inicio y fin.' });
+    }
+
+    const queryAsesorias = `
+        SELECT tipo_asesoria, COUNT(*) AS cantidad 
+        FROM control_asesoria 
+        WHERE DATE(fecha_hora) BETWEEN ? AND ? 
+        GROUP BY tipo_asesoria
+    `;
+
+    const queryCorrecciones = `
+        SELECT tipo_correccion, COUNT(*) AS cantidad 
+        FROM control_correcciones 
+        WHERE DATE(fecha) BETWEEN ? AND ? 
+        GROUP BY tipo_correccion
+    `;
+
+    // Nueva consulta para obtener los consolidados por asignatura agrupando y pivoteando los tipos de corrección
+    const queryPorAsignatura = `
+        SELECT 
+            codigo_materia, 
+            SUM(CASE WHEN tipo_correccion = 'TP' THEN 1 ELSE 0 END) AS cantidad_tp,
+            SUM(CASE WHEN tipo_correccion = 'TSP' THEN 1 ELSE 0 END) AS cantidad_tsp,
+            SUM(CASE WHEN tipo_correccion = 'TG' THEN 1 ELSE 0 END) AS cantidad_tg
+        FROM control_correcciones 
+        WHERE DATE(fecha) BETWEEN ? AND ? 
+        GROUP BY codigo_materia
+    `;
+*/
+
+app.get('/api/reporte_actividades', (req, res) => {
+    if (!req.session || !req.session.usuario) {
+        return res.status(401).json({ success: false, message: 'No autorizado' });
+    }
+
+    const { inicio, fin } = req.query;
+    if (!inicio || !fin) {
+        return res.status(400).json({ success: false, message: 'Debe proporcionar una fecha de inicio y fin.' });
+    }
+
+    const queryAsesorias = `
+        SELECT tipo_asesoria, COUNT(*) AS cantidad 
+        FROM control_asesoria 
+        WHERE DATE(fecha_hora) BETWEEN ? AND ? 
+        GROUP BY tipo_asesoria
+    `;
+
+    const queryCorrecciones = `
+        SELECT tipo_correccion, COUNT(*) AS cantidad 
+        FROM control_correcciones 
+        WHERE DATE(fecha) BETWEEN ? AND ? 
+        GROUP BY tipo_correccion
+    `;
+
+    const queryPorAsignaturaCorrecciones = `
+        SELECT 
+            codigo_materia, 
+            SUM(CASE WHEN tipo_correccion = 'TP' THEN 1 ELSE 0 END) AS cantidad_tp,
+            SUM(CASE WHEN tipo_correccion = 'TSP' THEN 1 ELSE 0 END) AS cantidad_tsp,
+            SUM(CASE WHEN tipo_correccion = 'TG' THEN 1 ELSE 0 END) AS cantidad_tg
+        FROM control_correcciones 
+        WHERE DATE(fecha) BETWEEN ? AND ? 
+        GROUP BY codigo_materia
+    `;
+
+    // Obtener los tipos de asesorías distintos directamente desde control_asesoria para el período
+    const queryTiposAsesorias = `
+        SELECT DISTINCT tipo_asesoria 
+        FROM control_asesoria 
+        WHERE DATE(fecha_hora) BETWEEN ? AND ?
+    `;
+
+    db.query(queryAsesorias, [inicio, fin], (err, asesoriasResult) => {
+        if (err) {
+            console.error('Error al generar reporte de asesorías:', err);
+            return res.status(500).json({ success: false, message: err.message });
+        }
+
+        db.query(queryCorrecciones, [inicio, fin], (err2, correccionesResult) => {
+            if (err2) {
+                console.error('Error al generar reporte de correcciones:', err2);
+                return res.status(500).json({ success: false, message: err2.message });
+            }
+
+            db.query(queryPorAsignaturaCorrecciones, [inicio, fin], (err3, porAsignaturaResult) => {
+                if (err3) {
+                    console.error('Error al generar reporte consolidado por asignatura (correcciones):', err3);
+                    return res.status(500).json({ success: false, message: err3.message });
+                }
+
+                db.query(queryTiposAsesorias, [inicio, fin], (err4, tiposAsesoriasResult) => {
+                    if (err4) {
+                        console.error('Error al obtener tipos de asesorías:', err4);
+                        return res.status(500).json({ success: false, message: err4.message });
+                    }
+
+                    // Construir dinámicamente la consulta pivote usando los tipos encontrados en control_asesoria
+                    let dynamicCases = tiposAsesoriasResult.map(t => {
+                        const tipo = t.tipo_asesoria;
+                        return `SUM(CASE WHEN tipo_asesoria = '${tipo}' THEN 1 ELSE 0 END) AS \`${tipo}\``;
+                    }).join(', ');
+
+                    const queryAsesoriasPorAsignatura = dynamicCases ?
+                        `SELECT codigo_materia, ${dynamicCases} FROM control_asesoria WHERE DATE(fecha_hora) BETWEEN ? AND ? GROUP BY codigo_materia` :
+                        `SELECT codigo_materia FROM control_asesoria WHERE DATE(fecha_hora) BETWEEN ? AND ? GROUP BY codigo_materia`;
+
+                    db.query(queryAsesoriasPorAsignatura, [inicio, fin], (err5, asesoriasPorAsignaturaResult) => {
+                        if (err5) {
+                            console.error('Error al generar consolidado de asesorías por asignaturas:', err5);
+                            return res.status(500).json({ success: false, message: err5.message });
+                        }
+
+                        res.json({
+                            success: true,
+                            asesorias: asesoriasResult,
+                            correcciones: correccionesResult,
+                            por_asignatura: porAsignaturaResult,
+                            asesorias_por_asignatura: asesoriasPorAsignaturaResult,
+                            tipos_asesorias_definidos: tiposAsesoriasResult
+                        });
+                    });
+                });
+            });
+        });
+    });
+});
 
 // Inicialización del servidor
 const PORT = process.env.PORT || 3000;
