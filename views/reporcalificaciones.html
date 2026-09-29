@@ -174,9 +174,9 @@
         <div class="card shadow-sm border-0 p-3 bg-white">
             <div class="row align-items-end g-3">
                 <div class="col-md-3">
-                    <label for="filtroCodigoMateria" class="form-label small fw-semibold mb-1">Materia:</label>
+                    <label for="filtroCodigoMateria" class="form-label small fw-semibold mb-1">Asignatura:</label>
                     <select id="filtroCodigoMateria" class="form-select form-select-sm" onchange="cargarReporteCalificaciones()">
-                        <option value="">-- Seleccione una materia --</option>
+                        <option value="">-- Seleccione una asignatura --</option>
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -254,7 +254,7 @@
                 const data = await res.json();
                 const selectFiltro = document.getElementById('filtroCodigoMateria');
 
-                selectFiltro.innerHTML = '<option value="">-- Seleccione una materia --</option>';
+                selectFiltro.innerHTML = '<option value="">-- Seleccione una asignatura --</option>';
                 const lista = data.success ? data.data : data;
                 if (Array.isArray(lista)) {
                     listaMateriasGlobal = lista;
@@ -263,7 +263,7 @@
                     });
                 }
             } catch (error) {
-                console.error("Error al cargar materias:", error);
+                console.error("Error al cargar asignatura:", error);
             }
         }
 

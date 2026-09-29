@@ -66,15 +66,14 @@
                         <!-- Código de Materia -->
                         <div class="mb-3">
                             <label for="codigoMateria" class="form-label fw-semibold">Código de la Asignatura</label>
-                            <input type="text" class="form-control" id="codigoMateria" placeholder="Ej. 101, 502..." required autocomplete="off">
-                            <div class="form-text" id="mensajeCodigo">Ingrese un código numérico de tres dígitos (000 al 999).</div>
+                            <input type="text" class="form-control" id="codigoMateria" placeholder="Ej. 101, 502..." required>
+                            <div class="form-text" id="mensajeCodigo">Ingrese un código único para asignatura.</div>
                         </div>
 
                         <!-- Descripción de Materia -->
                         <div class="mb-3">
                             <label for="descripcionMateria" class="form-label fw-semibold">Descripción / Nombre</label>
-                            <textarea class="form-control text-uppercase" id="descripcionMateria" rows="3" placeholder="Nombre completo de la materia..." required autocomplete="off"></textarea>
-                            <div class="form-text">El texto se registrará automáticamente en letras mayúsculas.</div>
+                            <textarea class="form-control" id="descripcionMateria" rows="3" placeholder="Nombre completo de la materia..." required></textarea>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -122,6 +121,7 @@
                 if (dataUser.authenticated) {
                     asesorActual = dataUser.user;
 
+                    // CORRECCIÓN: Asignar el nombre del asesor al elemento del navbar ('nombreUsuario')
                     const spanUser = document.getElementById('nombreUsuario');
                     if (spanUser) {
                         spanUser.textContent = dataUser.user.nombre || dataUser.user.usuario;
@@ -149,7 +149,7 @@
             codigoOriginalEdicion = "";
 
             const mensajeCodigo = document.getElementById('mensajeCodigo');
-            mensajeCodigo.textContent = 'Ingrese un código numérico de tres dígitos (000 al 999).';
+            mensajeCodigo.textContent = 'Ingrese un código único para la materia.';
             mensajeCodigo.className = 'form-text text-muted';
 
             modalMateriaInstance.show();
@@ -168,6 +168,7 @@
 
                 const data = await res.json();
 
+                // Normalizar la obtención de la lista según la respuesta del backend
                 if (Array.isArray(data)) {
                     listaMateriasGlobal = data;
                 } else if (data.success && Array.isArray(data.data)) {
@@ -244,30 +245,7 @@
             const btnGuardar = document.getElementById('btnGuardarMateria');
             const idRegistro = document.getElementById('materiaId').value;
             const codigoIngresado = document.getElementById('codigoMateria').value.trim();
-
-            // Garantizar que la descripción se guarde en letras mayúsculas
-            const descripcionIngresada = document.getElementById('descripcionMateria').value.trim().toUpperCase();
-
-            // Validación: Verificar que sea un valor numérico de tres dígitos entre 000 y 999
-            const regexTresDigitos = /^\d{3}$/;
-            if (!regexTresDigitos.test(codigoIngresado)) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Código inválido',
-                    text: 'El código de la asignatura debe ser un valor numérico exacto de tres dígitos (entre 000 y 999).'
-                });
-                return;
-            }
-
-            const codigoNumero = parseInt(codigoIngresado, 10);
-            if (codigoNumero < 0 || codigoNumero > 999) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Código fuera de rango',
-                    text: 'El código numérico debe estar comprendido entre 000 y 999.'
-                });
-                return;
-            }
+            const descripcionIngresada = document.getElementById('descripcionMateria').value.trim();
 
             // Validación local de código duplicado
             if (!modoEdicion || (modoEdicion && codigoIngresado !== codigoOriginalEdicion)) {
@@ -322,7 +300,7 @@
                 Swal.fire('Error de Conexión', 'No se pudo conectar con el servidor.', 'error');
             } finally {
                 btnGuardar.disabled = false;
-                btnGuardar.textContent = 'Guardar Asignatura';
+                btnGuardar.textContent = 'Guardar Materia';
             }
         }
 

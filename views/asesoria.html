@@ -41,7 +41,7 @@
                             <th>Cédula Alumno</th>
                             <th>Carrera</th>
                             <th>Tipo de Asesoría</th>
-                            <th>Materia</th>
+                            <th>Asignatura</th>
                             <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
@@ -54,6 +54,7 @@
             </div>
         </div>
     </div>
+
 
 
 </div>
@@ -113,9 +114,9 @@
                     <div class="row">
                         <!-- Materia -->
                         <div class="col-md-6 mb-3">
-                            <label for="selectMateria" class="form-label fw-semibold">Materia</label>
+                            <label for="selectMateria" class="form-label fw-semibold">Asignatura</label>
                             <select id="selectMateria" class="form-select" required>
-                                    <option value="">Seleccione una materia...</option>
+                                    <option value="">Seleccione una asignatura...</option>
                                 </select>
                         </div>
                         <!-- Fecha y Hora -->
@@ -169,36 +170,6 @@
         await inicializarDatos();
     });
 
-    /*
-
-            document.addEventListener("DOMContentLoaded", function() {
-                modalAsesoriaInstance = new bootstrap.Modal(document.getElementById('modalAsesoria'));
-
-                fetch('/views/navbar.html')
-                    .then(response => response.text())
-                    .then(data => {
-                        document.getElementById('navbar-container').innerHTML = data;
-
-                        // Petición para obtener los datos del asesor logueado
-                        fetch('/api/user-session')
-                            .then(res => res.json())
-                            .then(sesion => {
-                                const spanUsuario = document.getElementById('usuarioAsesorLogueado');
-                                if (spanUsuario && sesion.authenticated && sesion.user) {
-                                    spanUsuario.textContent = sesion.user.nombre || sesion.user.usuario;
-                                } else if (spanUsuario) {
-                                    spanUsuario.textContent = 'Invitado';
-                                }
-                            })
-                            .catch(err => console.error("Error al obtener sesión de usuario:", err));
-                    })
-                    .catch(err => console.error("Error al cargar el navbar:", err));
-                await inicializarDatos();
-            });
-    */
-
-
-
 
 
 
@@ -234,24 +205,7 @@
             return;
         }
 
-        // Carga de Alumnos
-        /*
-            try {
-                const resAlumnos = await fetch('/api/alumnos');
-                const dataAlumnos = await resAlumnos.json();
-                const selectAlumno = document.getElementById('selectAlumno');
-                selectAlumno.innerHTML = '<option value="">Seleccione un alumno...</option>';
-                listaAlumnosGlobal = dataAlumnos.success ? dataAlumnos.data : (Array.isArray(dataAlumnos) ? dataAlumnos : []);
 
-                if (Array.isArray(listaAlumnosGlobal)) {
-                    listaAlumnosGlobal.forEach(a => {
-                        selectAlumno.innerHTML += `<option value="${a.cedula}">${a.cedula} - ${a.nombre}</option>`;
-                    });
-                }
-            } catch (error) {
-                console.error("Error al cargar alumnos:", error);
-            }
-*/
         // Carga de Alumnos
         try {
             const resAlumnos = await fetch('/api/alumnos');
@@ -305,7 +259,7 @@
             const resMaterias = await fetch('/api/materia_una');
             const dataMaterias = await resMaterias.json();
             const selectMateria = document.getElementById('selectMateria');
-            selectMateria.innerHTML = '<option value="">Seleccione una materia...</option>';
+            selectMateria.innerHTML = '<option value="">Seleccione una asignatura...</option>';
             const listaM = dataMaterias.success ? dataMaterias.data : (Array.isArray(dataMaterias) ? dataMaterias : []);
 
             if (Array.isArray(listaM)) {

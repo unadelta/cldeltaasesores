@@ -81,8 +81,7 @@
                         <!-- Nombre y Apellido -->
                         <div class="mb-3">
                             <label for="nombre" class="form-label fw-semibold">Nombre y Apellido</label>
-                            <input type="text" class="form-control text-uppercase" id="nombre" placeholder="Ingrese nombre completo" required autocomplete="off">
-                            <div class="form-text">El texto se registrará automáticamente en letras mayúsculas.</div>
+                            <input type="text" class="form-control" id="nombre" placeholder="Ingrese nombre completo" required autocomplete="off">
                         </div>
 
                         <!-- Combobox Código de Carrera -->
@@ -306,7 +305,6 @@
             const id = document.getElementById('alumnoId').value;
             const nac = document.getElementById('nacionalidad').value;
             let numCedula = document.getElementById('cedula').value.trim();
-            // Garantizar que el nombre del alumno se escriba en letras mayúsculas
             const nombre = document.getElementById('nombre').value.trim().toUpperCase();
             const codigoCarrera = document.getElementById('selectCarrera').value;
 
@@ -334,7 +332,7 @@
             // Completar con ceros a la izquierda si es menor a 8 cifras
             if (numCedula.length < 8) {
                 numCedula = numCedula.padStart(8, '0');
-                document.getElementById('cedula').value = numCedula;
+                document.getElementById('cedula').value = numCedula; // Actualiza visualmente el input en el formulario
             }
 
             if (!nombre) {
@@ -433,5 +431,7 @@
         }
     </script>
 </body>
+
+</html>
 
 </html>

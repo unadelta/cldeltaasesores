@@ -534,17 +534,17 @@ app.delete('/api/materias/:codigo', (req, res) => {
 
 
 
+
+
 app.get('/api/materia_una', async(req, res) => {
     try {
-        const [rows] = await db.promise().query('SELECT id, codigo, descripcion FROM materia_una');
+        const [rows] = await db.promise().query('SELECT id, codigo, descripcion FROM materia_una ORDER BY codigo ASC');
         res.json({ success: true, data: rows });
     } catch (err) {
         console.error('Error al obtener materias:', err);
         res.status(500).json({ success: false, message: 'Error en el servidor' });
     }
 });
-
-
 
 // ==========================================
 // RUTAS PARA EL MÓDULO DE ALUMNOS

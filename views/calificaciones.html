@@ -9,19 +9,6 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <style>
-        /* .table-custom-header th {
-            background-color: #cfe2ff !important;
-            color: #000000 !important;
-            font-size: 0.85rem !important;
-            font-weight: 700 !important;
-            text-align: center;
-            vertical-align: middle;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-        */
-        
         .table-custom-header th {
             background-color: #1F91DC !important;
             color: #ffffff !important;
@@ -79,9 +66,9 @@
                         </select>
                     </div>
                     <div class="col-6 col-sm-auto">
-                        <label for="filtroCodigoMateria" class="form-label fw-semibold text-start d-block mb-1" style="font-size: 0.8rem;">Código materia</label>
+                        <label for="filtroCodigoMateria" class="form-label fw-semibold text-start d-block mb-1" style="font-size: 0.8rem;">Código Asignatura</label>
                         <select id="filtroCodigoMateria" class="form-select form-select-sm select-materia-compact border-success shadow-sm" style="border-width: 2px;" onchange="filtrarCalificacionesPorMateria()">
-                            <option value="">Seleccione materia</option>
+                            <option value="">Seleccione Asignatura</option>
                         </select>
                     </div>
                     <div class="col-12 col-sm-auto mt-2 mt-sm-0">
@@ -108,7 +95,7 @@
                         </thead>
                         <tbody id="tablaCalificaciones" class="table-custom-body">
                             <tr>
-                                <td colspan="7" class="text-center text-muted py-4">Seleccione una materia para ver los objetivos y calificaciones.</td>
+                                <td colspan="7" class="text-center text-muted py-4">Seleccione una asignatura para ver los objetivos y calificaciones.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -122,7 +109,7 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white py-2">
-                    <h5 class="modal-title fs-6"><i class="bi bi-person-plus-fill me-2"></i>Registrar Alumno en Materia</h5>
+                    <h5 class="modal-title fs-6"><i class="bi bi-person-plus-fill me-2"></i>Registrar Alumno en la asignatura</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -135,7 +122,7 @@
                 </div>
                 <div class="modal-footer py-2">
                     <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-sm btn-success" onclick="procesarAgregarAlumno()"><i class="bi bi-plus-circle me-1"></i> Agregar a Materia</button>
+                    <button type="button" class="btn btn-sm btn-success" onclick="procesarAgregarAlumno()"><i class="bi bi-plus-circle me-1"></i> Agregar a  Asignatura</button>
                 </div>
             </div>
         </div>
@@ -278,7 +265,7 @@
                     });
                 }
             } catch (error) {
-                console.error("Error al cargar materias:", error);
+                console.error("Error al cargar asignatura:", error);
             }
         }
 
@@ -326,7 +313,7 @@
         function abrirModalRegistrarAlumno() {
             const codigoMateriaSeleccionada = document.getElementById('filtroCodigoMateria').value;
             if (!codigoMateriaSeleccionada) {
-                Swal.fire('Atención', 'Debe seleccionar una materia primero antes de registrar alumnos.', 'warning');
+                Swal.fire('Atención', 'Debe seleccionar una asignatura primero antes de registrar alumnos.', 'warning');
                 return;
             }
 
@@ -431,7 +418,7 @@
                                 <th class="text-center">Acciones</th>
                             </tr>
                         `;
-                tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">Seleccione una materia para ver los objetivos y calificaciones.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">Seleccione una asignatura para ver los objetivos y calificaciones.</td></tr>`;
                 return;
             }
 
@@ -442,7 +429,7 @@
 
             const materiaEncontrada = listaMateriasGlobal.find(m => m.codigo === codigoSeleccionado);
             if (materiaEncontrada) {
-                labelNombreMateria.textContent = `Materia: ${materiaEncontrada.descripcion} (Semestre: ${semestreSeleccionado})`;
+                labelNombreMateria.textContent = `Asignatura: ${materiaEncontrada.descripcion} (Semestre: ${semestreSeleccionado})`;
 
                 const numObj = parseInt(materiaEncontrada.numobj) || 0;
                 let thObjetivosHtml = '';
@@ -695,7 +682,7 @@
             const codigoMateria = document.getElementById('filtroCodigoMateria').value;
 
             if (!codigoMateria || !cedulaAlumno) {
-                Swal.fire('Atención', 'Debe seleccionar una materia y asegurar que el alumno posea cédula.', 'warning');
+                Swal.fire('Atención', 'Debe seleccionar una asignatura y asegurar que el alumno posea cédula.', 'warning');
                 return;
             }
 

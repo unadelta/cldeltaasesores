@@ -28,33 +28,6 @@
                 </button>
             </div>
         </div>
-        <!-- 
-        <div class="card border-0 shadow-sm">
-            <div class="card-body p-0">
-                <div class="table-responsive" style="max-height: 550px; overflow-y: auto;">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-dark sticky-top" style="top: 0; z-index: 10;">
-                            <tr>
-                                <th>Fecha</th>
-                                <th>Alumno</th>
-                                <th>Cédula</th>
-                                <th>Carrera</th>
-                                <th>Tarea</th>
-                                <th>Materia</th>
-                                <th class="text-center">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tablaCorrecciones">
-                            <tr>
-                                <td colspan="7" class="text-center text-muted py-4">Cargando registros...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-    -->
 
 
         <div class="card border-0 shadow-sm">
@@ -73,7 +46,7 @@
                                 <th>Cédula</th>
                                 <th>Carrera</th>
                                 <th>Tarea</th>
-                                <th>Materia</th>
+                                <th>Asignatura</th>
                                 <th class="text-center">Acciones</th>
                             </tr>
                         </thead>
@@ -134,19 +107,19 @@
 
                             <!-- 2. Selección de Materia (Tabla materia_una) -->
                             <div class="mb-3">
-                                <label for="selectMateria" class="form-label fw-semibold">Seleccionar Materia</label>
+                                <label for="selectMateria" class="form-label fw-semibold">Seleccionar Asignatura</label>
                                 <select id="selectMateria" class="form-select" required>
-                                <option value="">Seleccione una materia...</option>
+                                <option value="">Seleccione una asignatura...</option>
                             </select>
                             </div>
 
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label for="codigoMateria" class="form-label fw-semibold">Cod. materia</label>
+                                    <label for="codigoMateria" class="form-label fw-semibold">Cod. Asignatura</label>
                                     <input type="text" class="form-control bg-light" id="codigoMateria" placeholder="Cod. materia" readonly required>
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label for="descripcionMateria" class="form-label fw-semibold">Materia</label>
+                                    <label for="descripcionMateria" class="form-label fw-semibold">Asignatura</label>
                                     <input type="text" class="form-control bg-light" id="descripcionMateria" placeholder="Materia" readonly required>
                                 </div>
                             </div>
@@ -499,41 +472,6 @@
                     btnGuardar.textContent = 'Guardar';
                 }
             }
-            /*
-                        async function cargarControlCorrecciones() {
-                            try {
-                                const res = await fetch('/api/control_correcciones');
-                                const data = await res.json();
-                                const tbody = document.getElementById('tablaCorrecciones');
-                                tbody.innerHTML = '';
-
-                                const lista = data.success ? data.data : data;
-                                listaCorreccionesGlobal = Array.isArray(lista) ? lista : [];
-
-                                if (listaCorreccionesGlobal.length > 0) {
-                                    listaCorreccionesGlobal.forEach(item => {
-                                        let fechaF = item.fecha ? new Date(item.fecha).toLocaleDateString('es-ES') : '';
-                                        tbody.innerHTML += `<tr>
-                                        <td>${fechaF}</td>
-                                        <td>${item.nombre_alumno || ''}</td>
-                                        <td>${item.cedula_alumno || ''}</td>
-                                        <td><span class="badge bg-secondary">${item.codigo_carrera || ''}</span></td>
-                                        <td><span class="badge bg-warning text-dark">${item.descripcion_tarea || item.tipo_correccion || ''}</span></td>
-                                        <td><span class="badge bg-info text-dark">${item.codigo_materia || ''}</span></td>
-                                        <td class="text-center">
-                                            <button class="btn btn-sm btn-primary me-1" onclick="editarCorreccion(${item.id})" title="Editar"><i class="bi bi-pencil"></i></button>
-                                            <button class="btn btn-sm btn-danger" onclick="eliminarCorreccion(${item.id})" title="Eliminar"><i class="bi bi-trash"></i></button>
-                                        </td>
-                                    </tr>`;
-                                    });
-                                } else {
-                                    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">No hay correcciones registradas.</td></tr>`;
-                                }
-                            } catch (error) {
-                                console.error("Error al cargar control de correcciones:", error);
-                            }
-                        }
-            */
 
             async function cargarControlCorrecciones() {
                 try {

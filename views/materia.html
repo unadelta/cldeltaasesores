@@ -905,7 +905,7 @@
                 if (data.success) {
                     Swal.fire({
                         title: '¡Éxito!',
-                        text: esEdicion ? 'Materia actualizada correctamente.' : 'Materia registrada correctamente.',
+                        text: esEdicion ? 'Asignatura actualizada correctamente.' : 'Asignatura registrada correctamente.',
                         icon: 'success',
                         timer: 2000,
                         showConfirmButton: false
@@ -913,14 +913,14 @@
                     modalMateriaInstance.hide();
                     await cargarMaterias(); // Recargar tabla principal
                 } else {
-                    Swal.fire('Error', data.message || 'No se pudo guardar la materia.', 'error');
+                    Swal.fire('Error', data.message || 'No se pudo guardar la asignatura.', 'error');
                 }
             } catch (err) {
                 console.error("Error al guardar:", err);
                 Swal.fire('Error', 'Error de conexión con el servidor.', 'error');
             } finally {
                 btnGuardar.disabled = false;
-                btnGuardar.textContent = 'Guardar Materia';
+                btnGuardar.textContent = 'Guardar Asignatura';
             }
         }
     </script>
