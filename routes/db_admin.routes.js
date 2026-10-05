@@ -115,6 +115,9 @@ router.get('/respaldo', async(req, res) => {
         });
     }
 });
+
+
+/*
 // ==========================================
 // RUTA 2: Ejecutar Update desde archivo SQL
 // ==========================================
@@ -160,6 +163,73 @@ router.post('/update', upload.single('sqlFile'), async(req, res) => {
 
     } catch (error) {
         console.error(`Error ejecutando update SQL: ${error}`);
+
+        // Limpiar archivo temporal en caso de error
+        if (fs.existsSync(uploadedFilePath)) {
+            fs.unlinkSync(uploadedFilePath);
+        }
+
+        res.status(500).json({
+            success: false,
+            message: 'Error crítico al ejecutar el script SQL.',
+            error: error.message
+        });
+    }
+});*/
+
+// ==========================================
+// RUTA 2: Ejecutar Update desde archivo SQL
+// ==========================================
+router.post('/update', upload.single('sqlFile'), async(req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ success: false, message: 'No se subió archivo.' });
+    }
+
+    const uploadedFilePath = req.file.path;
+    const originalName = req.file.originalname;
+
+    console.log(`Iniciando actualización de DB con archivo: ${originalName}`);
+
+    let connection;
+    try {
+        const rawSqlContent = fs.readFileSync(uploadedFilePath, 'utf8');
+
+        // Envolver el contenido con desactivación de revisión de llaves foráneas
+        const sqlContent = `SET FOREIGN_KEY_CHECKS = 0;\n${rawSqlContent}\nSET FOREIGN_KEY_CHECKS = 1;`;
+
+        // Conexión usando mysql2 con soporte SSL y múltiples sentencias permitidas
+        connection = await mysql.createConnection({
+            host: dbConfig.host,
+            port: Number(dbConfig.port),
+            user: dbConfig.user,
+            password: dbConfig.password,
+            database: dbConfig.database,
+            multipleStatements: true,
+            ssl: {
+                rejectUnauthorized: false
+            }
+        });
+
+        await connection.query(sqlContent);
+        await connection.end();
+
+        // Limpieza: Eliminar archivo subido temporalmente
+        fs.unlink(uploadedFilePath, (unlinkErr) => {
+            if (unlinkErr) console.error('Error al eliminar archivo de update temporal:', unlinkErr);
+        });
+
+        console.log('Actualización de DB completada exitosamente.');
+        res.json({
+            success: true,
+            message: `El archivo "${originalName}" se ejecutó correctamente en la base de datos.`
+        });
+
+    } catch (error) {
+        console.error(`Error ejecutando update SQL: ${error}`);
+
+        if (connection) {
+            await connection.end().catch(() => {});
+        }
 
         // Limpiar archivo temporal en caso de error
         if (fs.existsSync(uploadedFilePath)) {

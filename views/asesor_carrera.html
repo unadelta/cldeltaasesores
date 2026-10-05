@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Alumnos por Asignatura - Asesores UNA</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+
+<body style="background-color: #1F91DC !important;">
+
+    <!-- NAVBAR PRINCIPAL -->
+    <div id="navbar-container"></div>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="container mt-4 mb-5">
+        <div class="row mb-3 align-items-center">
+            <div class="col-sm-6">
+                <h3 class="fw-bold text-white"><i class="bi bi-journal-check me-2"></i>Control de Alumnos por Asignatura</h3>
+            </div>
+            <div class="col-sm-6 text-sm-end">
+                <button class="btn btn-success" onclick="abrirModalAsesorCarrera()">
+                    <i class="bi bi-plus-circle me-1"></i> Registrar Alumnos por Carrera
+                </button>
+            </div>
+        </div>
+
+        <!-- BARRA DE TÍTULO Y TABLA DE REGISTROS -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-0">
+                <div class="table-responsive" style="max-height: 550px; overflow-y: auto;">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-dark sticky-top" style="top: 0; z-index: 10;">
+                            <tr>
+                                <th style="width: 10%;">Item</th>
+                                <th style="width: 20%;">Cod. Carrera</th>
+                                <th style="width: 30%;">Cod. Asignatura</th>
+                                <th style="width: 20%;">Semestre</th>
+                                <th style="width: 10%;">Cant. Alumno</th>
+                                <th style="width: 10%;" class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaAsesorCarrera">
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">Cargando registros...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL REGISTRAR / EDITAR ASIGNACIÓN -->
+    <div class="modal fade" id="modalAsesorCarrera" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="formAsesorCarrera" onsubmit="guardarAsesorCarrera(event)">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title" id="modalTitulo">Registrar Alumnos por Carrera</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="registroId">
+
+                        <!-- Combobox Código de Carrera -->
+                        <div class="mb-3">
+                            <label for="carrera" class="form-label fw-semibold">Cod. Carrera</label>
+                            <select id="carrera" class="form-select" required>
+                                <option value="">Seleccione una carrera...</option>
+                            </select>
+                        </div>
+
+                        <!-- Combobox Asignatura (materia_una) -->
+                        <div class="mb-3">
+                            <label for="asignatura" class="form-label fw-semibold">Cod. Asignatura</label>
+                            <select id="asignatura" class="form-select" required>
+                                <option value="">Seleccione una asignatura...</option>
+                            </select>
+                            <div class="form-text">La asignatura no puede repetirse para un mismo semestre.</div>
+                        </div>
+
+                        <!-- Semestre -->
+                        <div class="mb-3">
+                            <label for="semestre" class="form-label fw-semibold">Semestre</label>
+                            <input type="text" class="form-control" id="semestre" placeholder="Ej. 2025-1" required autocomplete="off">
+                            <div class="form-text">Formato numérico requerido (ej. 2025-1).</div>
+                        </div>
+
+                        <!-- Cantidad de Alumno -->
+                        <div class="mb-3">
+                            <label for="cantidadAlumno" class="form-label fw-semibold">Cant. Alumno</label>
+                            <input type="number" class="form-control" id="cantidadAlumno" placeholder="Ingrese cantidad de alumnos" min="1" required autocomplete="off">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" id="btnGuardar">Guardar Registro</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let modalInstance = null;
+        let asesorCedulaGlobal = "";
+        let listaRegistrosGlobal = [];
+
+        document.addEventListener("DOMContentLoaded", async() => {
+            modalInstance = new bootstrap.Modal(document.getElementById('modalAsesorCarrera'));
+
+            await cargarNavbar();
+            await obtenerSesionAsesor();
+            await cargarCarrerasCombobox();
+            await cargarMateriasCombobox();
+            await cargarRegistrosAsesorCarrera();
+        });
+
+        async function cargarNavbar() {
+            try {
+                const response = await fetch('/views/navbar.html');
+                if (response.ok) {
+                    const data = await response.text();
+                    document.getElementById('navbar-container').innerHTML = data;
+                }
+            } catch (err) {
+                console.error("Error al cargar el navbar:", err);
+            }
+        }
+
+        async function obtenerSesionAsesor() {
+            try {
+                const res = await fetch('/api/user-session');
+                const data = await res.json();
+                if (data.authenticated && data.user) {
+                    asesorCedulaGlobal = data.user.cedula || data.user.usuario || "";
+                    const elem = document.getElementById('nombreUsuario') || document.getElementById('usuarioAsesorLogueado');
+                    if (elem) elem.textContent = data.user.nombre || data.user.usuario;
+                } else {
+                    window.location.href = '/';
+                }
+            } catch (e) {
+                console.error("Error al verificar sesión", e);
+                window.location.href = '/';
+            }
+        }
+
+        async function cargarCarrerasCombobox() {
+            try {
+                const res = await fetch('/api/carreras');
+                const data = await res.json();
+                const select = document.getElementById('carrera');
+                select.innerHTML = '<option value="">Seleccione una carrera...</option>';
+
+                const lista = Array.isArray(data) ? data : (data.success ? data.data : []);
+                lista.forEach(c => {
+                    select.innerHTML += `<option value="${c.codigo}">${c.codigo} - ${c.nombre_carrera || ''}</option>`;
+                });
+            } catch (error) {
+                console.error("Error al cargar carreras:", error);
+            }
+        }
+
+        async function cargarMateriasCombobox() {
+            try {
+                const res = await fetch('/api/materiauna');
+                const data = await res.json();
+                const select = document.getElementById('asignatura');
+                select.innerHTML = '<option value="">Seleccione una asignatura...</option>';
+
+                const lista = Array.isArray(data) ? data : (data.success ? data.data : (data.materias || []));
+                lista.forEach(m => {
+                    select.innerHTML += `<option value="${m.codigo}">${m.codigo} - ${m.descripcion || ''}</option>`;
+                });
+            } catch (error) {
+                console.error("Error al cargar materias:", error);
+            }
+        }
+        /*
+                async function cargarRegistrosAsesorCarrera() {
+                    const tbody = document.getElementById('tablaAsesorCarrera');
+                    try {
+                        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Cargando registros...</td></tr>';
+
+                        const res = await fetch('/api/asesorcarrera');
+                        const data = await res.json();
+
+                        const lista = Array.isArray(data) ? data : (data.success ? data.data : []);
+                        listaRegistrosGlobal = lista;
+
+                        tbody.innerHTML = '';
+                        if (lista.length > 0) {
+                            lista.forEach((item, index) => {
+                                const registroId = item.id || item._id;
+                                tbody.innerHTML += `
+                                    <tr>
+                                        <td>${index + 1}</td>
+                                        <td><span class="badge bg-secondary">${item.carrera}</span></td>
+                                        <td class="fw-semibold">${item.asignatura}</td>
+                                        <td>${item.semestre}</td>
+                                        <td><span class="badge bg-primary">${item.cantidad_alumno}</span></td>
+                                        <td class="text-center text-nowrap">
+                                            <button class="btn btn-sm btn-warning me-1" onclick="editarRegistro('${registroId}')" title="Editar">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-danger" onclick="eliminarRegistro('${registroId}')" title="Eliminar">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `;
+                            });
+                        } else {
+                            tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">No hay registros almacenados.</td></tr>`;
+                        }
+                    } catch (error) {
+                        console.error("Error al cargar registros:", error);
+                        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-4">Error al conectar con el servidor.</td></tr>`;
+                    }
+                }
+        */
+        async function cargarRegistrosAsesorCarrera() {
+            const tbody = document.getElementById('tablaAsesorCarrera');
+            try {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Cargando registros...</td></tr>';
+
+                const res = await fetch('/api/asesorcarrera');
+                const data = await res.json();
+
+                const lista = Array.isArray(data) ? data : (data.success ? data.data : []);
+                listaRegistrosGlobal = lista;
+
+                // Limpiamos el contenedor antes de inyectar las nuevas filas
+                tbody.innerHTML = '';
+
+                if (lista.length > 0) {
+                    let filasHtml = ''; // Construimos todo en una variable temporal
+                    lista.forEach((item, index) => {
+                        const registroId = item.id || item._id;
+                        filasHtml += `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td><span class="badge bg-secondary">${item.carrera}</span></td>
+                        <td class="fw-semibold">${item.asignatura}</td>
+                        <td>${item.semestre}</td>
+                        <td><span class="badge bg-primary">${item.cantidad_alumno}</span></td>
+                        <td class="text-center text-nowrap">
+                            <button class="btn btn-sm btn-warning me-1" onclick="editarRegistro('${registroId}')" title="Editar">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="eliminarRegistro('${registroId}')" title="Eliminar">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                    });
+                    tbody.innerHTML = filasHtml; // Asignamos una sola vez para evitar renderizados duplicados o parciales
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">No hay registros almacenados.</td></tr>`;
+                }
+            } catch (error) {
+                console.error("Error al cargar registros:", error);
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-4">Error al conectar con el servidor.</td></tr>`;
+            }
+        }
+
+
+
+
+        function abrirModalAsesorCarrera() {
+            document.getElementById('formAsesorCarrera').reset();
+            document.getElementById('registroId').value = '';
+            document.getElementById('modalTitulo').textContent = 'Registrar Alumnos por Carrera';
+            document.getElementById('btnGuardar').textContent = 'Guardar Registro';
+            modalInstance.show();
+        }
+
+        function editarRegistro(id) {
+            const registro = listaRegistrosGlobal.find(item => (item.id == id || item._id == id));
+            if (!registro) return;
+
+            document.getElementById('registroId').value = registro.id || registro._id;
+            document.getElementById('carrera').value = registro.carrera;
+            document.getElementById('asignatura').value = registro.asignatura;
+            document.getElementById('semestre').value = registro.semestre;
+            document.getElementById('cantidadAlumno').value = registro.cantidad_alumno;
+
+            document.getElementById('modalTitulo').textContent = 'Editar Registro';
+            document.getElementById('btnGuardar').textContent = 'Actualizar Registro';
+            modalInstance.show();
+        }
+
+        async function guardarAsesorCarrera(e) {
+            e.preventDefault();
+
+            const id = document.getElementById('registroId').value;
+            const carrera = document.getElementById('carrera').value;
+            const asignatura = document.getElementById('asignatura').value;
+            const semestre = document.getElementById('semestre').value.trim();
+            const cantidadAlumno = parseInt(document.getElementById('cantidadAlumno').value, 10);
+
+            // Validar formato del semestre (Ej: 2025-1)
+            const regexSemestre = /^\d{4}-\d{1}$/;
+            if (!regexSemestre.test(semestre)) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Formato Inválido',
+                    text: 'El semestre debe tener un formato numérico como por ejemplo: 2025-1',
+                    confirmButtonColor: '#3085d6'
+                });
+                return;
+            }
+
+            const payload = {
+                asesor_cedula: asesorCedulaGlobal,
+                carrera: carrera,
+                asignatura: asignatura,
+                cantidad_alumno: cantidadAlumno,
+                semestre: semestre
+            };
+
+            const url = id ? `/api/asesorcarrera/${id}` : '/api/asesorcarrera';
+            const method = id ? 'PUT' : 'POST';
+
+            try {
+                const res = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await res.json();
+
+                if (res.ok && (result.success !== false)) {
+                    modalInstance.hide();
+                    await cargarRegistrosAsesorCarrera();
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Éxito!',
+                        text: result.message || 'Operación completada correctamente.',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Atención',
+                        text: result.message || 'La asignatura ya fue registrada para ese semestre.',
+                        confirmButtonColor: '#3085d6'
+                    });
+                }
+            } catch (error) {
+                console.error("Error al guardar:", error);
+                Swal.fire('Error', 'No se pudo comunicar con el servidor.', 'error');
+            }
+        }
+
+        async function eliminarRegistro(id) {
+            const confirm = await Swal.fire({
+                title: '¿Desea eliminar este registro?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            });
+
+            if (confirm.isConfirmed) {
+                try {
+                    const res = await fetch(`/api/asesorcarrera/${id}`, {
+                        method: 'DELETE'
+                    });
+                    const result = await res.json();
+                    if (res.ok) {
+                        Swal.fire('¡Eliminado!', 'El registro ha sido borrado.', 'success');
+                        await cargarRegistrosAsesorCarrera();
+                    } else {
+                        Swal.fire('Error', result.message || 'No se pudo eliminar.', 'error');
+                    }
+                } catch (error) {
+                    console.error("Error:", error);
+                    Swal.fire('Error', 'Error de conexión con el servidor.', 'error');
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>

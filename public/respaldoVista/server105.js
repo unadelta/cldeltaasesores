@@ -8,20 +8,13 @@ const session = require('express-session');
 
 //Respaldo BD
 const cors = require('cors');
-require('dotenv').config(); // Muy importante para las credenciales
-//Respaldobd
-
 
 // --- IMPORTANTE: Middlewares globales ---
 app.use(cors());
 app.use(express.json()); // Necesario para recibir JSON del frontend
 
 // --- Importar las rutas de administración de DB ---
-// Asumiendo que creaste el archivo en ./routes/db_admin.routes.js
 const dbAdminRoutes = require('./routes/db_admin.routes');
-
-
-//Repaldo BD
 
 if (process.env.NODE_ENV !== 'production') {
     require('dotenv').config();
@@ -30,17 +23,16 @@ const pool = mysql.createPool({
     host: process.env.MYSQLHOST || process.env.DB_HOST || 'localhost',
     user: process.env.MYSQLUSER || process.env.DB_USER || 'root',
     password: process.env.MYSQLPASSWORD !== undefined ? process.env.MYSQLPASSWORD : (process.env.DB_PASSWORD || ''),
-    database: process.env.MYSQLDATABASE || process.env.DB_NAME || 'asesores', // 👈 Aquí se define 'asesores' por defecto a nivel local
+    database: process.env.MYSQLDATABASE || process.env.DB_NAME || 'asesores',
     port: process.env.MYSQLPORT || process.env.DB_PORT || 3306,
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
-    connectTimeout: 10000 // 10 segundos de límite para evitar que se quede congelado
+    connectTimeout: 10000
 });
 
 // Definir la variable db para que funcione en todo el servidor con el pool
 const db = pool;
-
 
 // Prueba explícita de conexión al arrancar el servidor
 pool.getConnection((err, connection) => {
@@ -57,7 +49,6 @@ pool.getConnection((err, connection) => {
         }
     } else {
         console.log('✅ ¡ÉXITO! Conexión exitosa a la base de datos MySQL .');
-        // Es muy importante liberar la conexión de vuelta al pool
         connection.release();
     }
 });
@@ -80,17 +71,14 @@ app.use(session({
     }
 }));
 
-
 // ==========================================
 // RUTA RAÍZ (LOGIN)
 // ==========================================
 
 app.get('/', (req, res) => {
-    // Si ya hay una sesión activa, lo mandamos directo al dashboard
     if (req.session && req.session.usuario) {
         return res.redirect('/dashboard');
     }
-    // Si no ha iniciado sesión, muestra tu archivo de login (ajusta el nombre si es login.html o index.html)
     res.sendFile(path.join(__dirname, 'views', 'login.html'));
 });
 
@@ -114,7 +102,6 @@ app.post('/api/login', (req, res) => {
 
         if (results.length > 0) {
             const asesor = results[0];
-            // Guardar datos en la sesión
             req.session.usuario = {
                 id: asesor.id,
                 cedula: asesor.cedula,
@@ -131,12 +118,11 @@ app.post('/api/login', (req, res) => {
     });
 });
 
-// Endpoint para verificar sesión activa (compatible con /api/user-session y /api/sesion-usuario)
 app.get('/api/user-session', (req, res) => {
     if (req.session && req.session.usuario) {
         res.json({
             authenticated: true,
-            user: req.session.usuario // Mantiene la compatibilidad con el frontend actual
+            user: req.session.usuario
         });
     } else {
         res.json({
@@ -145,7 +131,6 @@ app.get('/api/user-session', (req, res) => {
     }
 });
 
-
 app.get('/api/sesion-usuario', (req, res) => {
     if (req.session && req.session.usuario) {
         res.json({ success: true, nombre: req.session.usuario.nombre || req.session.usuario });
@@ -153,9 +138,6 @@ app.get('/api/sesion-usuario', (req, res) => {
         res.json({ success: false, nombre: 'Invitado' });
     }
 });
-
-
-
 
 // ==========================================
 // RUTA DEL DASHBOARD
@@ -360,7 +342,7 @@ app.get('/api/materias/verificar', (req, res) => {
         res.json({ existe: results.length > 0 });
     });
 });
-/*
+
 app.post('/api/materias', async(req, res) => {
     const { codigo, descripcion, numobj, minaprueba, objetivos, calificaciones } = req.body;
 
@@ -407,7 +389,7 @@ app.post('/api/materias', async(req, res) => {
                 nota_final DECIMAL(5,2) DEFAULT 0.00,
                 nota_final_letra VARCHAR(10) DEFAULT '',
                 semestre VARCHAR(50) DEFAULT ''
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
         `;
 
         await connection.query(sqlCrearTablaEspecifica);
@@ -461,81 +443,6 @@ app.put('/api/materias/:codigoOriginal', async(req, res) => {
         res.status(500).json({ success: false, message: 'Error al actualizar la materia en la base de datos.' });
     }
 });
-*/
-app.post('/api/materias', async(req, res) => {
-    const { codigo, descripcion, numobj, minaprueba, objetivos, calificaciones } = req.body;
-
-    if (!codigo || !descripcion || !numobj || !minaprueba) {
-        return res.status(400).json({ success: false, message: 'Faltan campos obligatorios básicos.' });
-    }
-
-    try {
-        const connection = db.promise();
-
-        // 1. GARANTIZAR QUE EL CÓDIGO NO ESTÉ REPETIDO EN LA BASE DE DATOS
-        const [materiasExistentes] = await connection.query(
-            'SELECT codigo FROM materia WHERE codigo = ?', [codigo]
-        );
-
-        if (materiasExistentes.length > 0) {
-            return res.status(400).json({
-                success: false,
-                message: `El código de asignatura '${codigo}' ya se encuentra registrado en el sistema.`
-            });
-        }
-
-        // 2. Si no existe, procedemos con el registro normal
-        await connection.query(
-            'INSERT INTO materia (codigo, descripcion, numobj, minaprueba) VALUES (?, ?, ?, ?)', [codigo, descripcion, numobj, minaprueba]
-        );
-
-        if (Array.isArray(objetivos) && objetivos.length > 0) {
-            for (let obj of objetivos) {
-                await connection.query(
-                    'INSERT INTO objetivo_materia (materia_codigo, nro_objetivo, peso) VALUES (?, ?, ?)', [codigo, obj.nro_objetivo, obj.peso]
-                );
-            }
-        }
-
-        if (Array.isArray(calificaciones) && calificaciones.length > 0) {
-            for (let cal of calificaciones) {
-                await connection.query(
-                    'INSERT INTO calificaciones (cod_materia, peso_acumulado, calificacion_definitiva) VALUES (?, ?, ?)', [codigo, cal.peso_acumulado, cal.calificacion]
-                );
-            }
-        }
-
-        const nombreTablaLimpio = `calificacion_${codigo.replace(/[^a-zA-Z0-9_]/g, '_')}`;
-        let columnasObjetivosSql = '';
-        const cantidadObjetivos = parseInt(numobj) || 0;
-        for (let i = 1; i <= cantidadObjetivos; i++) {
-            columnasObjetivosSql += `, obj${i} DECIMAL(5,2) DEFAULT 0.00`;
-        }
-
-        const sqlCrearTablaEspecifica = `
-            CREATE TABLE IF NOT EXISTS \`${nombreTablaLimpio}\` (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                nombre_alumno VARCHAR(150) NOT NULL,
-                cedula_alumno VARCHAR(30) NOT NULL,
-                cedula_asesor VARCHAR(30) NOT NULL
-                ${columnasObjetivosSql},
-                nota_final DECIMAL(5,2) DEFAULT 0.00,
-                nota_final_letra VARCHAR(10) DEFAULT '',
-                semestre VARCHAR(50) DEFAULT ''
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-        `;
-
-        await connection.query(sqlCrearTablaEspecifica);
-
-        res.json({ success: true, message: 'Materia registrada y su tabla de notas específica fue creada exitosamente.' });
-    } catch (err) {
-        console.error("Error al registrar materia y crear su tabla:", err);
-        res.status(500).json({ success: false, message: 'Error al registrar la materia o crear su estructura en la base de datos.' });
-    }
-});
-
-
-
 
 app.delete('/api/materias/:codigo', async(req, res) => {
     const materiaCodigo = req.params.codigo;
@@ -555,42 +462,6 @@ app.delete('/api/materias/:codigo', async(req, res) => {
         res.status(500).json({ success: false, message: 'Error al eliminar la materia de la base de datos.' });
     }
 });
-// Ruta del servidor para eliminar la materia por su código
-app.delete('/api/materias/:codigo', (req, res) => {
-    const codigoMateria = req.params.codigo;
-    const sqlDropTabla = `DROP TABLE IF EXISTS calificacion_${codigoMateria}`;
-
-    // 1. Eliminar la tabla dinámica de calificaciones asociada
-    db.query(sqlDropTabla)
-        .then(() => {
-            // 2. Eliminar todas las filas en la tabla 'materias' que coincidan con el código
-            return db.query('DELETE FROM materias WHERE codigo = ?', [codigoMateria]);
-        })
-        .then(([resultado]) => {
-            // 3. Eliminar registros dependientes en la tabla de objetivos
-            return db.query('DELETE FROM objetivos WHERE codigo = ?', [codigoMateria]);
-        })
-        .then(() => {
-            // Respuesta exitosa al frontend
-            return res.json({
-                success: true,
-                message: 'La asignatura y todos sus datos asociados fueron eliminados correctamente.'
-            });
-        })
-        .catch(error => {
-            // Control de errores
-            console.error("Error al eliminar la materia en el servidor:", error);
-            return res.status(500).json({
-                success: false,
-                message: 'Error al eliminar la materia de la base de datos.'
-            });
-        });
-});
-
-
-
-
-
 
 app.get('/api/materia_una', async(req, res) => {
     try {
@@ -624,33 +495,6 @@ app.get('/api/alumnos', (req, res) => {
     });
 });
 
-app.get('/api/alumnos/buscar/:cedula', (req, res) => {
-    const cedulaBusqueda = decodeURIComponent(req.params.cedula);
-    const query = `
-        SELECT a.id, a.cedula, a.nombre, a.codigo_carrera, c.nombre_carrera AS descripcion_carrera
-        FROM alumno a
-        LEFT JOIN carrera c ON a.codigo_carrera = c.codigo
-        WHERE a.cedula = ?
-    `;
-    db.query(query, [cedulaBusqueda], (err, results) => {
-        if (err) {
-            console.error('Error al buscar alumno por cédula:', err);
-            return res.status(500).json({ success: false, error: err.message });
-        }
-        if (results.length > 0) {
-            res.json({ success: true, data: results[0] });
-        } else {
-            res.json({ success: false, data: null });
-        }
-    });
-});
-
-
-// ==========================================
-// RUTAS PARA EL MÓDULO DE ALUMNOS (CALLBACKS - TABLA: alumno)
-// ==========================================
-
-// BUSCAR ALUMNO POR CÉDULA
 app.get('/api/alumnos/buscar/:cedula', (req, res) => {
     const cedulaBusqueda = decodeURIComponent(req.params.cedula);
     const query = `
@@ -853,10 +697,25 @@ app.delete('/api/tareas/:id', (req, res) => {
     });
 });
 
+// ==========================================
+// RUTAS PARA EL MÓDULO DE ASESORÍAS Y CORRECCIONES
+// ==========================================
 
-// ==========================================
-// RUTAS PARA EL MÓDULO DE ASESORÍAS
-// ==========================================
+app.get('/api/control_correcciones', async(req, res) => {
+    try {
+        const [rows] = await db.promise().query(`
+            SELECT cc.*, MAX(a.descripcion_carrera) AS descripcion_carrera 
+            FROM control_correcciones cc
+            LEFT JOIN alumno a ON cc.codigo_carrera = a.codigo_carrera
+            GROUP BY cc.id
+            ORDER BY cc.fecha DESC
+        `);
+        res.json({ success: true, data: rows });
+    } catch (err) {
+        console.error('Error al obtener control_correcciones:', err);
+        res.status(500).json({ success: false, message: 'Error en el servidor al consultar los registros' });
+    }
+});
 
 app.get('/asesoria', (req, res) => {
     if (!req.session || !req.session.usuario) {
@@ -989,35 +848,6 @@ app.delete('/api/control_asesoria/:id', (req, res) => {
     });
 });
 
-app.get('/api/control_correcciones', async(req, res) => {
-    try {
-        const [rows] = await db.promise().query(`
-            SELECT 
-                cc.id,
-                cc.cedula_alumno,
-                cc.nombre_alumno,
-                cc.codigo_carrera,
-                cc.codigo_materia,
-                cc.cedula_asesor,
-                cc.nombre_asesor,
-                cc.fecha,
-                MAX(a.descripcion_carrera) AS descripcion_carrera,
-                COALESCE(t.codigo, cc.tipo_correccion, '') AS tipo_correccion,
-                COALESCE(t.descripcion, 'Sin clasificar') AS descripcion_tarea
-            FROM control_correcciones cc
-            LEFT JOIN alumno a ON TRIM(cc.codigo_carrera) COLLATE utf8mb4_general_ci = TRIM(a.codigo_carrera) COLLATE utf8mb4_general_ci
-            LEFT JOIN tarea t ON TRIM(cc.tipo_correccion) COLLATE utf8mb4_general_ci = TRIM(t.codigo) COLLATE utf8mb4_general_ci 
-                              OR TRIM(cc.tipo_correccion) COLLATE utf8mb4_general_ci = CAST(t.id AS CHAR) COLLATE utf8mb4_general_ci
-            GROUP BY cc.id
-            ORDER BY cc.fecha DESC
-        `);
-        res.json({ success: true, data: rows });
-    } catch (err) {
-        console.error('Error al obtener control_correcciones:', err);
-        res.status(500).json({ success: false, message: 'Error en el servidor al consultar los registros' });
-    }
-});
-// Ruta para registrar una nueva corrección
 app.post('/api/control_correcciones', async(req, res) => {
     try {
         const {
@@ -1064,15 +894,6 @@ app.post('/api/control_correcciones', async(req, res) => {
     }
 });
 
-
-
-
-
-
-// ==========================================
-// API PARA EL REPORTE DE CONTROL DE ASESORÍAS
-// ==========================================
-
 app.get('/reporasesoria', (req, res) => {
     res.sendFile(path.join(__dirname, 'views', 'reporasesoria.html'));
 });
@@ -1103,10 +924,6 @@ app.get('/api/controlasesoria', (req, res) => {
         res.json({ success: true, data: results });
     });
 });
-
-// ==========================================
-// API PARA EL REPORTE DE CONTROL DE CORRECCIONES
-// ==========================================
 
 app.get('/reporcorrecciones', (req, res) => {
     res.sendFile(path.join(__dirname, 'views', 'reporcorrecciones.html'));
@@ -1143,7 +960,6 @@ app.get('/api/reporcorrecciones', (req, res) => {
     });
 });
 
-// Ruta PUT para actualizar una corrección existente por su ID
 app.put('/api/control_correcciones/:id', async(req, res) => {
     try {
         const { id } = req.params;
@@ -1183,7 +999,6 @@ app.put('/api/control_correcciones/:id', async(req, res) => {
     }
 });
 
-// Ruta DELETE para eliminar un registro de corrección por su ID
 app.delete('/api/control_correcciones/:id', async(req, res) => {
     try {
         const { id } = req.params;
@@ -1198,7 +1013,7 @@ app.delete('/api/control_correcciones/:id', async(req, res) => {
 });
 
 // ==========================================
-// RUTAS PARA EL MÓDULO DE CALIFICACIONES Y REGISTRO DINÁMICO
+// RUTAS PARA CALIFICACIONES Y OBJETIVOS
 // ==========================================
 
 app.get('/calificaciones', (req, res) => {
@@ -1342,11 +1157,6 @@ app.put('/api/calificaciones-alumnos/objetivos', async(req, res) => {
     }
 });
 
-
-/*Sesión de usuario*/
-
-
-
 app.get('/api/materias-objetivos/:codigoMateria', async(req, res) => {
     const { codigoMateria } = req.params;
 
@@ -1461,7 +1271,7 @@ app.get('/api/calificaciones/:codigoMateria', (req, res) => {
 });
 
 // ==========================================
-// RUTA Y CRUD COMPLETO PARA EL MÓDULO TIPO DE ASESORÍA
+// MÓDULO TIPO DE ASESORÍA
 // ==========================================
 
 app.get('/tipo_asesoria', (req, res) => {
@@ -1546,7 +1356,7 @@ app.delete('/api/tipo_asesoria/:id', (req, res) => {
 });
 
 // ==========================================
-// RUTA Y CRUD COMPLETO PARA EL MÓDULO CORRECCIONES
+// MÓDULO CORRECCIONES
 // ==========================================
 
 app.get('/correcciones', (req, res) => {
@@ -1638,7 +1448,6 @@ app.delete('/api/correcciones/:id', async(req, res) => {
     }
 });
 
-// Ruta para servir la vista del reporte consolidado
 app.get('/reporconsolidado', (req, res) => {
     if (!req.session || !req.session.usuario) {
         return res.redirect('/');
@@ -1646,47 +1455,20 @@ app.get('/reporconsolidado', (req, res) => {
     res.sendFile(path.join(__dirname, 'views', 'reporconsolidado.html'));
 });
 
-
 app.use('/api/db', dbAdminRoutes);
 
-
-// --- Ruta de prueba ---
-app.get('/', (req, res) => {
-    res.send('Servidor API Asesores UNA funcionando.');
-});
-
 // ==========================================
-// RUTA DE VISTA PARA GESTIÓN DE MATERIAS
+// GESTIÓN DE MATERIAS (MÓDULO UNA)
 // ==========================================
 
-
-
 app.get('/control_materia', (req, res) => {
-    // Valida si el usuario tiene sesión activa usando 'usuario'
-    if (!req.session || !req.session.usuario) {
-        return res.redirect('/');
-    }
-
-    res.sendFile(path.join(__dirname, 'views', 'control_materia.html'));
-});
-
-// Ruta para la vista HTML de control de materias
-app.get('/control_materia', (req, res) => {
-    // Valida si el usuario tiene sesión activa usando 'usuario'
     if (!req.session || !req.session.usuario) {
         return res.redirect('/');
     }
     res.sendFile(path.join(__dirname, 'views', 'control_materia.html'));
 });
 
-
-// ==========================================
-// ENDPOINTS API PARA LA TABLA 'materia_una' (MYSQL - CALLBACKS)
-// ==========================================
-
-// 1. OBTENER TODAS LAS MATERIAS
 app.get('/api/materiauna', (req, res) => {
-    //const query = 'SELECT id, codigo, descripcion FROM materia_una';
     const query = 'SELECT id, codigo, descripcion FROM materia_una ORDER BY codigo ASC';
 
     pool.query(query, (err, results) => {
@@ -1698,8 +1480,6 @@ app.get('/api/materiauna', (req, res) => {
     });
 });
 
-
-// 2. REGISTRAR NUEVA MATERIA (Con validación de código duplicado)
 app.post('/api/materiauna', (req, res) => {
     const { codigo, descripcion } = req.body;
 
@@ -1707,7 +1487,6 @@ app.post('/api/materiauna', (req, res) => {
         return res.status(400).json({ success: false, message: 'El código y la descripción son obligatorios.' });
     }
 
-    // Verificar si el código ya existe
     pool.query('SELECT id FROM materia_una WHERE codigo = ?', [codigo], (err, existing) => {
         if (err) {
             console.error('❌ Error al verificar código duplicado:', err);
@@ -1721,7 +1500,6 @@ app.post('/api/materiauna', (req, res) => {
             });
         }
 
-        // Insertar la nueva materia
         pool.query('INSERT INTO materia_una (codigo, descripcion) VALUES (?, ?)', [codigo, descripcion], (err, result) => {
             if (err) {
                 console.error('❌ Error al registrar materia en MySQL:', err);
@@ -1737,8 +1515,6 @@ app.post('/api/materiauna', (req, res) => {
     });
 });
 
-
-// 3. ACTUALIZAR MATERIA EXISTENTE
 app.put('/api/materiauna/:id', (req, res) => {
     const { id } = req.params;
     const { codigo, descripcion } = req.body;
@@ -1747,7 +1523,6 @@ app.put('/api/materiauna/:id', (req, res) => {
         return res.status(400).json({ success: false, message: 'El código y la descripción son obligatorios.' });
     }
 
-    // Verificar si otro registro diferente ya está usando el código
     pool.query('SELECT id FROM materia_una WHERE codigo = ? AND id != ?', [codigo, id], (err, existing) => {
         if (err) {
             console.error('❌ Error al verificar código duplicado en actualización:', err);
@@ -1761,10 +1536,8 @@ app.put('/api/materiauna/:id', (req, res) => {
             });
         }
 
-        // Ejecutar actualización
         pool.query('UPDATE materia_una SET codigo = ?, descripcion = ? WHERE id = ?', [codigo, descripcion, id], (err, result) => {
             if (err) {
-                // <-- AQUÍ ESTÁ EL CAMBIO CLAVE PARA VER EL ERROR EN CONSOLA -->
                 console.error('❌ ERROR REAL DE MYSQL AL ACTUALIZAR:', err);
                 return res.status(500).json({ success: false, message: 'Error en BD: ' + err.message });
             }
@@ -1778,7 +1551,6 @@ app.put('/api/materiauna/:id', (req, res) => {
     });
 });
 
-// 4. ELIMINAR MATERIA
 app.delete('/api/materiauna/:id', (req, res) => {
     const { id } = req.params;
 
@@ -1796,45 +1568,28 @@ app.delete('/api/materiauna/:id', (req, res) => {
     });
 });
 
-
-
-
 // ==========================================
-// RUTA PARA SERVIR LA INTERFAZ DE ADMIN DB
+// ADMIN DB & LOGOUT
 // ==========================================
+
 app.get('/admin_db', (req, res) => {
-    // IMPORTANTE: Primero debes proteger esta ruta.
-    // Descomenta el middleware de autenticación de admin que tengas.
-    // Ejemplo: if (!req.session.usuario || req.session.usuario.rol !== 'admin') return res.redirect('/');
-
-    // Asumiendo que admin_db.html está en la carpeta 'views'
     res.sendFile(path.join(__dirname, 'views', 'admin_db.html'));
 });
-
-// ... (más abajo deben estar las rutas de la API que ya creamos)
-app.use('/api/db', dbAdminRoutes);
-
-
-// Ruta para manejar el cierre de sesión
-// ==========================================
-// RUTA DE CIERRE DE SESIÓN (LOGOUT)
-// ==========================================
 
 app.get('/logout', (req, res) => {
     req.session.destroy((err) => {
         if (err) {
             console.error('❌ Error al destruir la sesión:', err);
         }
-        // Limpiar la cookie de sesión configurada en express-session
         res.clearCookie('session_cookie_id');
-        // Redirigir al login
         res.redirect('/');
     });
 });
 
 // ==========================================
-// ENDPOINT: Reporte de Actividades (Definitivo)
+// REPORTE DE ACTIVIDADES
 // ==========================================
+/*
 app.get('/api/reporte_actividades', (req, res) => {
     if (!req.session || !req.session.usuario) {
         return res.status(401).json({ success: false, message: 'No autorizado' });
@@ -1875,7 +1630,6 @@ app.get('/api/reporte_actividades', (req, res) => {
         GROUP BY tipo_correccion
     `;
 
-    // Obtenemos TODOS los tipos de corrección históricos del asesor para fijar las columnas
     const queryTiposCorrecciones = `
         SELECT DISTINCT tipo_correccion 
         FROM control_correcciones 
@@ -1911,7 +1665,6 @@ app.get('/api/reporte_actividades', (req, res) => {
                     return `COALESCE(SUM(CASE WHEN UPPER(cc.tipo_correccion) = UPPER('${tipo}') THEN 1 ELSE 0 END), 0) AS \`${tipo}\``;
                 }).join(', ');
 
-                // Query directa optimizada con el LEFT JOIN original que sí arrojaba los totales correctos
                 const queryPorAsignaturaCorrecciones = dynamicCorreccionesCases ? `
                     SELECT 
                         ac.asignatura AS codigo_materia,
@@ -1978,24 +1731,193 @@ app.get('/api/reporte_actividades', (req, res) => {
         });
     });
 });
+*/
+// ==========================================
+// ENDPOINT: Reporte de Actividades (Actualizado con Asesorías y Correcciones por Asignatura)
+// ==========================================
+app.get('/api/reporte_actividades', (req, res) => {
+    if (!req.session || !req.session.usuario) {
+        return res.status(401).json({ success: false, message: 'No autorizado' });
+    }
+
+    const cedulaAsesorSesion = req.session.usuario.cedula;
+    let { inicio, fin } = req.query;
+
+    if (!inicio || !fin) {
+        return res.status(400).json({ success: false, message: 'Debe proporcionar una fecha de inicio y fin.' });
+    }
+
+    function normalizarFecha(fechaStr) {
+        if (!fechaStr) return '';
+        if (fechaStr.includes('/')) {
+            const p = fechaStr.split('/');
+            if (p.length === 3) {
+                return `${p[2]}-${p[1]}-${p[0]}`;
+            }
+        }
+        return fechaStr;
+    }
+
+    inicio = normalizarFecha(inicio);
+    fin = normalizarFecha(fin);
+
+    const queryAsesorias = `
+        SELECT tipo_asesoria, COUNT(*) AS cantidad 
+        FROM control_asesoria 
+        WHERE TRIM(cedula_asesor) = TRIM(?) AND DATE(fecha_hora) BETWEEN ? AND ? 
+        GROUP BY tipo_asesoria
+    `;
+
+    const queryCorrecciones = `
+        SELECT tipo_correccion, COUNT(*) AS cantidad 
+        FROM control_correcciones 
+        WHERE TRIM(cedula_asesor) = TRIM(?) AND DATE(fecha) BETWEEN ? AND ? 
+        GROUP BY tipo_correccion
+    `;
+
+    const queryTiposCorrecciones = `
+        SELECT DISTINCT tipo_correccion 
+        FROM control_correcciones 
+        WHERE TRIM(cedula_asesor) = TRIM(?)
+    `;
+
+    const queryTiposAsesorias = `
+        SELECT DISTINCT tipo_asesoria 
+        FROM control_asesoria 
+        WHERE TRIM(cedula_asesor) = TRIM(?) AND DATE(fecha_hora) BETWEEN ? AND ?
+    `;
+
+    db.query(queryAsesorias, [cedulaAsesorSesion, inicio, fin], (err, asesoriasResult) => {
+        if (err) {
+            console.error('Error asesorías:', err);
+            return res.status(500).json({ success: false, message: err.message });
+        }
+
+        db.query(queryCorrecciones, [cedulaAsesorSesion, inicio, fin], (err2, correccionesResult) => {
+            if (err2) {
+                console.error('Error correcciones:', err2);
+                return res.status(500).json({ success: false, message: err2.message });
+            }
+
+            db.query(queryTiposCorrecciones, [cedulaAsesorSesion], (errTiposCorr, tiposCorreccionesResult) => {
+                if (errTiposCorr) {
+                    console.error('Error tipos correcciones:', errTiposCorr);
+                    return res.status(500).json({ success: false, message: errTiposCorr.message });
+                }
+
+                db.query(queryTiposAsesorias, [cedulaAsesorSesion, inicio, fin], (errTiposAses, tiposAsesoriasResult) => {
+                    if (errTiposAses) {
+                        console.error('Error tipos asesorías:', errTiposAses);
+                        return res.status(500).json({ success: false, message: errTiposAses.message });
+                    }
+
+                    // Generar casos dinámicos para correcciones
+                    let dynamicCorreccionesCases = tiposCorreccionesResult.map(t => {
+                        const tipo = t.tipo_correccion;
+                        return `COALESCE(SUM(CASE WHEN UPPER(cc.tipo_correccion) = UPPER('${tipo}') THEN 1 ELSE 0 END), 0) AS \`${tipo}\``;
+                    }).join(', ');
+
+                    // Generar casos dinámicos para asesorías (PRESENCIAL, EN LINEA, VIRTUAL, etc.)
+                    let dynamicAsesoriasCases = tiposAsesoriasResult.map(t => {
+                        const tipo = t.tipo_asesoria;
+                        return `COALESCE(SUM(CASE WHEN UPPER(ca.tipo_asesoria) = UPPER('${tipo}') THEN 1 ELSE 0 END), 0) AS \`${tipo}\``;
+                    }).join(', ');
+
+                    let allCases = [dynamicCorreccionesCases, dynamicAsesoriasCases].filter(Boolean).join(', ');
+
+                    // Consulta unificada por asignatura que incluye tanto correcciones como asesorías al lado
+                    const queryPorAsignaturaCompleto = allCases ? `
+                        SELECT 
+                            ac.asignatura AS codigo_materia,
+                            ac.cantidad_alumno,
+                            ${allCases}
+                        FROM asesor_carrera ac
+                        LEFT JOIN control_correcciones cc ON TRIM(cc.codigo_materia) = TRIM(ac.asignatura) 
+                             AND TRIM(cc.cedula_asesor) = TRIM(?) 
+                             AND DATE(cc.fecha) BETWEEN ? AND ?
+                        LEFT JOIN control_asesoria ca ON TRIM(ca.codigo_materia) = TRIM(ac.asignatura) 
+                             AND TRIM(ca.cedula_asesor) = TRIM(?) 
+                             AND DATE(ca.fecha_hora) BETWEEN ? AND ?
+                        WHERE TRIM(ac.asesor_cedula) = TRIM(?)
+                        GROUP BY ac.asignatura, ac.cantidad_alumno
+                        ORDER BY ac.asignatura ASC
+                    ` : `
+                        SELECT 
+                            ac.asignatura AS codigo_materia,
+                            ac.cantidad_alumno
+                        FROM asesor_carrera ac
+                        WHERE TRIM(ac.asesor_cedula) = TRIM(?)
+                        ORDER BY ac.asignatura ASC
+                    `;
+
+                    const paramsPorAsignatura = allCases ? [cedulaAsesorSesion, inicio, fin, cedulaAsesorSesion, inicio, fin, cedulaAsesorSesion] : [cedulaAsesorSesion];
+
+                    db.query(queryPorAsignaturaCompleto, paramsPorAsignatura, (err3, porAsignaturaResult) => {
+                        if (err3) {
+                            console.error('Error por asignatura completo:', err3);
+                            return res.status(500).json({ success: false, message: err3.message });
+                        }
+
+                        // Query independiente para la tabla exclusiva de asesorías por asignatura
+                        let dynamicAsesoresTableCases = tiposAsesoriasResult.map(t => {
+                            const tipo = t.tipo_asesoria;
+                            return `SUM(CASE WHEN tipo_asesoria = '${tipo}' THEN 1 ELSE 0 END) AS \`${tipo}\``;
+                        }).join(', ');
+
+                        const queryAsesoriasPorAsignatura = dynamicAsesoresTableCases ?
+                            `SELECT codigo_materia, ${dynamicAsesoresTableCases} FROM control_asesoria WHERE TRIM(cedula_asesor) = TRIM(?) AND DATE(fecha_hora) BETWEEN ? AND ? GROUP BY codigo_materia` :
+                            `SELECT codigo_materia FROM control_asesoria WHERE TRIM(cedula_asesor) = TRIM(?) AND DATE(fecha_hora) BETWEEN ? AND ? GROUP BY codigo_materia`;
+
+                        db.query(queryAsesoriasPorAsignatura, [cedulaAsesorSesion, inicio, fin], (err5, asesoriasPorAsignaturaResult) => {
+                            if (err5) {
+                                console.error('Error asesorías por asignatura:', err5);
+                                return res.status(500).json({ success: false, message: err5.message });
+                            }
+
+                            res.json({
+                                success: true,
+                                asesorias: asesoriasResult,
+                                correcciones: correccionesResult,
+                                por_asignatura: porAsignaturaResult,
+                                tipos_correcciones_definidos: tiposCorreccionesResult,
+                                asesorias_por_asignatura: asesoriasPorAsignaturaResult,
+                                tipos_asesorias_definidos: tiposAsesoriasResult
+                            });
+                        });
+                    });
+                });
+            });
+        });
+    });
+});
 
 
 
+// ==========================================
+// ASESOR CARRERA
+// ==========================================
+
+app.get('/asesor_carrera', (req, res) => {
+    if (!req.session || !req.session.usuario) {
+        return res.redirect('/');
+    }
+    res.sendFile(path.join(__dirname, 'views', 'asesor_carrera.html'));
+});
 
 app.get('/api/asesorcarrera', (req, res) => {
-    // Usamos DISTINCT para evitar filas idénticas repetidas a nivel de base de datos
     const query = `
-        SELECT DISTINCT 
-            ac.id, 
+        SELECT 
+            MIN(ac.id) AS id, 
             ac.asesor_cedula, 
             ac.carrera, 
             ac.asignatura, 
-            ac.cantidad_alumno, 
+            SUM(ac.cantidad_alumno) AS cantidad_alumno, 
             ac.semestre, 
-            m.descripcion AS asignatura_descripcion 
+            MAX(m.descripcion) AS asignatura_descripcion 
         FROM asesor_carrera ac
         LEFT JOIN materia_una m ON ac.asignatura = m.codigo
-        ORDER BY ac.asignatura ASC
+        GROUP BY ac.asignatura, ac.semestre, ac.asesor_cedula, ac.carrera
+        ORDER BY MIN(ac.asignatura) ASC
     `;
     db.query(query, (err, results) => {
         if (err) {
@@ -2005,7 +1927,7 @@ app.get('/api/asesorcarrera', (req, res) => {
         res.json({ success: true, data: results });
     });
 });
-// 2. CREAR UN NUEVO REGISTRO EN ASESOR_CARRERA
+
 app.post('/api/asesorcarrera', (req, res) => {
     const { asesor_cedula, carrera, asignatura, cantidad_alumno, semestre } = req.body;
 
@@ -2013,7 +1935,6 @@ app.post('/api/asesorcarrera', (req, res) => {
         return res.status(400).json({ success: false, message: 'Faltan campos obligatorios por completar.' });
     }
 
-    // Validar si la asignatura ya está registrada para el mismo semestre
     db.query('SELECT id FROM asesor_carrera WHERE asignatura = ? AND semestre = ?', [asignatura, semestre], (err, duplicado) => {
         if (err) {
             console.error('❌ Error al verificar duplicados:', err);
@@ -2027,7 +1948,6 @@ app.post('/api/asesorcarrera', (req, res) => {
             });
         }
 
-        // Verificar que la asignatura exista en materia_una
         db.query('SELECT codigo FROM materia_una WHERE codigo = ?', [asignatura], (err, materiaExiste) => {
             if (err) {
                 console.error('❌ Error al verificar asignatura:', err);
@@ -2059,13 +1979,6 @@ app.post('/api/asesorcarrera', (req, res) => {
     });
 });
 
-
-
-
-
-
-
-// 2.1. ACTUALIZAR REGISTRO EXISTENTE (PUT)
 app.put('/api/asesorcarrera/:id', (req, res) => {
     const { id } = req.params;
     const { carrera, asignatura, cantidad_alumno, semestre } = req.body;
@@ -2108,7 +2021,6 @@ app.put('/api/asesorcarrera/:id', (req, res) => {
     });
 });
 
-// 3. ELIMINAR UN REGISTRO
 app.delete('/api/asesorcarrera/:id', (req, res) => {
     const { id } = req.params;
     db.query('DELETE FROM asesor_carrera WHERE id = ?', [id], (err, result) => {
@@ -2123,106 +2035,6 @@ app.delete('/api/asesorcarrera/:id', (req, res) => {
     });
 });
 
-//ASESOR CARRERA
-
-app.get('/asesor_carrera', (req, res) => {
-    if (!req.session || !req.session.usuario) {
-        return res.redirect('/');
-    }
-    res.sendFile(path.join(__dirname, 'views', 'asesor_carrera.html'));
-});
-
-app.post('/api/guardar_acumulado_asesorias', (req, res) => {
-    console.log("📥 Datos recibidos:", req.body);
-
-    const { periodo, cedula, TP, TSP, TEG, PROY, EGRU, ELI, PRE, VT } = req.body;
-
-    if (!cedula || !periodo) {
-        return res.status(400).json({
-            success: false,
-            message: 'Faltan datos obligatorios (cédula o período).'
-        });
-    }
-
-    // 10 columnas exactas
-    const query = `
-        INSERT INTO acumuladotaase (periodo, cedula, TP, TSP, TEG, PROY, EGRU, ELI, PRE, VT)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON DUPLICATE KEY UPDATE 
-            TP = VALUES(TP),
-            TSP = VALUES(TSP),
-            TEG = VALUES(TEG),
-            PROY = VALUES(PROY),
-            EGRU = VALUES(EGRU),
-            ELI = VALUES(ELI),
-            PRE = VALUES(PRE),
-            VT = VALUES(VT)
-    `;
-
-    // 10 valores exactos correspondientes a las 10 interrogaciones (?)
-    const values = [
-        periodo,
-        cedula,
-        TP || 0,
-        TSP || 0,
-        TEG || 0,
-        PROY || 0,
-        EGRU || 0,
-        ELI || 0,
-        PRE || 0,
-        VT || 0
-    ];
-
-    db.query(query, values, (err, result) => {
-        if (err) {
-            console.error('❌ Error en MySQL:', err);
-            return res.status(500).json({ success: false, message: err.message });
-        }
-
-        console.log('✅ Acumulado guardado correctamente.');
-        res.json({ success: true, message: 'Guardado exitosamente.' });
-    });
-});
-
-
-
-app.get('/api/obtener_acumulado_anterior', (req, res) => {
-    const { cedula, periodo } = req.query; // período actual, ej: "2026-10"
-
-    if (!cedula || !periodo) {
-        return res.status(400).json({ success: false, message: 'Faltan parámetros (cédula o período).' });
-    }
-
-    const year = periodo.split('-')[0];
-    const primerMesAnio = `${year}-01`;
-
-    // Consultamos agrupando por período para obtener el desglose mes por mes
-    const query = `
-        SELECT 
-            periodo,
-            SUM(TP) AS TP, 
-            SUM(TSP) AS TSP, 
-            SUM(TEG) AS TEG, 
-            SUM(PROY) AS PROY, 
-            SUM(EGRU) AS EGRU, 
-            SUM(ELI) AS ELI, 
-            SUM(PRE) AS PRE, 
-            SUM(VT) AS VT 
-        FROM acumuladotaase 
-        WHERE cedula = ? AND periodo >= ? AND periodo < ?
-        GROUP BY periodo
-        ORDER BY periodo ASC
-    `;
-
-    db.query(query, [cedula, primerMesAnio, periodo], (err, results) => {
-        if (err) {
-            console.error('❌ Error al consultar valores acumulados mes a mes:', err);
-            return res.status(500).json({ success: false, message: err.message });
-        }
-
-        res.json({ success: true, data: results || [] });
-    });
-});
 // Inicialización del servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {

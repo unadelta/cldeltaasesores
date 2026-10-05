@@ -360,7 +360,7 @@ app.get('/api/materias/verificar', (req, res) => {
         res.json({ existe: results.length > 0 });
     });
 });
-/*
+
 app.post('/api/materias', async(req, res) => {
     const { codigo, descripcion, numobj, minaprueba, objetivos, calificaciones } = req.body;
 
@@ -407,7 +407,7 @@ app.post('/api/materias', async(req, res) => {
                 nota_final DECIMAL(5,2) DEFAULT 0.00,
                 nota_final_letra VARCHAR(10) DEFAULT '',
                 semestre VARCHAR(50) DEFAULT ''
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
         `;
 
         await connection.query(sqlCrearTablaEspecifica);
@@ -461,81 +461,6 @@ app.put('/api/materias/:codigoOriginal', async(req, res) => {
         res.status(500).json({ success: false, message: 'Error al actualizar la materia en la base de datos.' });
     }
 });
-*/
-app.post('/api/materias', async(req, res) => {
-    const { codigo, descripcion, numobj, minaprueba, objetivos, calificaciones } = req.body;
-
-    if (!codigo || !descripcion || !numobj || !minaprueba) {
-        return res.status(400).json({ success: false, message: 'Faltan campos obligatorios básicos.' });
-    }
-
-    try {
-        const connection = db.promise();
-
-        // 1. GARANTIZAR QUE EL CÓDIGO NO ESTÉ REPETIDO EN LA BASE DE DATOS
-        const [materiasExistentes] = await connection.query(
-            'SELECT codigo FROM materia WHERE codigo = ?', [codigo]
-        );
-
-        if (materiasExistentes.length > 0) {
-            return res.status(400).json({
-                success: false,
-                message: `El código de asignatura '${codigo}' ya se encuentra registrado en el sistema.`
-            });
-        }
-
-        // 2. Si no existe, procedemos con el registro normal
-        await connection.query(
-            'INSERT INTO materia (codigo, descripcion, numobj, minaprueba) VALUES (?, ?, ?, ?)', [codigo, descripcion, numobj, minaprueba]
-        );
-
-        if (Array.isArray(objetivos) && objetivos.length > 0) {
-            for (let obj of objetivos) {
-                await connection.query(
-                    'INSERT INTO objetivo_materia (materia_codigo, nro_objetivo, peso) VALUES (?, ?, ?)', [codigo, obj.nro_objetivo, obj.peso]
-                );
-            }
-        }
-
-        if (Array.isArray(calificaciones) && calificaciones.length > 0) {
-            for (let cal of calificaciones) {
-                await connection.query(
-                    'INSERT INTO calificaciones (cod_materia, peso_acumulado, calificacion_definitiva) VALUES (?, ?, ?)', [codigo, cal.peso_acumulado, cal.calificacion]
-                );
-            }
-        }
-
-        const nombreTablaLimpio = `calificacion_${codigo.replace(/[^a-zA-Z0-9_]/g, '_')}`;
-        let columnasObjetivosSql = '';
-        const cantidadObjetivos = parseInt(numobj) || 0;
-        for (let i = 1; i <= cantidadObjetivos; i++) {
-            columnasObjetivosSql += `, obj${i} DECIMAL(5,2) DEFAULT 0.00`;
-        }
-
-        const sqlCrearTablaEspecifica = `
-            CREATE TABLE IF NOT EXISTS \`${nombreTablaLimpio}\` (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                nombre_alumno VARCHAR(150) NOT NULL,
-                cedula_alumno VARCHAR(30) NOT NULL,
-                cedula_asesor VARCHAR(30) NOT NULL
-                ${columnasObjetivosSql},
-                nota_final DECIMAL(5,2) DEFAULT 0.00,
-                nota_final_letra VARCHAR(10) DEFAULT '',
-                semestre VARCHAR(50) DEFAULT ''
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-        `;
-
-        await connection.query(sqlCrearTablaEspecifica);
-
-        res.json({ success: true, message: 'Materia registrada y su tabla de notas específica fue creada exitosamente.' });
-    } catch (err) {
-        console.error("Error al registrar materia y crear su tabla:", err);
-        res.status(500).json({ success: false, message: 'Error al registrar la materia o crear su estructura en la base de datos.' });
-    }
-});
-
-
-
 
 app.delete('/api/materias/:codigo', async(req, res) => {
     const materiaCodigo = req.params.codigo;
@@ -853,6 +778,23 @@ app.delete('/api/tareas/:id', (req, res) => {
     });
 });
 
+// RUTA CORRECCIONES
+
+app.get('/api/control_correcciones', async(req, res) => {
+    try {
+        const [rows] = await db.promise().query(`
+            SELECT cc.*, MAX(a.descripcion_carrera) AS descripcion_carrera 
+            FROM control_correcciones cc
+            LEFT JOIN alumno a ON cc.codigo_carrera = a.codigo_carrera
+            GROUP BY cc.id
+            ORDER BY cc.fecha DESC
+        `);
+        res.json({ success: true, data: rows });
+    } catch (err) {
+        console.error('Error al obtener control_correcciones:', err);
+        res.status(500).json({ success: false, message: 'Error en el servidor al consultar los registros' });
+    }
+});
 
 // ==========================================
 // RUTAS PARA EL MÓDULO DE ASESORÍAS
@@ -989,34 +931,6 @@ app.delete('/api/control_asesoria/:id', (req, res) => {
     });
 });
 
-app.get('/api/control_correcciones', async(req, res) => {
-    try {
-        const [rows] = await db.promise().query(`
-            SELECT 
-                cc.id,
-                cc.cedula_alumno,
-                cc.nombre_alumno,
-                cc.codigo_carrera,
-                cc.codigo_materia,
-                cc.cedula_asesor,
-                cc.nombre_asesor,
-                cc.fecha,
-                MAX(a.descripcion_carrera) AS descripcion_carrera,
-                COALESCE(t.codigo, cc.tipo_correccion, '') AS tipo_correccion,
-                COALESCE(t.descripcion, 'Sin clasificar') AS descripcion_tarea
-            FROM control_correcciones cc
-            LEFT JOIN alumno a ON TRIM(cc.codigo_carrera) COLLATE utf8mb4_general_ci = TRIM(a.codigo_carrera) COLLATE utf8mb4_general_ci
-            LEFT JOIN tarea t ON TRIM(cc.tipo_correccion) COLLATE utf8mb4_general_ci = TRIM(t.codigo) COLLATE utf8mb4_general_ci 
-                              OR TRIM(cc.tipo_correccion) COLLATE utf8mb4_general_ci = CAST(t.id AS CHAR) COLLATE utf8mb4_general_ci
-            GROUP BY cc.id
-            ORDER BY cc.fecha DESC
-        `);
-        res.json({ success: true, data: rows });
-    } catch (err) {
-        console.error('Error al obtener control_correcciones:', err);
-        res.status(500).json({ success: false, message: 'Error en el servidor al consultar los registros' });
-    }
-});
 // Ruta para registrar una nueva corrección
 app.post('/api/control_correcciones', async(req, res) => {
     try {
@@ -1063,11 +977,6 @@ app.post('/api/control_correcciones', async(req, res) => {
         res.status(500).json({ success: false, message: 'Error en el servidor al guardar la corrección' });
     }
 });
-
-
-
-
-
 
 // ==========================================
 // API PARA EL REPORTE DE CONTROL DE ASESORÍAS
@@ -1982,20 +1891,33 @@ app.get('/api/reporte_actividades', (req, res) => {
 
 
 
+
+
+// ASESOR CARRERA
+
+app.get('/asesor_carrera', (req, res) => {
+    if (!req.session || !req.session.usuario) {
+        return res.redirect('/');
+    }
+    res.sendFile(path.join(__dirname, 'views', 'asesor_carrera.html'));
+});
+//Servir la vista HTML del módulo
+// 1. OBTENER REGISTROS DE ASESOR_CARRERA
+
 app.get('/api/asesorcarrera', (req, res) => {
-    // Usamos DISTINCT para evitar filas idénticas repetidas a nivel de base de datos
     const query = `
-        SELECT DISTINCT 
-            ac.id, 
+        SELECT 
+            MIN(ac.id) AS id, 
             ac.asesor_cedula, 
             ac.carrera, 
             ac.asignatura, 
-            ac.cantidad_alumno, 
+            SUM(ac.cantidad_alumno) AS cantidad_alumno, 
             ac.semestre, 
-            m.descripcion AS asignatura_descripcion 
+            MAX(m.descripcion) AS asignatura_descripcion 
         FROM asesor_carrera ac
         LEFT JOIN materia_una m ON ac.asignatura = m.codigo
-        ORDER BY ac.asignatura ASC
+        GROUP BY ac.asignatura, ac.semestre, ac.asesor_cedula, ac.carrera
+        ORDER BY MIN(ac.asignatura) ASC
     `;
     db.query(query, (err, results) => {
         if (err) {
@@ -2120,107 +2042,6 @@ app.delete('/api/asesorcarrera/:id', (req, res) => {
             return res.status(404).json({ success: false, message: 'El registro no fue encontrado.' });
         }
         res.json({ success: true, message: 'Registro eliminado correctamente.' });
-    });
-});
-
-//ASESOR CARRERA
-
-app.get('/asesor_carrera', (req, res) => {
-    if (!req.session || !req.session.usuario) {
-        return res.redirect('/');
-    }
-    res.sendFile(path.join(__dirname, 'views', 'asesor_carrera.html'));
-});
-
-app.post('/api/guardar_acumulado_asesorias', (req, res) => {
-    console.log("📥 Datos recibidos:", req.body);
-
-    const { periodo, cedula, TP, TSP, TEG, PROY, EGRU, ELI, PRE, VT } = req.body;
-
-    if (!cedula || !periodo) {
-        return res.status(400).json({
-            success: false,
-            message: 'Faltan datos obligatorios (cédula o período).'
-        });
-    }
-
-    // 10 columnas exactas
-    const query = `
-        INSERT INTO acumuladotaase (periodo, cedula, TP, TSP, TEG, PROY, EGRU, ELI, PRE, VT)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON DUPLICATE KEY UPDATE 
-            TP = VALUES(TP),
-            TSP = VALUES(TSP),
-            TEG = VALUES(TEG),
-            PROY = VALUES(PROY),
-            EGRU = VALUES(EGRU),
-            ELI = VALUES(ELI),
-            PRE = VALUES(PRE),
-            VT = VALUES(VT)
-    `;
-
-    // 10 valores exactos correspondientes a las 10 interrogaciones (?)
-    const values = [
-        periodo,
-        cedula,
-        TP || 0,
-        TSP || 0,
-        TEG || 0,
-        PROY || 0,
-        EGRU || 0,
-        ELI || 0,
-        PRE || 0,
-        VT || 0
-    ];
-
-    db.query(query, values, (err, result) => {
-        if (err) {
-            console.error('❌ Error en MySQL:', err);
-            return res.status(500).json({ success: false, message: err.message });
-        }
-
-        console.log('✅ Acumulado guardado correctamente.');
-        res.json({ success: true, message: 'Guardado exitosamente.' });
-    });
-});
-
-
-
-app.get('/api/obtener_acumulado_anterior', (req, res) => {
-    const { cedula, periodo } = req.query; // período actual, ej: "2026-10"
-
-    if (!cedula || !periodo) {
-        return res.status(400).json({ success: false, message: 'Faltan parámetros (cédula o período).' });
-    }
-
-    const year = periodo.split('-')[0];
-    const primerMesAnio = `${year}-01`;
-
-    // Consultamos agrupando por período para obtener el desglose mes por mes
-    const query = `
-        SELECT 
-            periodo,
-            SUM(TP) AS TP, 
-            SUM(TSP) AS TSP, 
-            SUM(TEG) AS TEG, 
-            SUM(PROY) AS PROY, 
-            SUM(EGRU) AS EGRU, 
-            SUM(ELI) AS ELI, 
-            SUM(PRE) AS PRE, 
-            SUM(VT) AS VT 
-        FROM acumuladotaase 
-        WHERE cedula = ? AND periodo >= ? AND periodo < ?
-        GROUP BY periodo
-        ORDER BY periodo ASC
-    `;
-
-    db.query(query, [cedula, primerMesAnio, periodo], (err, results) => {
-        if (err) {
-            console.error('❌ Error al consultar valores acumulados mes a mes:', err);
-            return res.status(500).json({ success: false, message: err.message });
-        }
-
-        res.json({ success: true, data: results || [] });
     });
 });
 // Inicialización del servidor

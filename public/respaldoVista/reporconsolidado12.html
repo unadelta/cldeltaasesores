@@ -60,38 +60,23 @@
         <!-- VISTA DEL REPORTE -->
         <div class="card border-0 shadow-sm p-4" id="areaImpresion">
 
-
-            <!-- ENCABEZADO INSTITUCIONAL: LOGO Y TEXTOS ALINEADOS A LA IZQUIERDA -->
-            <div class="border-bottom pb-2 mb-2">
-                <div class="d-flex align-items-center">
-                    <!-- Logotipo -->
-                    <div class="me-3">
-                        <img src="/jpg/logouna.jpg" alt="Logo UNA" height="28" class="bg-white rounded p-1 shadow-sm" onerror="this.style.display='none'">
-                    </div>
-
-                    <!-- Bloque de textos alineados a la izquierda -->
-                    <div>
-                        <h6 class="text-uppercase fw-bold text-secondary m-0" style="font-size: 0.75rem;">Universidad Nacional Abierta</h6>
-                        <p class="text-muted m-0" style="font-size: 0.65rem;">Centro Local Delta Amacuro</p>
-                        <h5 class="fw-bold text-primary mt-1 mb-0" style="font-size: 0.95rem;">Reporte Consolidado por Asignatura (Trabajos-Asesorías)</h5>
-                        <p class="text-muted mb-0" style="font-size: 0.6rem;" id="textoRangoFechas">Período: No seleccionado</p>
-                    </div>
+            <!-- ENCABEZADO INSTITUCIONAL CON LOGO -->
+            <div class="text-center border-bottom pb-3 mb-4">
+                <div class="d-flex align-items-center justify-content-center mb-3">
+                    <img src="/jpg/logouna.jpg" alt="Logo UNA" height="60" class="bg-white rounded p-1 shadow-sm" onerror="this.style.display='none'">
                 </div>
+                <h5 class="text-uppercase fw-bold text-secondary m-0">Universidad Nacional Abierta</h5>
+                <h6 class="fw-semibold text-muted m-0">Centro Local Delta Amacuro</h6>
+                <h4 class="fw-bold text-primary mt-2">Reporte Consolidado por Asignatura (Tareas y Asesorías)</h4>
+                <p class="text-muted small mb-0" id="textoRangoFechas">Período: No seleccionado</p>
             </div>
 
-
-
-
+            <!-- CONTENIDO CONSOLIDADO -->
             <div id="contenidoReporte">
                 <div class="text-center text-muted py-5">
                     <i class="bi bi-info-circle display-6 mb-2 d-block"></i> Seleccione un rango de fechas y haga clic en <strong>Consultar</strong> para generar el reporte consolidado.
                 </div>
             </div>
-
-
-
-
-
 
             <!-- PIE DE PÁGINA CON FIRMAS -->
             <div class="row mt-5 pt-5 firmas-section" id="seccionFirmas" style="display: none;">
@@ -145,6 +130,7 @@
                 return;
             }
 
+            // Extraemos dinámicamente el período en formato YYYY-MM a partir de la fecha de inicio seleccionada
             const periodoSeleccionado = fechaInicio.substring(0, 7);
 
             document.getElementById('textoRangoFechas').textContent = `Período desde: ${fechaInicio} hasta: ${fechaFin}`;
@@ -159,7 +145,7 @@
                 const dataAsesorias = await resAsesorias.json();
 
                 if (dataReporte.success) {
-                    await renderizarReporte(dataReporte, dataAsesorias, periodoSeleccionado);
+                    renderizarReporte(dataReporte, dataAsesorias, periodoSeleccionado);
                     document.getElementById('seccionFirmas').style.display = 'flex';
                     document.getElementById('nombreAsesorFirma').textContent = nombreAsesorActual;
                 } else {
@@ -171,9 +157,7 @@
             }
         }
 
-
-
-        async function renderizarReporte(data, dataAsesoriasResp, periodoSeleccionado) {
+        function renderizarReporte(data, dataAsesoriasResp, periodoSeleccionado) {
             const contenedor = document.getElementById('contenidoReporte');
             const {
                 por_asignatura
@@ -205,16 +189,9 @@
 
             let columnasAsesoriaDinamicas = Array.from(tiposAsesoriaSet).sort();
 
-            // Obtener el nombre del mes actual
-            const [anio, mesNum] = periodoSeleccionado.split('-');
-            const fechaMes = new Date(parseInt(anio), parseInt(mesNum) - 1, 1);
-            const nombreMes = fechaMes.toLocaleString('es-ES', {
-                month: 'long'
-            });
-            const nombreMesCapitalizado = nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1);
-
             if (por_asignatura && por_asignatura.length > 0) {
                 const ignoreKeys = ['codigo_materia', 'cantidad_alumno', 'id', 'carrera', 'semestre'];
+
                 let columnasDinamicas = Object.keys(por_asignatura[0]).filter(k => !ignoreKeys.includes(k));
 
                 const ordenDeseado = ['TP', 'TSP', 'TEG', 'PROY', 'EGRU', 'ELI', 'PRE', 'VT'];
@@ -228,6 +205,7 @@
                 });
 
                 let todasLasColumnas = [...columnasDinamicas, ...columnasAsesoriaDinamicas];
+
                 let headersDinamicos = todasLasColumnas.map(col => `<th class="text-center">${col}</th>`).join('');
 
                 let totalesColumna = {};
@@ -250,128 +228,38 @@
                     }).join('');
 
                     return `<tr>
-                <td>${codigoMateria}</td>
-                <td class="text-center"><span class="badge bg-secondary">${item.cantidad_alumno || 0}</span></td>
-                ${celdasDinamicas}
-            </tr>`;
+                        <td>${codigoMateria}</td>
+                        <td class="text-center"><span class="badge bg-secondary">${item.cantidad_alumno || 0}</span></td>
+                        ${celdasDinamicas}
+                    </tr>`;
                 }).join('');
 
                 let celdasTotalesFooter = todasLasColumnas.map(col => {
                     return `<td class="text-center fw-bold">${totalesColumna[col]}</td>`;
                 }).join('');
 
-                // Consultar los meses anteriores mes por mes
-                let mesesAnterioresLista = [];
-                try {
-                    const resAcum = await fetch(`/api/obtener_acumulado_anterior?cedula=${cedulaAsesorActual}&periodo=${periodoSeleccionado}`);
-                    const jsonAcum = await resAcum.json();
-                    if (jsonAcum.success && Array.isArray(jsonAcum.data)) {
-                        mesesAnterioresLista = jsonAcum.data;
-                    }
-                } catch (e) {
-                    console.error("Error al obtener meses anteriores:", e);
-                }
-
-                // Generar una fila por cada mes anterior encontrado y acumular totales para la suma final
-                let acumuladoTotalAnterior = {};
-                todasLasColumnas.forEach(col => acumuladoTotalAnterior[col] = 0);
-
-                let filasMesesAnterioresHTML = mesesAnterioresLista.map(mesRow => {
-                    const [mAnio, mNum] = mesRow.periodo.split('-');
-                    const fM = new Date(parseInt(mAnio), parseInt(mNum) - 1, 1);
-                    let nMes = fM.toLocaleString('es-ES', {
-                        month: 'long'
-                    });
-                    nMes = nMes.charAt(0).toUpperCase() + nMes.slice(1);
-
-                    let celdasMes = todasLasColumnas.map(col => {
-                        const val = parseInt(mesRow[col] || 0);
-                        acumuladoTotalAnterior[col] += val;
-                        return `<td class="text-center text-muted">${val}</td>`;
-                    }).join('');
-
-                    return `<tr class="fw-semibold text-secondary">
-                <td class="text-end">Valores del mes (${nMes}):</td>
-                <td class="text-center">-</td>
-                ${celdasMes}
-            </tr>`;
-                }).join('');
-
-                // Fila del mes actual
-                let filaMesActualHTML = `
-            <tr class="fw-semibold text-dark bg-light">
-                <td class="text-end">Valores del mes (${nombreMesCapitalizado}):</td>
-                <td class="text-center">${totalAlumnosGeneral}</td>
-                ${celdasTotalesFooter}
-            </tr>`;
-
-                // Fila de Suma Total (Meses anteriores + Mes actual)
-                let celdasSumaTotalFooter = todasLasColumnas.map(col => {
-                    const valorAnteriorTotal = parseInt(acumuladoTotalAnterior[col] || 0);
-                    const valorActual = parseInt(totalesColumna[col] || 0);
-                    return `<td class="text-center fw-bold text-primary">${valorAnteriorTotal + valorActual}</td>`;
-                }).join('');
-
-                let filaSumaTotalHTML = `
-            <tr class="fw-bold bg-white border-top border-dark">
-                <td class="text-end text-dark">Acumulado (Meses anteriores + Mes actual):</td>
-                <td class="text-center text-dark">${totalAlumnosGeneral}</td>
-                ${celdasSumaTotalFooter}
-            </tr>`;
-                /*
-                                htmlPorAsignatura = `
-                            <div class="table-responsive">
-                                <table class="table table-bordered align-middle">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>Código asignatura</th>
-                                            <th class="text-center">Cantidad Alumno</th>
-                                            ${headersDinamicos}
-                                        </tr>
-                                    </thead>
-                                    <tbody>${filasAsig}</tbody>
-                                    <tfoot class="table-group-divider bg-light">
-                                        <tr class="fw-bold">
-                                            <td class="text-end">Totales (Filas):</td>
-                                            <td class="text-center">${totalAlumnosGeneral}</td>
-                                            ${celdasTotalesFooter}
-                                        </tr>
-                                        ${filasMesesAnterioresHTML}
-                                        ${filaMesActualHTML}
-                                        ${filaSumaTotalHTML}
-                                    </tfoot>
-                                </table>
-                            </div>`;
-                */
-
                 htmlPorAsignatura = `
-            <div class="table-responsive">
-                <table class="table table-bordered table-sm align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Código asignatura</th>
-                            <th class="text-center">Cantidad Alumno</th>
-                            ${headersDinamicos}
-                        </tr>
-                    </thead>
-                    <tbody>${filasAsig}</tbody>
-                    <tfoot class="table-group-divider bg-light">
-                        <tr class="fw-bold">
-                            <td class="text-end">Totales (Filas):</td>
-                            <td class="text-center">${totalAlumnosGeneral}</td>
-                            ${celdasTotalesFooter}
-                        </tr>
-                        ${filasMesesAnterioresHTML}
-                        ${filaMesActualHTML}
-                        ${filaSumaTotalHTML}
-                    </tfoot>
-                </table>
-            </div>`;
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Código asignatura</th>
+                                    <th class="text-center">Cantidad Alumno</th>
+                                    ${headersDinamicos}
+                                </tr>
+                            </thead>
+                            <tbody>${filasAsig}</tbody>
+                            <tfoot class="table-group-divider bg-light">
+                                <tr class="fw-bold">
+                                    <td class="text-end">Totales:</td>
+                                    <td class="text-center">${totalAlumnosGeneral}</td>
+                                    ${celdasTotalesFooter}
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>`;
 
-
-
-
-
+                // GUARDAR LOS TOTALES ACUMULADOS EN LA TABLA `acumuladotaase` USANDO EL PERÍODO SELECCIONADO
                 guardarAcumuladoAsesorias(totalesColumna, periodoSeleccionado);
 
             } else {
@@ -380,14 +268,14 @@
 
             contenedor.innerHTML = htmlPorAsignatura;
         }
+
         async function guardarAcumuladoAsesorias(totalesColumna, periodoSeleccionado) {
             const payload = {
-                periodo: periodoSeleccionado,
+                periodo: periodoSeleccionado, // Formato "YYYY-MM" proveniente de la fecha seleccionada
                 cedula: cedulaAsesorActual,
                 TP: totalesColumna['TP'] || 0,
                 TSP: totalesColumna['TSP'] || 0,
                 TEG: totalesColumna['TEG'] || 0,
-                PROY: totalesColumna['PROY'] || 0,
                 EGRU: totalesColumna['EGRU'] || 0,
                 ELI: totalesColumna['ELI'] || 0,
                 PRE: totalesColumna['PRE'] || 0,
