@@ -37,7 +37,6 @@
                             <tr>
                                 <th style="width: 50px;">Item</th>
                                 <th>Fecha</th>
-                                <th>Semestre</th>
                                 <th>Alumno</th>
                                 <th>Cédula</th>
                                 <th>Carrera</th>
@@ -48,7 +47,7 @@
                         </thead>
                         <tbody id="tablaCorrecciones">
                             <tr>
-                                <td colspan="9" class="text-center text-muted py-4">Cargando registros...</td>
+                                <td colspan="8" class="text-center text-muted py-4">Cargando registros...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -72,10 +71,9 @@
                         <!-- 1. Búsqueda de Alumno por Combobox -->
                         <div class="mb-3">
                             <label for="selectAlumno" class="form-label fw-semibold">Buscar Alumno</label>
-                            <select id="selectAlumno" class="form-select" onchange="seleccionarAlumno(this)" required>
+                            <select id="selectAlumno" class="form-select" required>
                                 <option value="">Seleccione un alumno...</option>
                             </select>
-                            <div class="form-text" id="mensajeAlumno">Seleccione un alumno del listado para autocompletar sus datos.</div>
                         </div>
 
                         <div class="row">
@@ -102,7 +100,7 @@
 
                         <hr class="my-3">
 
-                        <!-- 2. Selección de Materia (Tabla materiauna) -->
+                        <!-- 2. Selección de Materia (Tabla materia_una) -->
                         <div class="mb-3">
                             <label for="selectMateria" class="form-label fw-semibold">Seleccionar Asignatura</label>
                             <select id="selectMateria" class="form-select" required>
@@ -144,19 +142,6 @@
 
                         <hr class="my-3">
 
-                        <!-- 4. Selección de Semestre -->
-                        <div class="mb-3">
-                            <label for="selectSemestre" class="form-label fw-semibold">Semestre</label>
-                            <select id="selectSemestre" class="form-select" required>
-                                <option value="">Seleccione el semestre...</option>
-                                <option value="2026-2">2026-2</option>
-                                <option value="2027-1">2027-1</option>
-                                <option value="2027-2">2027-2</option>
-                                <option value="2028-1">2028-1</option>
-                                <option value="2028-2">2028-2</option>
-                            </select>
-                        </div>
-
                         <div class="row">
                             <!-- Asesor (Automático por sesión) -->
                             <div class="col-md-6 mb-3">
@@ -185,9 +170,6 @@
     <script>
         let modalInstance = null;
         let asesorActual = {};
-        let listaAlumnosGlobal = [];
-        let listaCarrerasGlobal = [];
-        let listaMateriasGlobal = [];
         let listaCorreccionesGlobal = [];
 
         document.addEventListener("DOMContentLoaded", async() => {
@@ -195,10 +177,18 @@
             await inicializarDatos();
             await cargarControlCorrecciones();
 
-            // Evento para autocompletar asignatura correctamente con dataset
+            // Eventos para autocompletar campos al cambiar los comboboxes
+            document.getElementById('selectAlumno').addEventListener('change', function() {
+                const opt = this.options[this.selectedIndex];
+                document.getElementById('cedulaAlumno').value = opt.dataset.cedula || '';
+                document.getElementById('nombreAlumno').value = opt.dataset.nombre || '';
+                document.getElementById('codigoCarrera').value = opt.dataset.codigocarrera || '';
+                document.getElementById('descripcionCarrera').value = opt.dataset.descripcioncarrera || '';
+            });
+
             document.getElementById('selectMateria').addEventListener('change', function() {
                 const opt = this.options[this.selectedIndex];
-                document.getElementById('codigoMateria').value = opt.dataset.codigo || this.value || '';
+                document.getElementById('codigoMateria').value = opt.dataset.codigo || '';
                 document.getElementById('descripcionMateria').value = opt.dataset.descripcion || '';
             });
 
@@ -226,42 +216,38 @@
                 console.error("Error al obtener sesión:", e);
             }
 
-            // 2. Cargar Catálogo de Carreras para cruzar descripciones
-            try {
-                const resCarreras = await fetch('/api/carreras');
-                const resultCarreras = await resCarreras.json();
-                listaCarrerasGlobal = resultCarreras.success ? resultCarreras.data : (Array.isArray(resultCarreras) ? resultCarreras : []);
-            } catch (err) {
-                console.error("Error al cargar carreras:", err);
-            }
-
-            // 3. Cargar ComboBox Alumnos
+            // 2. Cargar ComboBox Alumnos
             try {
                 const res = await fetch('/api/alumnos');
                 const result = await res.json();
                 const select = document.getElementById('selectAlumno');
                 select.innerHTML = '<option value="">Seleccione un alumno...</option>';
-                listaAlumnosGlobal = result.success ? result.data : (Array.isArray(result) ? result : []);
-
-                if (Array.isArray(listaAlumnosGlobal)) {
-                    listaAlumnosGlobal.forEach(al => {
-                        select.innerHTML += `<option value="${al.cedula}">${al.cedula} - ${al.nombre}</option>`;
+                const lista = result.success ? result.data : result;
+                if (Array.isArray(lista)) {
+                    lista.forEach(al => {
+                        const opt = document.createElement('option');
+                        opt.value = al.id;
+                        opt.textContent = `${al.cedula} - ${al.nombre}`;
+                        opt.dataset.cedula = al.cedula;
+                        opt.dataset.nombre = al.nombre;
+                        opt.dataset.codigocarrera = al.codigo_carrera || '';
+                        opt.dataset.descripcioncarrera = al.descripcion_carrera || '';
+                        select.appendChild(opt);
                     });
                 }
             } catch (err) {
                 console.error("Error al cargar alumnos:", err);
             }
 
-            // 4. Cargar ComboBox Materias usando /api/materiauna con dataset asignado
+            // 3. Cargar ComboBox Materias
             try {
-                const res = await fetch('/api/materiauna');
+                const res = await fetch('/api/materia_una');
                 const result = await res.json();
                 const select = document.getElementById('selectMateria');
                 select.innerHTML = '<option value="">Seleccione una asignatura...</option>';
-                listaMateriasGlobal = result.success ? result.data : (Array.isArray(result) ? result : []);
-
-                if (Array.isArray(listaMateriasGlobal)) {
-                    listaMateriasGlobal.forEach(mat => {
+                const lista = result.success ? result.data : result;
+                if (Array.isArray(lista)) {
+                    lista.forEach(mat => {
                         const opt = document.createElement('option');
                         opt.value = mat.codigo;
                         opt.textContent = `${mat.codigo} - ${mat.descripcion}`;
@@ -271,10 +257,10 @@
                     });
                 }
             } catch (error) {
-                console.error("Error al cargar materiauna:", error);
+                console.error("Error al cargar materia_una:", error);
             }
 
-            // 5. Cargar ComboBox Tareas
+            // 4. Cargar ComboBox Tareas usando el 'codigo' explícitamente
             try {
                 const res = await fetch('/api/tareas');
                 const result = await res.json();
@@ -284,7 +270,7 @@
                 if (Array.isArray(lista)) {
                     lista.forEach(tar => {
                         const opt = document.createElement('option');
-                        opt.value = tar.codigo;
+                        opt.value = tar.codigo; // 👈 Valor estrictamente basado en el código alfanumérico
                         opt.textContent = `${tar.codigo} - ${tar.descripcion}`;
                         opt.dataset.codigo = tar.codigo;
                         opt.dataset.descripcion = tar.descripcion;
@@ -296,55 +282,12 @@
             }
         }
 
-        function seleccionarAlumno(selectElement) {
-            const cedulaSeleccionada = selectElement.value;
-            const mensajeDiv = document.getElementById('mensajeAlumno');
-
-            if (!cedulaSeleccionada) {
-                document.getElementById('cedulaAlumno').value = '';
-                document.getElementById('nombreAlumno').value = '';
-                document.getElementById('codigoCarrera').value = '';
-                document.getElementById('descripcionCarrera').value = '';
-                mensajeDiv.textContent = 'Seleccione un alumno del listado para autocompletar sus datos.';
-                mensajeDiv.className = 'form-text text-muted';
-                return;
-            }
-
-            const alumnoEncontrado = listaAlumnosGlobal.find(a => a.cedula === cedulaSeleccionada);
-
-            if (alumnoEncontrado) {
-                document.getElementById('cedulaAlumno').value = alumnoEncontrado.cedula || '';
-                document.getElementById('nombreAlumno').value = alumnoEncontrado.nombre || '';
-
-                const codCarrera = alumnoEncontrado.codigo_carrera || '';
-                document.getElementById('codigoCarrera').value = codCarrera;
-
-                // Buscar la descripción de la carrera por su código
-                const carreraEncontrada = listaCarrerasGlobal.find(c => String(c.codigo).trim() === String(codCarrera).trim());
-                document.getElementById('descripcionCarrera').value = carreraEncontrada ? (carreraEncontrada.nombre_carrera || carreraEncontrada.descripcion) : (alumnoEncontrado.descripcion_carrera || '');
-
-                mensajeDiv.textContent = '¡Alumno seleccionado correctamente!';
-                mensajeDiv.className = 'form-text text-success fw-semibold';
-            } else {
-                document.getElementById('cedulaAlumno').value = '';
-                document.getElementById('nombreAlumno').value = '';
-                document.getElementById('codigoCarrera').value = '';
-                document.getElementById('descripcionCarrera').value = '';
-                mensajeDiv.textContent = 'No se pudieron cargar los datos del alumno seleccionado.';
-                mensajeDiv.className = 'form-text text-danger';
-            }
-        }
-
         function abrirModalCorreccion() {
             document.getElementById('formCorreccion').reset();
             document.getElementById('correccionId').value = '';
             document.getElementById('modalTitulo').textContent = 'Registrar Nueva Corrección';
             document.getElementById('nombreAsesor').value = asesorActual.nombre || asesorActual.usuario;
             document.getElementById('cedulaAsesor').value = asesorActual.cedula;
-
-            const mensajeAlumno = document.getElementById('mensajeAlumno');
-            mensajeAlumno.textContent = 'Seleccione un alumno del listado para autocompletar sus datos.';
-            mensajeAlumno.className = 'form-text text-muted';
 
             const ahora = new Date();
             document.getElementById('fechaHora').value = ahora.toLocaleDateString('es-ES');
@@ -360,24 +303,16 @@
             document.getElementById('correccionId').value = item.id;
             document.getElementById('modalTitulo').textContent = 'Editar Corrección';
 
-            document.getElementById('selectAlumno').value = item.cedula_alumno || '';
             document.getElementById('cedulaAlumno').value = item.cedula_alumno || '';
             document.getElementById('nombreAlumno').value = item.nombre_alumno || '';
             document.getElementById('codigoCarrera').value = item.codigo_carrera || '';
+            document.getElementById('descripcionCarrera').value = item.descripcion_carrera || '';
 
-            // Asignar descripción de carrera
-            const carreraEncontrada = listaCarrerasGlobal.find(c => String(c.codigo).trim() === String(item.codigo_carrera).trim());
-            document.getElementById('descripcionCarrera').value = carreraEncontrada ? (carreraEncontrada.nombre_carrera || carreraEncontrada.descripcion) : (item.descripcion_carrera || '');
-
-            document.getElementById('selectMateria').value = item.codigo_materia || '';
             document.getElementById('codigoMateria').value = item.codigo_materia || '';
             document.getElementById('descripcionMateria').value = item.descripcion_materia || '';
 
-            document.getElementById('selectTarea').value = item.tipo_correccion || '';
             document.getElementById('codigoTarea').value = item.tipo_correccion || '';
             document.getElementById('descripcionTarea').value = item.descripcion_tarea || '';
-
-            document.getElementById('selectSemestre').value = item.semestre || '';
 
             document.getElementById('nombreAsesor').value = item.nombre_asesor || asesorActual.nombre;
             document.getElementById('cedulaAsesor').value = item.cedula_asesor || asesorActual.cedula;
@@ -385,9 +320,32 @@
             let fechaItem = item.fecha ? new Date(item.fecha) : new Date();
             document.getElementById('fechaHora').value = fechaItem.toLocaleDateString('es-ES');
 
-            const mensajeAlumno = document.getElementById('mensajeAlumno');
-            mensajeAlumno.textContent = 'Modificando registro seleccionado.';
-            mensajeAlumno.className = 'form-text text-primary fw-semibold';
+            // Seleccionar en el combobox de Alumnos
+            const selectAlumno = document.getElementById('selectAlumno');
+            for (let option of selectAlumno.options) {
+                if (option.dataset.cedula === item.cedula_alumno) {
+                    selectAlumno.value = option.value;
+                    break;
+                }
+            }
+
+            // Seleccionar en el combobox de Materias
+            const selectMateria = document.getElementById('selectMateria');
+            for (let option of selectMateria.options) {
+                if (option.dataset.codigo === item.codigo_materia) {
+                    selectMateria.value = option.value;
+                    break;
+                }
+            }
+
+            // Seleccionar en el combobox de Tareas usando estrictamente el código
+            const selectTarea = document.getElementById('selectTarea');
+            for (let option of selectTarea.options) {
+                if (option.dataset.codigo === item.tipo_correccion || option.value === item.tipo_correccion) {
+                    selectTarea.value = option.value;
+                    break;
+                }
+            }
 
             modalInstance.show();
         }
@@ -431,8 +389,8 @@
             const nombreAlumno = document.getElementById('nombreAlumno').value.trim();
             const codigoMateria = document.getElementById('codigoMateria').value.trim();
             const descripcionMateria = document.getElementById('descripcionMateria').value.trim();
-            const semestre = document.getElementById('selectSemestre').value.trim();
 
+            // Garantizar captura robusta del código de tarea
             let codigoTarea = document.getElementById('codigoTarea').value.trim();
             const selectTarea = document.getElementById('selectTarea');
             if (!codigoTarea && selectTarea.value) {
@@ -447,11 +405,11 @@
             const nombreAsesor = document.getElementById('nombreAsesor').value.trim();
             const fechaHora = document.getElementById('fechaHora').value.trim();
 
-            if (!cedulaAlumno || !nombreAlumno || !codigoMateria || !descripcionMateria || !codigoTarea || !semestre || !nombreAsesor || !fechaHora) {
+            if (!cedulaAlumno || !nombreAlumno || !codigoMateria || !descripcionMateria || !codigoTarea || !nombreAsesor || !fechaHora) {
                 Swal.fire({
                     icon: 'warning',
                     title: 'Campos incompletos',
-                    text: 'Por favor, complete todos los campos obligatorios incluyendo el semestre.',
+                    text: 'Por favor, complete todos los campos obligatorios y verifique que los elementos estén seleccionados correctamente.',
                     confirmButtonColor: '#0d6efd'
                 });
                 return;
@@ -468,8 +426,7 @@
                 nombre_alumno: nombreAlumno,
                 codigo_carrera: document.getElementById('codigoCarrera').value,
                 codigo_materia: codigoMateria,
-                tipo_correccion: codigoTarea,
-                semestre: semestre,
+                tipo_correccion: codigoTarea, // 👈 Envía explícitamente el código (TEG, PROY, TP, TSP)
                 cedula_asesor: document.getElementById('cedulaAsesor').value,
                 nombre_asesor: nombreAsesor,
                 fecha: new Date().toISOString()
@@ -544,7 +501,6 @@
                         tr.innerHTML = `
                             <td class="fw-bold text-muted">${itemContador++}</td>
                             <td>${fechaF}</td>
-                            <td><span class="badge bg-warning text-dark">${item.semestre || 'N/A'}</span></td>
                             <td>${item.nombre_alumno || ''}</td>
                             <td>${item.cedula_alumno || ''}</td>
                             <td><span class="badge bg-secondary">${item.codigo_carrera || ''}</span></td>
@@ -558,7 +514,7 @@
                         tbody.appendChild(tr);
                     });
                 } else {
-                    tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-4">No hay correcciones registradas.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">No hay correcciones registradas.</td></tr>`;
                 }
 
             } catch (error) {

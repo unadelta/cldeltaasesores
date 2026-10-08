@@ -239,58 +239,18 @@
                 selectSemestre.value = `${anioActual}-2`;
             }
         }
-        /*
-                async function cargarMaterias() {
-                    try {
-                        const res = await fetch('/api/materias');
-                        const data = await res.json();
-                        const selectFiltro = document.getElementById('filtroCodigoMateria');
-
-                        selectFiltro.innerHTML = '<option value="">Seleccione materia</option>';
-
-                        const lista = data.success ? data.data : data;
-                        if (Array.isArray(lista)) {
-                            // Ordenar las materias por código en orden ascendente (soporta números y texto)
-                            lista.sort((a, b) => String(a.codigo).localeCompare(String(b.codigo), undefined, {
-                                numeric: true,
-                                sensitivity: 'base'
-                            }));
-
-                            listaMateriasGlobal = lista;
-
-                            lista.forEach(m => {
-                                const codigo = m.codigo;
-                                const descripcion = m.descripcion || '';
-                                selectFiltro.innerHTML += `<option value="${codigo}">${codigo} - ${descripcion}</option>`;
-                            });
-                        }
-                    } catch (error) {
-                        console.error("Error al cargar asignatura:", error);
-                    }
-                }
-        */
-
 
         async function cargarMaterias() {
             try {
-                const semestreSeleccionado = document.getElementById('filtroSemestre').value;
+                const res = await fetch('/api/materias');
+                const data = await res.json();
                 const selectFiltro = document.getElementById('filtroCodigoMateria');
 
-                selectFiltro.innerHTML = '<option value="">Cargando asignaturas...</option>';
+                selectFiltro.innerHTML = '<option value="">Seleccione materia</option>';
 
-                if (!semestreSeleccionado) {
-                    selectFiltro.innerHTML = '<option value="">Seleccione semestre primero</option>';
-                    return;
-                }
-
-                // Enviamos el semestre como parámetro para que el servidor filtre por las tablas del asesor
-                const res = await fetch(`/api/materias?semestre=${encodeURIComponent(semestreSeleccionado)}`);
-                const data = await res.json();
-
-                selectFiltro.innerHTML = '<option value="">Seleccione Asignatura</option>';
-
-                const lista = data.success ? data.data : [];
-                if (Array.isArray(lista) && lista.length > 0) {
+                const lista = data.success ? data.data : data;
+                if (Array.isArray(lista)) {
+                    // Ordenar las materias por código en orden ascendente (soporta números y texto)
                     lista.sort((a, b) => String(a.codigo).localeCompare(String(b.codigo), undefined, {
                         numeric: true,
                         sensitivity: 'base'
@@ -303,14 +263,12 @@
                         const descripcion = m.descripcion || '';
                         selectFiltro.innerHTML += `<option value="${codigo}">${codigo} - ${descripcion}</option>`;
                     });
-                } else {
-                    selectFiltro.innerHTML = '<option value="">No hay asignaturas para este semestre</option>';
-                    listaMateriasGlobal = [];
                 }
             } catch (error) {
-                console.error("Error al cargar asignaturas:", error);
+                console.error("Error al cargar asignatura:", error);
             }
         }
+
 
 
         async function cargarTodosLosAlumnos() {
@@ -662,70 +620,10 @@
             const letraAsignada = numeroALetras(notaParcialDefinitiva);
             document.getElementById('modalCalificacionLetras').value = letraAsignada;
         }
-        /*
-                function guardarCalificacionesObjetivos() {
-                    const idAlumno = document.getElementById('calificacionId').value;
-                    const codigoMateria = document.getElementById('filtroCodigoMateria').value;
-
-                    const textoCedulaModal = document.getElementById('modalCedulaAlumno').textContent;
-                    const cedulaAlumno = textoCedulaModal.replace('Cédula:', '').trim();
-
-                    const selects = document.querySelectorAll('.input-objetivo');
-
-                    let objetivosData = {};
-                    let notaFinal = parseFloat(document.getElementById('modalCalificacionDefinitiva').value) || 0;
-                    let notaFinalLetra = document.getElementById('modalCalificacionLetras').value || numeroALetras(notaFinal);
-
-                    selects.forEach(sel => {
-                        const nro = sel.getAttribute('data-nro');
-                        const val = parseInt(sel.value) || 0;
-                        objetivosData[`obj${nro}`] = val;
-                    });
-
-                    const payload = {
-                        id: idAlumno,
-                        calificacion_codigo: codigoMateria,
-                        cedula_alumno: cedulaAlumno,
-                        objetivos: objetivosData,
-                        nota_final: notaFinal,
-                        nota_final_letra: notaFinalLetra
-                    };
-
-                    fetch('/api/calificaciones-alumnos/objetivos', {
-                            method: 'PUT',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify(payload)
-                        })
-                        .then(res => res.json())
-                        .then(result => {
-                            if (result.success) {
-                                modalCalificacionInstance.hide();
-                                Swal.fire({
-                                    icon: 'success',
-                                    title: 'Actualizado',
-                                    text: 'Calificaciones guardadas con éxito.',
-                                    timer: 1500,
-                                    showConfirmButton: false
-                                });
-                                filtrarCalificacionesPorMateria();
-                            } else {
-                                Swal.fire('Error', result.message || 'No se pudieron guardar las calificaciones.', 'error');
-                            }
-                        })
-                        .catch(err => {
-                            console.error("Error al actualizar:", err);
-                            Swal.fire('Error de Conexión', 'No se pudo comunicar con el servidor.', 'error');
-                        });
-                }
-        */
-
 
         function guardarCalificacionesObjetivos() {
             const idAlumno = document.getElementById('calificacionId').value;
             const codigoMateria = document.getElementById('filtroCodigoMateria').value;
-            const semestreSeleccionado = document.getElementById('filtroSemestre').value; // 👈 Capturar semestre
 
             const textoCedulaModal = document.getElementById('modalCedulaAlumno').textContent;
             const cedulaAlumno = textoCedulaModal.replace('Cédula:', '').trim();
@@ -746,7 +644,6 @@
                 id: idAlumno,
                 calificacion_codigo: codigoMateria,
                 cedula_alumno: cedulaAlumno,
-                semestre: semestreSeleccionado, // 👈 Incluido en el payload
                 objetivos: objetivosData,
                 nota_final: notaFinal,
                 nota_final_letra: notaFinalLetra
@@ -783,10 +680,9 @@
 
         function eliminarCalificacionAlumno(cedulaAlumno, nombreAlumno) {
             const codigoMateria = document.getElementById('filtroCodigoMateria').value;
-            const semestreSeleccionado = document.getElementById('filtroSemestre').value;
 
-            if (!codigoMateria || !cedulaAlumno || !semestreSeleccionado) {
-                Swal.fire('Atención', 'Debe seleccionar una asignatura y un semestre válido.', 'warning');
+            if (!codigoMateria || !cedulaAlumno) {
+                Swal.fire('Atención', 'Debe seleccionar una asignatura y asegurar que el alumno posea cédula.', 'warning');
                 return;
             }
 
@@ -801,7 +697,7 @@
                 cancelButtonText: 'Cancelar'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    fetch(`/api/calificaciones-alumnos/${encodeURIComponent(codigoMateria)}/${encodeURIComponent(cedulaAlumno)}?semestre=${encodeURIComponent(semestreSeleccionado)}`, {
+                    fetch(`/api/calificaciones-alumnos/${encodeURIComponent(codigoMateria)}/${encodeURIComponent(cedulaAlumno)}`, {
                             method: 'DELETE'
                         })
                         .then(res => res.json())
@@ -826,8 +722,6 @@
                 }
             });
         }
-
-
 
         document.addEventListener("DOMContentLoaded", function() {
             fetch('/views/navbar.html')

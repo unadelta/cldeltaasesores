@@ -194,7 +194,6 @@
         let modalMateriaInstance = null;
         let listaMateriasGestionadasGlobal = [];
         let catalogoMateriasGlobal = [];
-        let cedulaAsesorGlobal = ''; // Variable global para almacenar la cédula del asesor logueado
 
         document.addEventListener("DOMContentLoaded", async() => {
             modalMateriaInstance = new bootstrap.Modal(document.getElementById('modalMateria'));
@@ -206,9 +205,6 @@
                 if (data.authenticated) {
                     const spanUser = document.getElementById('nombreUsuario');
                     if (spanUser) spanUser.textContent = data.user.nombre || data.user.usuario;
-
-                    // Captura y asignación de la cédula del asesor desde la sesión activa
-                    cedulaAsesorGlobal = data.user.cedula || data.user.id || '';
 
                     await inicializarCatalogo();
                     await cargarMaterias();
@@ -288,7 +284,6 @@
             }
         }
 
-
         async function cargarMaterias() {
             const tbody = document.getElementById('tablaMaterias');
             if (!tbody) return;
@@ -348,9 +343,6 @@
                 tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">Error de conexión al servidor.</td></tr>`;
             }
         }
-
-
-
 
         function abrirModalCrear() {
             const form = document.getElementById('formMateria');
@@ -622,16 +614,20 @@
                 return;
             }
 
+            // Modifica el payload agregando la cédula del asesor de la sesión
             const payload = {
                 codigo,
                 descripcion,
                 minaprueba,
                 numobj,
                 semestre,
-                cedula: cedulaAsesorGlobal, // <--- Cédula del asesor incluida explícitamente para el servidor
+                cedula: window.cedulaAsesorSesion || '', // <--- Cédula del asesor añadida
                 objetivos,
                 calificaciones
             };
+
+
+
 
             try {
                 const url = esEdicion ? `/api/materias/${codigoOriginal}` : '/api/materias';
