@@ -1,0 +1,51 @@
+DELIMITER //
+
+CREATE PROCEDURE RenombrarTablasCalificaciones()
+BEGIN
+    -- Lista de los códigos de las tablas que deseas renombrar
+    -- (Puedes agregar o quitar los números según necesites)
+    DECLARE done INT DEFAULT FALSE;
+    DECLARE v_codigo VARCHAR(20);
+    
+    -- Cursor con la lista exacta de códigos a migrar
+    DECLARE cur CURSOR FOR 
+        SELECT '116' UNION ALL
+        SELECT '300' UNION ALL
+        SELECT '315' UNION ALL
+        SELECT '323' UNION ALL
+        SELECT '327' UNION ALL
+        SELECT '371';
+        
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+
+    OPEN cur;
+
+    read_loop: LOOP
+        FETCH cur INTO v_codigo;
+        IF done THEN
+            LEAVE read_loop;
+        END IF;
+
+        -- Ejecuta dinámicamente el cambio de nombre de:
+        -- calificacion_XXX  ->  calificaciones_XXX_9858269_2026_2
+        SET @sql = CONCAT(
+            'RENAME TABLE \`calificacion_', v_codigo, 
+            '\` TO \`calificaciones_', v_codigo, '_9858269_2026_2\`'
+        );
+        
+        PREPARE stmt FROM @sql;
+        EXECUTE stmt;
+        DEALLOCATE PREPARE stmt;
+        
+    END LOOP;
+
+    CLOSE cur;
+END //
+
+DELIMITER ;
+
+-- Ejecutar el procedimiento almacenado
+CALL RenombrarTablasCalificaciones();
+
+-- Eliminar el procedimiento temporalmente creado para mantener limpia la BD
+DROP PROCEDURE IF EXISTS RenombrarTablasCalificaciones;

@@ -35,7 +35,6 @@
                         <thead class="table-dark sticky-top" style="top: 0; z-index: 10;">
                             <tr>
                                 <th>Fecha / Hora</th>
-                                <th>Semestre</th>
                                 <th>Alumno</th>
                                 <th>Cédula Alumno</th>
                                 <th>Carrera</th>
@@ -46,7 +45,7 @@
                         </thead>
                         <tbody id="tablaAsesorias">
                             <tr>
-                                <td colspan="8" class="text-center text-muted py-4">Cargando registros...</td>
+                                <td colspan="7" class="text-center text-muted py-4">Cargando registros...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -115,20 +114,8 @@
                                 <option value="">Seleccione una asignatura...</option>
                             </select>
                             </div>
-                            <!-- Semestre -->
-                            <div class="col-md-6 mb-3">
-                                <label for="selectSemestre" class="form-label fw-semibold">Semestre</label>
-                                <select id="selectSemestre" class="form-select" required>
-                                <option value="">Seleccione el semestre...</option>
-                                <option value="2026-1">2026-1</option>
-                                <option value="2026-2">2026-2</option>
-                            </select>
-                            </div>
-                        </div>
-
-                        <div class="row">
                             <!-- Fecha y Hora -->
-                            <div class="col-md-12 mb-3">
+                            <div class="col-md-6 mb-3">
                                 <label for="fechaHora" class="form-label fw-semibold">Fecha y Hora</label>
                                 <input type="text" class="form-control bg-light" id="fechaHora" readonly required>
                             </div>
@@ -227,7 +214,7 @@
                 console.error("Error al cargar alumnos:", error);
             }
 
-            // Carga de Tipos de Asesoría
+            // Carga de Tipos de Asesoría (Muestra código + descripción, asigna el código como valor)[cite: 2, 3]
             try {
                 const resTipos = await fetch('/api/tipo_asesoria');
                 const dataTipos = await resTipos.json();
@@ -248,9 +235,9 @@
                 console.error("Error al cargar tipos de asesoría:", error);
             }
 
-            // Carga de Materias (Usando /api/materiauna tal como estaba originalmente)
+            // Carga de Materias
             try {
-                const resMaterias = await fetch('/api/materiauna');
+                const resMaterias = await fetch('/api/materia_una');
                 const dataMaterias = await resMaterias.json();
                 const selectMateria = document.getElementById('selectMateria');
                 selectMateria.innerHTML = '<option value="">Seleccione una asignatura...</option>';
@@ -284,7 +271,6 @@
             document.getElementById('cedulaAlumno').value = '';
             document.getElementById('nombreAlumno').value = '';
             document.getElementById('codigoCarrera').value = '';
-            document.getElementById('selectSemestre').value = '';
 
             const mensajeAlumno = document.getElementById('mensajeAlumno');
             mensajeAlumno.textContent = 'Seleccione un alumno del listado para autocompletar sus datos.';
@@ -343,13 +329,13 @@
             const idRegistro = document.getElementById('asesoriaId').value;
             const isEditing = Boolean(idRegistro);
 
+            // Envía el código seleccionado (ej. 'VT') en el campo tipo_asesoria para almacenarlo en control_asesoria[cite: 2, 4]
             const data = {
                 cedula_alumno: document.getElementById('cedulaAlumno').value,
                 nombre_alumno: document.getElementById('nombreAlumno').value,
                 codigo_carrera: document.getElementById('codigoCarrera').value,
                 tipo_asesoria: document.getElementById('selectTipoAsesoria').value,
                 codigo_materia: document.getElementById('selectMateria').value,
-                semestre: document.getElementById('selectSemestre').value,
                 cedula_asesor: document.getElementById('cedulaAsesor').value,
                 nombre_asesor: document.getElementById('nombreAsesor').value
             };
@@ -393,7 +379,7 @@
         async function cargarControlAsesorias() {
             const tbody = document.getElementById('tablaAsesorias');
             try {
-                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm" role="status"></span> Actualizando registros...</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm" role="status"></span> Actualizando registros...</td></tr>';
 
                 const res = await fetch('/api/control_asesoria');
                 if (res.status === 401) {
@@ -422,7 +408,6 @@
                         const tr = document.createElement('tr');
                         tr.innerHTML = `
                         <td class="text-nowrap">${fechaF}</td>
-                        <td><span class="badge bg-warning text-dark">${item.semestre || 'N/A'}</span></td>
                         <td>${item.nombre_alumno || 'N/A'}</td>
                         <td>${item.cedula_alumno || 'N/A'}</td>
                         <td><span class="badge bg-secondary text-truncate" style="max-width: 150px;" title="${item.codigo_carrera || ''}">${item.codigo_carrera || 'N/A'}</span></td>
@@ -440,11 +425,11 @@
                         tbody.appendChild(tr);
                     });
                 } else {
-                    tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">No hay asesorías registradas recientemente.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">No hay asesorías registradas recientemente.</td></tr>`;
                 }
             } catch (error) {
                 console.error("Error al cargar control de asesorías:", error);
-                tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-4">Error al conectar con el servidor para obtener datos.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">Error al conectar con el servidor para obtener datos.</td></tr>`;
             }
         }
 
@@ -464,7 +449,6 @@
             document.getElementById('codigoCarrera').value = registro.codigo_carrera || '';
             document.getElementById('selectTipoAsesoria').value = registro.tipo_asesoria || '';
             document.getElementById('selectMateria').value = registro.codigo_materia || '';
-            document.getElementById('selectSemestre').value = registro.semestre || '';
 
             if (registro.fecha_hora) {
                 const fEdicion = new Date(registro.fecha_hora);
