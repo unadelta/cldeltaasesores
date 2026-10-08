@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Trabajos (TP - PTG) - Sistema Asesores UNA</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        
+        .card {
+            border: none;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- NAVBAR PRINCIPAL (Cargado dinámicamente) -->
+    <div id="navbar-container"></div>
+
+    <!-- Contenido Principal -->
+    <div class="container my-4">
+        <div class="row mb-4">
+            <div class="col-md-12 d-flex justify-content-between align-items-center">
+                <h2><i class="fas fa-tasks text-primary me-2"></i>Control de Trabajos (TP y PTG)</h2>
+                <button class="btn btn-primary" onclick="limpiarFormulario()" data-bs-toggle="modal" data-bs-target="#modalRegistro">
+                    <i class="fas fa-plus-circle me-1"></i> Registrar Trabajo
+                </button>
+            </div>
+        </div>
+
+        <!-- Tabla de Registros -->
+        <div class="card p-3">
+            <div class="table-responsive">
+                <table id="tablaTrabajos" class="table table-striped table-hover align-middle w-100">
+                    <thead class="table-primary">
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Alumno</th>
+                            <th>Cédula Alumno</th>
+                            <th>Carrera</th>
+                            <th>Tipo de Trabajo</th>
+                            <th>Materia</th>
+                            <th>Asesor Responsable</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Datos cargados dinámicamente vía JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Registro / Edición -->
+    <div class="modal fade" id="modalRegistro" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="modalLabel"><i class="fas fa-edit me-2"></i>Registrar / Editar Trabajo</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formTrabajo">
+                        <input type="hidden" id="trabajoId">
+
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="fecha" class="form-label fw-semibold">Fecha</label>
+                                <input type="date" class="form-control bg-light" id="fecha" readonly required>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="cedula_alumno" class="form-label fw-semibold">Cédula Alumno</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="cedula_alumno" placeholder="Ej. V-12345678" required>
+                                    <button class="btn btn-outline-secondary" type="button" id="btnBuscarAlumno" title="Buscar alumno">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="nombre_alumno" class="form-label fw-semibold">Nombre Alumno</label>
+                                <input type="text" class="form-control bg-light" id="nombre_alumno" placeholder="Automático" readonly required>
+                            </div>
+                        </div>
+
+                        <!-- Sección Carrera (Combobox y contenedores código/nombre_carrera) -->
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <label for="select_carrera" class="form-label fw-semibold">Seleccionar Carrera</label>
+                                <select class="form-select" id="select_carrera" required>
+                                    <option value="" selected disabled>Seleccione la carrera...</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="carrera_codigo" class="form-label fw-semibold">Código Carrera</label>
+                                <input type="text" class="form-control bg-light" id="carrera_codigo" readonly required>
+                            </div>
+                            <div class="col-md-8">
+                                <label for="carrera_descripcion" class="form-label fw-semibold">Descripción Carrera</label>
+                                <input type="text" class="form-control bg-light" id="carrera_descripcion" readonly required>
+                            </div>
+                        </div>
+
+                        <!-- Sección Materia (Combobox y contenedores código/descripcion) -->
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <label for="select_materia" class="form-label fw-semibold">Seleccionar Materia (Materia UNA)</label>
+                                <select class="form-select" id="select_materia" required>
+                                    <option value="" selected disabled>Seleccione la materia...</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="materia_codigo" class="form-label fw-semibold">Código Materia</label>
+                                <input type="text" class="form-control bg-light" id="materia_codigo" readonly required>
+                            </div>
+                            <div class="col-md-8">
+                                <label for="materia_descripcion" class="form-label fw-semibold">Descripción Materia</label>
+                                <input type="text" class="form-control bg-light" id="materia_descripcion" readonly required>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="tipo_correccion" class="form-label fw-semibold">Tipo de Trabajo</label>
+                                <select class="form-select" id="tipo_correccion" required>
+                                    <option value="" selected disabled>Seleccione...</option>
+                                    <option value="Trabajo Práctico (TP)">Trabajo Práctico (TP)</option>
+                                    <option value="Prueba de Grado (PTG)">Prueba de Grado (PTG)</option>
+                                    <option value="Trabajo Especial de Grado (TEG)">Trabajo Especial de Grado (TEG)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Datos del Asesor tomados de sesión (dos contenedores) -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="cedula_asesor" class="form-label fw-semibold">Cédula Asesor</label>
+                                <input type="text" class="form-control bg-light" id="cedula_asesor" readonly required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="nombre_asesor" class="form-label fw-semibold">Asesor Responsable</label>
+                                <input type="text" class="form-control bg-light" id="nombre_asesor" readonly required>
+                            </div>
+                        </div>
+
+                        <div class="text-end">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i> Guardar Registro</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts necesarios -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+    <script>
+        let tabla;
+        let modalRegistroInstance;
+        let asesorActual = {
+            cedula: '',
+            nombre: ''
+        };
+        let listaCarreras = [];
+        let listaMaterias = [];
+
+        $(document).ready(function() {
+            cargarNavbar();
+            obtenerDatosSesion();
+
+            cargarCarreras();
+            cargarMateriasUna();
+
+            modalRegistroInstance = new bootstrap.Modal(document.getElementById('modalRegistro'));
+
+            tabla = $('#tablaTrabajos').DataTable({
+                language: {
+                    url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
+                },
+                order: [
+                    [0, "desc"]
+                ]
+            });
+
+            cargarTrabajos();
+
+            $('#btnBuscarAlumno').on('click', buscarAlumnoPorCedula);
+            $('#cedula_alumno').on('blur', function() {
+                if ($(this).val().trim() !== '') {
+                    buscarAlumnoPorCedula();
+                }
+            });
+
+            // Evento cambio de carrera adaptado de forma robusta
+            $('#select_carrera').on('change', function() {
+                const codSelected = $(this).val();
+                const carreraEncontrada = listaCarreras.find(c => String(c.codigo) === String(codSelected) || String(c.id_carrera) === String(codSelected));
+                if (carreraEncontrada) {
+                    $('#carrera_codigo').val(carreraEncontrada.codigo || carreraEncontrada.id_carrera || '');
+                    $('#carrera_descripcion').val(carreraEncontrada.nombre_carrera || carreraEncontrada.nombre || carreraEncontrada.descripcion || '');
+                }
+            });
+
+            // Evento cambio de materia
+            $('#select_materia').on('change', function() {
+                const codSelected = $(this).val();
+                const materiaEncontrada = listaMaterias.find(m => String(m.codigo) === String(codSelected));
+                if (materiaEncontrada) {
+                    $('#materia_codigo').val(materiaEncontrada.codigo);
+                    $('#materia_descripcion').val(materiaEncontrada.descripcion);
+                }
+            });
+
+            $('#formTrabajo').on('submit', async function(e) {
+                e.preventDefault();
+
+                const id = $('#trabajoId').val();
+                const datos = {
+                    fecha: $('#fecha').val(),
+                    cedula_alumno: $('#cedula_alumno').val(),
+                    nombre_alumno: $('#nombre_alumno').val(),
+                    carrera: `${$('#carrera_codigo').val()} - ${$('#carrera_descripcion').val()}`,
+                    tipo_correccion: $('#tipo_correccion').val(),
+                    codigo_materia: $('#materia_codigo').val(),
+                    cedula_asesor: $('#cedula_asesor').val(),
+                    nombre_asesor: $('#nombre_asesor').val()
+                };
+
+                const url = id ? `/api/control-correcciones/${id}` : '/api/control-correcciones';
+                const method = id ? 'PUT' : 'POST';
+
+                try {
+                    const response = await fetch(url, {
+                        method: method,
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(datos)
+                    });
+                    const resultado = await response.json();
+
+                    if (resultado.success) {
+                        Swal.fire({
+                            title: '¡Éxito!',
+                            text: resultado.message,
+                            icon: 'success',
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                        modalRegistroInstance.hide();
+                        cargarTrabajos();
+                    } else {
+                        Swal.fire('Error', resultado.message, 'error');
+                    }
+                } catch (error) {
+                    console.error('Error al guardar:', error);
+                    Swal.fire('Error', 'No se pudo conectar con el servidor.', 'error');
+                }
+            });
+        });
+
+        async function cargarNavbar() {
+            try {
+                const response = await fetch('/views/navbar.html');
+                if (!response.ok) throw new Error('Error al cargar navbar');
+                const html = await response.text();
+                document.getElementById('navbar-container').innerHTML = html;
+            } catch (err) {
+                console.error("Error al cargar el navbar:", err);
+            }
+        }
+
+        async function obtenerDatosSesion() {
+            try {
+                const res = await fetch('/api/current-user', {
+                    cache: 'no-store'
+                });
+                if (res.ok) {
+                    const user = await res.json();
+                    asesorActual.cedula = user.cedula || user.usuario || '';
+                    asesorActual.nombre = user.nombre || user.nombre_completo || '';
+                }
+            } catch (err) {
+                console.error('Error al obtener sesión del asesor:', err);
+            }
+        }
+
+        async function cargarCarreras() {
+            try {
+                const res = await fetch('/api/carreras', {
+                    cache: 'no-store'
+                });
+                if (res.ok) {
+                    const data = await res.json();
+
+                    // Aseguramos que 'listaCarreras' sea siempre un arreglo, sin importar cómo responda el backend
+                    if (Array.isArray(data)) {
+                        listaCarreras = data;
+                    } else if (data && Array.isArray(data.carreras)) {
+                        listaCarreras = data.carreras;
+                    } else if (data && Array.isArray(data.data)) {
+                        listaCarreras = data.data;
+                    } else {
+                        listaCarreras = [];
+                    }
+
+                    const select = $('#select_carrera');
+                    select.find('option:not(:first)').remove();
+
+                    listaCarreras.forEach(c => {
+                        const codigo = c.codigo || c.id_carrera || c.id || '';
+                        const nombre = c.nombre_carrera || c.nombre || c.descripcion || '';
+                        if (codigo) {
+                            select.append(`<option value="${codigo}">${codigo} - ${nombre}</option>`);
+                        }
+                    });
+                } else {
+                    console.error("El servidor respondió con un estado no exitoso para carreras");
+                }
+            } catch (err) {
+                console.error('Error de red al cargar carreras:', err);
+            }
+        }
+        async function cargarMateriasUna() {
+            try {
+                const res = await fetch('/api/materias-una', {
+                    cache: 'no-store'
+                });
+                if (res.ok) {
+                    listaMaterias = await res.json();
+                    const select = $('#select_materia');
+                    select.find('option:not(:first)').remove();
+                    listaMaterias.forEach(m => {
+                        select.append(`<option value="${m.codigo}">${m.codigo} - ${m.descripcion}</option>`);
+                    });
+                }
+            } catch (err) {
+                console.error('Error al cargar materias:', err);
+            }
+        }
+
+        async function buscarAlumnoPorCedula() {
+            const cedula = $('#cedula_alumno').val().trim();
+            if (!cedula) return;
+
+            try {
+                const res = await fetch(`/api/alumnos/${encodeURIComponent(cedula)}`, {
+                    cache: 'no-store'
+                });
+                if (res.ok) {
+                    const alumno = await res.json();
+                    if (alumno && alumno.nombre) {
+                        $('#nombre_alumno').val(alumno.nombre);
+                    } else {
+                        Swal.fire('No encontrado', 'No se encontró ningún alumno con esa cédula.', 'warning');
+                        $('#nombre_alumno').val('');
+                    }
+                } else {
+                    Swal.fire('No encontrado', 'El alumno no está registrado.', 'info');
+                    $('#nombre_alumno').val('');
+                }
+            } catch (err) {
+                console.error('Error al buscar alumno:', err);
+            }
+        }
+
+        async function cargarTrabajos() {
+            try {
+                const response = await fetch('/api/control-correcciones', {
+                    cache: 'no-store'
+                });
+                const trabajos = await response.json();
+
+                tabla.clear();
+
+                trabajos.forEach(t => {
+                    const fechaFormateada = t.fecha ? t.fecha.split('T')[0] : '';
+
+                    tabla.row.add([
+                        fechaFormateada,
+                        t.nombre_alumno,
+                        t.cedula_alumno,
+                        t.carrera || 'N/A',
+                        t.tipo_correccion,
+                        t.codigo_materia,
+                        t.nombre_asesor,
+                        `
+                        <div class="text-center">
+                            <button class="btn btn-sm btn-outline-primary me-1" onclick='editarTrabajo(${JSON.stringify(t)})' title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick='eliminarTrabajo(${t.id})' title="Eliminar">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                        `
+                    ]);
+                });
+
+                tabla.draw();
+            } catch (error) {
+                console.error('Error al cargar datos:', error);
+                Swal.fire('Error', 'No se pudieron cargar los registros de trabajos.', 'error');
+            }
+        }
+
+        function limpiarFormulario() {
+            $('#formTrabajo')[0].reset();
+            $('#trabajoId').val('');
+
+            const hoy = new Date().toISOString().split('T')[0];
+            $('#fecha').val(hoy);
+
+            $('#cedula_asesor').val(asesorActual.cedula);
+            $('#nombre_asesor').val(asesorActual.nombre);
+
+            $('#carrera_codigo').val('');
+            $('#carrera_descripcion').val('');
+            $('#materia_codigo').val('');
+            $('#materia_descripcion').val('');
+
+            cargarCarreras();
+        }
+
+        function editarTrabajo(t) {
+            $('#trabajoId').val(t.id);
+            $('#fecha').val(t.fecha ? t.fecha.split('T')[0] : '');
+            $('#cedula_alumno').val(t.cedula_alumno);
+            $('#nombre_alumno').val(t.nombre_alumno);
+
+            if (t.carrera) {
+                if (t.carrera.includes(' - ')) {
+                    const partes = t.carrera.split(' - ');
+                    const codigo = partes[0];
+                    const descripcion = partes.slice(1).join(' - ');
+                    $('#carrera_codigo').val(codigo);
+                    $('#carrera_descripcion').val(descripcion);
+                    $('#select_carrera').val(codigo);
+                } else {
+                    const encontrada = listaCarreras.find(c => String(c.nombre_carrera) === String(t.carrera) || String(c.codigo) === String(t.carrera));
+                    if (encontrada) {
+                        $('#carrera_codigo').val(encontrada.codigo || encontrada.id_carrera);
+                        $('#carrera_descripcion').val(encontrada.nombre_carrera || encontrada.nombre || encontrada.descripcion);
+                        $('#select_carrera').val(encontrada.codigo || encontrada.id_carrera);
+                    } else {
+                        $('#carrera_descripcion').val(t.carrera);
+                    }
+                }
+            }
+
+            $('#materia_codigo').val(t.codigo_materia);
+            $('#select_materia').val(t.codigo_materia);
+            const matEncontrada = listaMaterias.find(m => String(m.codigo) === String(t.codigo_materia));
+            if (matEncontrada) {
+                $('#materia_descripcion').val(matEncontrada.descripcion);
+            }
+
+            $('#tipo_correccion').val(t.tipo_correccion);
+            $('#cedula_asesor').val(t.cedula_asesor || asesorActual.cedula);
+            $('#nombre_asesor').val(t.nombre_asesor || asesorActual.nombre);
+
+            modalRegistroInstance.show();
+        }
+
+        async function eliminarTrabajo(id) {
+            const result = await Swal.fire({
+                title: '¿Estás seguro?',
+                text: "Esta acción eliminará el registro de control de trabajo de forma permanente.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            });
+
+            if (result.isConfirmed) {
+                try {
+                    const response = await fetch(`/api/control-correcciones/${id}`, {
+                        method: 'DELETE'
+                    });
+                    const resultado = await response.json();
+
+                    if (resultado.success) {
+                        Swal.fire('¡Eliminado!', resultado.message, 'success');
+                        cargarTrabajos();
+                    } else {
+                        Swal.fire('Error', resultado.message, 'error');
+                    }
+                } catch (error) {
+                    console.error('Error al eliminar:', error);
+                    Swal.fire('Error', 'Error de conexión con el servidor.', 'error');
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>

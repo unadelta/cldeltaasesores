@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporte de Asesorías - Asesores UNA</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        /* Estilos generales para asegurar el fondo */
+        
+        body {
+            background-color: #f8f9fa !important;
+            height: 100%;
+            margin: 0;
+        }
+        /* Estilo para la cabecera del reporte */
+        
+        .report-header {
+            border-bottom: 2px solid #1F91DC;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        /* Ocultar elementos al imprimir */
+        
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            body {
+                background: white !important;
+            }
+            .container {
+                width: 100%;
+                max-width: 100%;
+                padding: 0;
+            }
+            .card {
+                border: none !important;
+                box-shadow: none !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- NAVBAR PRINCIPAL (Se cargará dinámicamente) -->
+    <div id="navbar-container"></div>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="container mt-4 mb-5">
+
+        <!-- Título del Reporte y Botón Imprimir -->
+        <div class="d-flex justify-content-between align-items-center report-header no-print">
+            <h3 class="fw-bold text-primary">
+                <i class="bi bi-file-earmark-text-fill me-2"></i>Reporte de Asesorías Realizadas
+            </h3>
+            <button class="btn btn-secondary" onclick="window.print()">
+            <i class="bi bi-printer me-1"></i> Imprimir Reporte
+        </button>
+        </div>
+
+        <!-- TARJETA DE FILTROS (NUEVA SECCIÓN) -->
+        <div class="card shadow-sm border-0 mb-4 no-print">
+            <div class="card-header bg-white border-bottom-0 pt-4 pb-0">
+                <h5 class="card-title text-secondary">
+                    <i class="bi bi-filter me-2"></i>Filtrar Reporte por Fecha
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label for="fechaDesde" class="form-label fw-semibold">Desde:</label>
+                        <input type="date" class="form-control" id="fechaDesde">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="fechaHasta" class="form-label fw-semibold">Hasta:</label>
+                        <input type="date" class="form-control" id="fechaHasta">
+                    </div>
+                    <div class="col-md-4 d-flex gap-2">
+                        <button class="btn btn-primary w-100" onclick="filtrarPorFecha()">
+                        <i class="bi bi-search me-1"></i> Buscar
+                    </button>
+                        <button class="btn btn-outline-secondary w-100" onclick="limpiarFiltros()">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Limpiar
+                    </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla de Reporte -->
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover align-middle mb-0">
+                        <thead class="table-primary">
+                            <tr>
+                                <th>N°</th>
+                                <th>Cédula Alumno</th>
+                                <th>Carrera</th>
+                                <th>Tipo Asesoría</th>
+                                <th>Materia</th>
+                                <th>Fecha y Hora</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaReporteAsesorias">
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div> Cargando datos...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Totalizadores (Opcional, debajo de la tabla) -->
+        <div class="row mt-3 no-print">
+            <div class="col-md-4 ms-auto">
+                <div class="alert alert-info text-end">
+                    <strong>Total Asesorías en el período:</strong> <span id="totalRegistros">0</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", async() => {
+            // Cargar navbar
+            try {
+                const res = await fetch('/views/navbar.html');
+                if (res.ok) {
+                    document.getElementById('navbar-container').innerHTML = await res.text();
+                }
+            } catch (e) {
+                console.error("Error cargar navbar", e);
+            }
+
+            // Cargar datos iniciales sin filtros (vacíos)
+            await cargarReporte();
+        });
+
+        // Función principal para cargar la tabla, acepta fechas opcionales
+        async function cargarReporte(fechaDesde = '', fechaHasta = '') {
+            const tbody = document.getElementById('tablaReporteAsesorias');
+            const totalSpan = document.getElementById('totalRegistros');
+
+            // Mostrar estado de carga
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div> Procesando...
+                           </td></tr>`;
+            totalSpan.textContent = '0';
+
+            try {
+                // Construir URL con parámetros de búsqueda si existen
+                let url = '/api/controlasesoria';
+                if (fechaDesde && fechaHasta) {
+                    url += `?fecha_desde=${fechaDesde}&fecha_hasta=${fechaHasta}`;
+                } else if (fechaDesde || fechaHasta) {
+                    Swal.fire('Atención', 'Debe seleccionar ambas fechas para filtrar, o ninguna.', 'warning');
+                    // Si solo hay una fecha, cargamos todo de nuevo para no confundir
+                    url = '/api/controlasesoria';
+                    document.getElementById('fechaDesde').value = '';
+                    document.getElementById('fechaHasta').value = '';
+                }
+
+                const res = await fetch(url);
+
+                // Manejo de sesión expirada
+                if (res.status === 401) {
+                    window.location.href = '/';
+                    return;
+                }
+
+                const result = await res.json();
+
+                tbody.innerHTML = ''; // Limpiar loading
+
+                if (result.success && Array.isArray(result.data)) {
+                    const data = result.data;
+                    totalSpan.textContent = data.length;
+
+                    if (data.length > 0) {
+                        data.forEach((item, index) => {
+                            // Formatear fecha de ISO a dd/mm/yyyy hh:mm
+                            const fecha = new Date(item.fecha_hora);
+                            const fechaLocal = fecha.toLocaleString('es-ES', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            });
+
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                            <td class="fw-bold">${index + 1}</td>
+                            <td>${item.cedula_alumno}</td>
+                            <td><span class="badge bg-secondary text-truncate" style="max-width: 150px;" title="${item.codigo_carrera}">${item.codigo_carrera}</span></td>
+                            <td>${item.tipo_asesoria}</td>
+                            <td><span class="badge bg-info text-dark text-truncate" style="max-width: 180px;" title="${item.codigo_materia}">${item.codigo_materia}</span></td>
+                            <td class="text-nowrap">${fechaLocal}</td>
+                        `;
+                            tbody.appendChild(tr);
+                        });
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No se encontraron asesorías en este rango de fechas.</td></tr>';
+                    }
+                } else {
+                    throw new Error(result.message || 'Error al obtener datos');
+                }
+
+            } catch (error) {
+                console.error("Error al cargar reporte:", error);
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-4">Error al conectar con el servidor.</td></tr>';
+            }
+        }
+
+        // Función ligada al botón Buscar
+        function filtrarPorFecha() {
+            const desde = document.getElementById('fechaDesde').value;
+            const hasta = document.getElementById('fechaHasta').value;
+
+            if (!desde || !hasta) {
+                Swal.fire('Error', 'Seleccione una fecha de inicio y una fecha de fin.', 'error');
+                return;
+            }
+
+            // Validar que 'desde' no sea mayor a 'hasta'
+            if (desde > hasta) {
+                Swal.fire('Error', 'La fecha "Desde" no puede ser posterior a la fecha "Hasta".', 'warning');
+                return;
+            }
+
+            cargarReporte(desde, hasta);
+        }
+
+        // Función ligada al botón Limpiar
+        function limpiarFiltros() {
+            document.getElementById('fechaDesde').value = '';
+            document.getElementById('fechaHasta').value = '';
+            cargarReporte(); // Cargar sin filtros
+        }
+
+        async function cerrarSesion() {
+            try {
+                await fetch('/api/logout', {
+                    method: 'POST'
+                });
+            } catch (e) {}
+            window.location.href = '/';
+        }
+    </script>
+</body>
+
+</html>

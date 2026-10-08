@@ -30,15 +30,12 @@ const pool = mysql.createPool({
     host: process.env.MYSQLHOST || process.env.DB_HOST || 'localhost',
     user: process.env.MYSQLUSER || process.env.DB_USER || 'root',
     password: process.env.MYSQLPASSWORD !== undefined ? process.env.MYSQLPASSWORD : (process.env.DB_PASSWORD || ''),
-    database: process.env.MYSQLDATABASE || process.env.DB_NAME || 'asesores',
+    database: process.env.MYSQLDATABASE || process.env.DB_NAME || 'asesores', // 👈 Aquí se define 'asesores' por defecto a nivel local
     port: process.env.MYSQLPORT || process.env.DB_PORT || 3306,
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
-    connectTimeout: 10000,
-    ssl: process.env.DB_HOST && process.env.DB_HOST !== 'localhost' ? {
-        rejectUnauthorized: false
-    } : undefined
+    connectTimeout: 10000 // 10 segundos de límite para evitar que se quede congelado
 });
 
 // Definir la variable db para que funcione en todo el servidor con el pool
