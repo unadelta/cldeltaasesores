@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporte Consolidado por Asignatura - UNA Delta Amacuro</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <style>
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            body {
+                background-color: white !important;
+                -webkit-print-color-adjust: exact;
+            }
+            .card {
+                border: none !important;
+                box-shadow: none !important;
+            }
+            .firmas-section {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-light">
+
+    <!-- NAVBAR PRINCIPAL -->
+    <div id="navbar-container" class="no-print"></div>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="container my-4">
+
+        <!-- FILTROS Y ACCIONES (NO SE IMPRIMEN) -->
+        <div class="card border-0 shadow-sm mb-4 no-print">
+            <div class="card-body">
+                <h5 class="fw-bold text-primary mb-3"><i class="bi bi-filter-circle me-2"></i>Generar Reporte Consolidado por Asignatura</h5>
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label for="fechaInicio" class="form-label fw-semibold">Fecha de Inicio</label>
+                        <input type="date" class="form-control" id="fechaInicio" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="fechaFin" class="form-label fw-semibold">Fecha de Fin</label>
+                        <input type="date" class="form-control" id="fechaFin" required>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <button class="btn btn-primary me-2" onclick="generarReporte()"><i class="bi bi-search me-1"></i> Consultar</button>
+                        <button class="btn btn-secondary" onclick="window.print()"><i class="bi bi-printer me-1"></i> Imprimir / PDF</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VISTA DEL REPORTE -->
+        <div class="card border-0 shadow-sm p-4" id="areaImpresion">
+
+            <!-- ENCABEZADO INSTITUCIONAL CON LOGO -->
+            <div class="text-center border-bottom pb-3 mb-4">
+                <div class="d-flex align-items-center justify-content-center mb-3">
+                    <img src="/jpg/logouna.jpg" alt="Logo UNA" height="60" class="bg-white rounded p-1 shadow-sm" onerror="this.style.display='none'">
+                </div>
+                <h5 class="text-uppercase fw-bold text-secondary m-0">Universidad Nacional Abierta</h5>
+                <h6 class="fw-semibold text-muted m-0">Centro Local Delta Amacuro</h6>
+                <h4 class="fw-bold text-primary mt-2">Reporte Consolidado por Asignatura (Tareas y Asesorías)</h4>
+                <p class="text-muted small mb-0" id="textoRangoFechas">Período: No seleccionado</p>
+            </div>
+
+            <!-- CONTENIDO CONSOLIDADO -->
+            <div id="contenidoReporte">
+                <div class="text-center text-muted py-5">
+                    <i class="bi bi-info-circle display-6 mb-2 d-block"></i> Seleccione un rango de fechas y haga clic en <strong>Consultar</strong> para generar el reporte consolidado.
+                </div>
+            </div>
+
+            <!-- PIE DE PÁGINA CON FIRMAS -->
+            <div class="row mt-5 pt-5 firmas-section" id="seccionFirmas" style="display: none;">
+                <div class="col-6 text-center">
+                    <div style="border-top: 1px solid #000; width: 80%; margin: 0 auto 10px auto;"></div>
+                    <p class="fw-bold mb-1" id="nombreAsesorFirma">Asesor de la Carrera</p>
+                    <p class="text-muted small mb-0">Asesor Responsable</p>
+                </div>
+                <div class="col-6 text-center">
+                    <div style="border-top: 1px solid #000; width: 80%; margin: 0 auto 10px auto;"></div>
+                    <p class="fw-bold mb-1">Dra. Yovinza Salazar</p>
+                    <p class="text-muted small mb-0">Jefa de la Unidad Académica</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        let nombreAsesorActual = "Asesor de la Carrera";
+        let cedulaAsesorActual = "";
+
+        document.addEventListener("DOMContentLoaded", async() => {
+            const hoy = new Date();
+            const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
+            const ultimoDia = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).toISOString().split('T')[0];
+
+            document.getElementById('fechaInicio').value = primerDia;
+            document.getElementById('fechaFin').value = ultimoDia;
+
+            try {
+                const resUser = await fetch('/api/user-session');
+                const dataUser = await resUser.json();
+                if (dataUser.authenticated && dataUser.user) {
+                    nombreAsesorActual = dataUser.user.nombre || dataUser.user.usuario;
+                    cedulaAsesorActual = dataUser.user.cedula || dataUser.user.id_cedula || "";
+                }
+            } catch (e) {
+                console.error("Error al obtener sesión de usuario:", e);
+            }
+        });
+
+        async function generarReporte() {
+            const fechaInicio = document.getElementById('fechaInicio').value;
+            const fechaFin = document.getElementById('fechaFin').value;
+
+            if (!fechaInicio || !fechaFin) {
+                Swal.fire('Campos requeridos', 'Por favor seleccione la fecha de inicio y fin.', 'warning');
+                return;
+            }
+
+            document.getElementById('textoRangoFechas').textContent = `Período desde: ${fechaInicio} hasta: ${fechaFin}`;
+
+            try {
+                const [resReporte, resAsesorias] = await Promise.all([
+                    fetch(`/api/reporte_actividades?inicio=${fechaInicio}&fin=${fechaFin}`),
+                    fetch(`/api/control_asesoria?inicio=${fechaInicio}&fin=${fechaFin}`)
+                ]);
+
+                const dataReporte = await resReporte.json();
+                const dataAsesorias = await resAsesorias.json();
+
+                if (dataReporte.success) {
+                    renderizarReporte(dataReporte, dataAsesorias, fechaInicio);
+                    document.getElementById('seccionFirmas').style.display = 'flex';
+                    document.getElementById('nombreAsesorFirma').textContent = nombreAsesorActual;
+                } else {
+                    Swal.fire('Error', dataReporte.message || 'No se pudo generar el reporte.', 'error');
+                }
+            } catch (error) {
+                console.error("Error al consultar reporte:", error);
+                Swal.fire('Error', 'Error de conexión con el servidor.', 'error');
+            }
+        }
+
+        function renderizarReporte(data, dataAsesoriasResp, fechaInicioStr) {
+            const contenedor = document.getElementById('contenidoReporte');
+            const {
+                por_asignatura
+            } = data;
+
+            const listaAsesorias = dataAsesoriasResp.success ? dataAsesoriasResp.data : (Array.isArray(dataAsesoriasResp) ? dataAsesoriasResp : []);
+
+            let tiposAsesoriaSet = new Set();
+            let asesoriasPorMateriaYTipo = {};
+
+            listaAsesorias.forEach(item => {
+                const fechaItem = item.fecha_hora ? item.fecha_hora.split('T')[0] : '';
+                const fechaInicio = document.getElementById('fechaInicio').value;
+                const fechaFin = document.getElementById('fechaFin').value;
+
+                if (fechaItem && (fechaItem < fechaInicio || fechaItem > fechaFin)) return;
+
+                const materia = item.codigo_materia;
+                const tipoAse = item.tipo_asesoria;
+
+                if (materia && tipoAse) {
+                    tiposAsesoriaSet.add(tipoAse);
+                    if (!asesoriasPorMateriaYTipo[materia]) {
+                        asesoriasPorMateriaYTipo[materia] = {};
+                    }
+                    asesoriasPorMateriaYTipo[materia][tipoAse] = (asesoriasPorMateriaYTipo[materia][tipoAse] || 0) + 1;
+                }
+            });
+
+            let columnasAsesoriaDinamicas = Array.from(tiposAsesoriaSet).sort();
+
+            if (por_asignatura && por_asignatura.length > 0) {
+                const ignoreKeys = ['codigo_materia', 'cantidad_alumno', 'id', 'carrera', 'semestre'];
+
+                let columnasDinamicas = Object.keys(por_asignatura[0]).filter(k => !ignoreKeys.includes(k));
+
+                const ordenDeseado = ['TP', 'TSP', 'TEG', 'PROY', 'EGRU', 'ELI', 'PRE', 'VT'];
+                columnasDinamicas.sort((a, b) => {
+                    let indexA = ordenDeseado.indexOf(a.toUpperCase());
+                    let indexB = ordenDeseado.indexOf(b.toUpperCase());
+                    if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+                    if (indexA !== -1) return -1;
+                    if (indexB !== -1) return 1;
+                    return a.localeCompare(b);
+                });
+
+                let todasLasColumnas = [...columnasDinamicas, ...columnasAsesoriaDinamicas];
+
+                let headersDinamicos = todasLasColumnas.map(col => `<th class="text-center">${col}</th>`).join('');
+
+                let totalesColumna = {};
+                todasLasColumnas.forEach(col => totalesColumna[col] = 0);
+                let totalAlumnosGeneral = 0;
+
+                let filasAsig = por_asignatura.map(item => {
+                    totalAlumnosGeneral += parseInt(item.cantidad_alumno || 0);
+                    const codigoMateria = item.codigo_materia;
+
+                    let celdasDinamicas = todasLasColumnas.map(col => {
+                        let valor = 0;
+                        if (columnasDinamicas.includes(col)) {
+                            valor = parseInt(item[col] || 0);
+                        } else {
+                            valor = asesoriasPorMateriaYTipo[codigoMateria] && asesoriasPorMateriaYTipo[codigoMateria][col] ? asesoriasPorMateriaYTipo[codigoMateria][col] : 0;
+                        }
+                        totalesColumna[col] += valor;
+                        return `<td class="text-center">${valor}</td>`;
+                    }).join('');
+
+                    return `<tr>
+                        <td>${codigoMateria}</td>
+                        <td class="text-center"><span class="badge bg-secondary">${item.cantidad_alumno || 0}</span></td>
+                        ${celdasDinamicas}
+                    </tr>`;
+                }).join('');
+
+                let celdasTotalesFooter = todasLasColumnas.map(col => {
+                    return `<td class="text-center fw-bold">${totalesColumna[col]}</td>`;
+                }).join('');
+
+                htmlPorAsignatura = `
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Código asignatura</th>
+                                    <th class="text-center">Cantidad Alumno</th>
+                                    ${headersDinamicos}
+                                </tr>
+                            </thead>
+                            <tbody>${filasAsig}</tbody>
+                            <tfoot class="table-group-divider bg-light">
+                                <tr class="fw-bold">
+                                    <td class="text-end">Totales:</td>
+                                    <td class="text-center">${totalAlumnosGeneral}</td>
+                                    ${celdasTotalesFooter}
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>`;
+
+                // GUARDAR LOS TOTOLES ACUMULADOS EN LA TABLA `acumuladotaase`
+                guardarAcumuladoAsesorias(totalesColumna, fechaInicioStr);
+
+            } else {
+                htmlPorAsignatura = `<div class="alert alert-info py-2">No se registraron datos en el período seleccionado.</div>`;
+            }
+
+            contenedor.innerHTML = htmlPorAsignatura;
+        }
+
+        async function guardarAcumuladoAsesorias(totalesColumna, fechaInicio) {
+            // Extraer el período del mes a partir de la fecha de inicio (ej: "2026-06") o formato "YYYY-MM"
+            const periodoMes = fechaInicio.substring(0, 7);
+
+            const payload = {
+                periodo: periodoMes,
+                cedula: cedulaAsesorActual,
+                TP: totalesColumna['TP'] || 0,
+                TSP: totalesColumna['TSP'] || 0,
+                TEG: totalesColumna['TEG'] || 0,
+                EGRU: totalesColumna['EGRU'] || 0,
+                ELI: totalesColumna['ELI'] || 0,
+                PRE: totalesColumna['PRE'] || 0,
+                VT: totalesColumna['VT'] || 0
+            };
+
+            try {
+                const response = await fetch('/api/guardar_acumulado_asesorias', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const resultado = await response.json();
+                if (!resultado.success) {
+                    console.warn("Aviso al guardar acumulado:", resultado.message);
+                }
+            } catch (error) {
+                console.error("Error de red al intentar guardar en acumuladotaase:", error);
+            }
+        }
+
+        // Cargar Navbar dinámicamente
+        document.addEventListener("DOMContentLoaded", function() {
+            fetch('/views/navbar.html')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('navbar-container').innerHTML = data;
+                })
+                .catch(err => console.error("Error al cargar el navbar:", err));
+        });
+    </script>
+</body>
+
+</html>

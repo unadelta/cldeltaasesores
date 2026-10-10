@@ -6,7 +6,7 @@ const dbConfig = {
     host: 'cldeltaasesores-asesores.e.aivencloud.com',
     port: 11660,
     user: 'avnadmin',
-    password: 'AVNS_e2mpxQqkLCVqVxbcfyj', // Tu contraseña real
+    password: 'AQUÍ_VA_TU_CONTRASEÑA', // Tu contraseña real
     database: 'defaultdb',
     multipleStatements: true,
     ssl: {

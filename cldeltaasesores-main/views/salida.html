@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sesión Cerrada - Sistema Asesores UNA</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://jsdelivr.net" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://jsdelivr.net" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        
+        .logout-card {
+            max-width: 500px;
+            border: none;
+            border-radius: 15px;
+        }
+        
+        .logo-una {
+            max-width: 140px;
+            height: auto;
+        }
+    </style>
+</head>
+
+<body class="d-flex align-items-center justify-content-center vh-100">
+
+    <div class="card logout-card shadow text-center p-4 m-3">
+        <div class="card-body">
+            <!-- Espacio para el Logo de la Universidad -->
+            <!-- NOTA: Reemplaza "ruta/al/logo_una.png" por la ubicación real de tu imagen corporativa -->
+            <div class="mb-4">
+                <img src="ruta/al/logo_una.png" alt="Logo UNA" class="logo-una mb-2">
+                <h6 class="text-muted fw-bold text-uppercase tracking-wider small">
+                    Universidad Nacional Abierta <br>
+                    <span class="text-primary">Centro Local Delta Amacuro</span>
+                </h6>
+            </div>
+
+            <!-- Icono de Cierre Exitoso -->
+            <div class="text-success mb-3">
+                <i class="bi bi-check-circle-fill display-4"></i>
+            </div>
+
+            <!-- Mensaje Solicitado -->
+            <h5 class="card-title fw-bold text-dark mb-3">¡Sesión finalizada con éxito!</h5>
+            <p class="card-text text-secondary fs-6 leading-relaxed">
+                Gracias por usar el sistema de gestión de asesores del centro local.
+            </p>
+
+            <hr class="my-4 text-muted opacity-25">
+
+            <!-- Redirección Manual / Automática -->
+            <p class="small text-muted mb-3">
+                Serás redirigido al inicio de sesión en unos instantes...
+            </p>
+            <a href="/" class="btn btn-primary btn-sm px-4 rounded-pill shadow-sm">
+                <i class="bi bi-box-arrow-in-right me-1"></i> Volver al Login
+            </a>
+        </div>
+    </div>
+
+    <!-- Script para redirección automática tras 5 segundos -->
+    <script>
+        setTimeout(function() {
+            window.location.href = "/"; // Cambia por tu ruta base de login si es necesario
+        }, 5000);
+    </script>
+
+    <!-- Bootstrap Bundle JS -->
+    <script src="https://jsdelivr.net"></script>
+</body>
+
+</html>
