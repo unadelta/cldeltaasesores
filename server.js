@@ -65,6 +65,28 @@ pool.getConnection((err, connection) => {
     }
 });
 
+
+// Consulta ligera a la BD cada 5 minutos (300,000 milisegundos)
+setInterval(() => {
+  db.query("SELECT 1", (err) => {
+    if (err) {
+      console.error("⚠️ Error en el ping de mantenimiento a la BD:", err.message);
+    } else {
+      console.log("🔄 Keep-alive ejecutado: Conexión activa con Aiven.");
+    }
+  });
+}, 5 * 60 * 1000);
+
+// Endpoint simple por si quieres probarlo desde el navegador
+app.get("/ping", (req, res) => {
+  db.query("SELECT 1", (err) => {
+    if (err) {
+      return res.status(500).json({ status: "error", message: err.message });
+    }
+    res.json({ status: "ok", message: "Base de datos y servidor activos" });
+  });
+});
+
 // Configuración de Middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
