@@ -165,7 +165,7 @@
                 .then(res => res.ok ? res.text() : Promise.reject(res))
                 .then(navHtml => {
                     document.getElementById('navbar-container').innerHTML = navHtml;
-                    actualizarNavbarDatos();
+                    actualizarNombreNavbar();
                     const btnCerrar = document.getElementById('btnCerrarSesion');
                     if (btnCerrar) btnCerrar.addEventListener('click', cerrarSesion);
                 })
@@ -174,8 +174,8 @@
             await inicializarDatos();
         });
 
-        function actualizarNavbarDatos() {
-            const spanUsuario = document.getElementById('nombreUsuario') || document.getElementById('usuarioAsesorLogueado');
+        function actualizarNombreNavbar() {
+            const spanUsuario = document.getElementById('nombreUsuario');
             const nombreMostrar = asesorActual.nombre || asesorActual.usuario;
             if (spanUsuario && nombreMostrar) {
                 spanUsuario.textContent = nombreMostrar;
@@ -186,15 +186,14 @@
             try {
                 const resUser = await fetch('/api/user-session');
                 const dataUser = await resUser.json();
-                if (dataUser.authenticated && dataUser.user) {
+                if (dataUser.authenticated) {
                     asesorActual = dataUser.user;
-                    actualizarNavbarDatos();
+                    actualizarNombreNavbar();
 
                     const hiddenNombre = document.getElementById('nombreAsesor');
                     const hiddenCedula = document.getElementById('cedulaAsesor');
-                    const cedulaVal = asesorActual.cedula || asesorActual.usuario || '';
                     if (hiddenNombre) hiddenNombre.value = asesorActual.nombre || asesorActual.usuario;
-                    if (hiddenCedula) hiddenCedula.value = cedulaVal;
+                    if (hiddenCedula) hiddenCedula.value = asesorActual.cedula;
                 } else {
                     window.location.href = '/';
                     return;
@@ -249,48 +248,28 @@
                 console.error("Error al cargar tipos de asesoría:", error);
             }
 
-            // Carga de Asignaturas desde /api/materiauna filtradas por la cédula activa en sesión
-            await cargarMateriasMateriaUnaAsesor();
-
-            await cargarControlAsesorias();
-        }
-
-        async function cargarMateriasMateriaUnaAsesor() {
-            const selectMateria = document.getElementById('selectMateria');
-            selectMateria.innerHTML = '<option value="">Seleccione una asignatura...</option>';
-
-            const cedulaSesion = String(asesorActual.cedula || asesorActual.usuario || "").trim();
-
-            if (!cedulaSesion) {
-                selectMateria.innerHTML = '<option value="">No hay sesión de asesor activa</option>';
-                return;
-            }
-
+            // Carga de Materias (Usando /api/materiauna tal como estaba originalmente)
             try {
                 const resMaterias = await fetch('/api/materiauna');
                 const dataMaterias = await resMaterias.json();
-                const listaMaterias = Array.isArray(dataMaterias) ? dataMaterias : (dataMaterias.success ? dataMaterias.data : (dataMaterias.materias || []));
+                const selectMateria = document.getElementById('selectMateria');
+                selectMateria.innerHTML = '<option value="">Seleccione una asignatura...</option>';
+                const listaM = dataMaterias.success ? dataMaterias.data : (Array.isArray(dataMaterias) ? dataMaterias : []);
 
-                // Filtrar las materias de materia_una donde cedula_asesor coincida con la cédula de sesión[cite: 5]
-                const materiasDelAsesor = listaMaterias.filter(m => String(m.cedula_asesor || "").trim() === cedulaSesion);
-
-                if (materiasDelAsesor.length === 0) {
-                    selectMateria.innerHTML = '<option value="">No tiene asignaturas asociadas</option>';
-                    return;
+                if (Array.isArray(listaM)) {
+                    listaM.forEach(m => {
+                        const codigo = m.codigo;
+                        const descripcion = m.descripcion;
+                        if (codigo && descripcion) {
+                            selectMateria.innerHTML += `<option value="${codigo}">${codigo} - ${descripcion}</option>`;
+                        }
+                    });
                 }
-
-                materiasDelAsesor.forEach(m => {
-                    const codigo = m.codigo;
-                    const descripcion = m.descripcion || '';
-                    if (codigo) {
-                        selectMateria.innerHTML += `<option value="${codigo}">${codigo} - ${descripcion}</option>`;
-                    }
-                });
-
             } catch (error) {
                 console.error("Error al cargar materias de materia_una:", error);
-                selectMateria.innerHTML = '<option value="">Error al cargar asignaturas</option>';
             }
+
+            await cargarControlAsesorias();
         }
 
         function abrirModalAsesoria() {
@@ -299,7 +278,7 @@
             document.getElementById('modalTituloLabel').textContent = 'Registrar Nueva Asesoría';
 
             document.getElementById('nombreAsesor').value = asesorActual.nombre || asesorActual.usuario;
-            document.getElementById('cedulaAsesor').value = asesorActual.cedula || asesorActual.usuario || '';
+            document.getElementById('cedulaAsesor').value = asesorActual.cedula;
 
             document.getElementById('selectAlumno').value = '';
             document.getElementById('cedulaAlumno').value = '';

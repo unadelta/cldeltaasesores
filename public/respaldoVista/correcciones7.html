@@ -102,7 +102,7 @@
 
                         <hr class="my-3">
 
-                        <!-- 2. Selección de Materia (Tabla materiauna filtrada solo por la cédula del asesor) -->
+                        <!-- 2. Selección de Materia (Tabla materiauna) -->
                         <div class="mb-3">
                             <label for="selectMateria" class="form-label fw-semibold">Seleccionar Asignatura</label>
                             <select id="selectMateria" class="form-select" required>
@@ -187,9 +187,8 @@
         let asesorActual = {};
         let listaAlumnosGlobal = [];
         let listaCarrerasGlobal = [];
-        let listaMateriasAsesorGlobal = [];
+        let listaMateriasGlobal = [];
         let listaCorreccionesGlobal = [];
-        let cedulaAsesorActual = '';
 
         document.addEventListener("DOMContentLoaded", async() => {
             modalInstance = new bootstrap.Modal(document.getElementById('modalCorreccion'));
@@ -218,8 +217,7 @@
                 if (dataUser.authenticated) {
                     asesorActual = dataUser.user;
                     document.getElementById('nombreAsesor').value = asesorActual.nombre || asesorActual.usuario;
-                    cedulaAsesorActual = String(asesorActual.cedula || asesorActual.id || '').trim();
-                    document.getElementById('cedulaAsesor').value = cedulaAsesorActual;
+                    document.getElementById('cedulaAsesor').value = asesorActual.cedula;
                 } else {
                     window.location.href = '/';
                     return;
@@ -254,22 +252,16 @@
                 console.error("Error al cargar alumnos:", err);
             }
 
-            // 4. Cargar ComboBox Materias desde /api/materiauna filtradas estrictamente por la cédula del asesor
+            // 4. Cargar ComboBox Materias usando /api/materiauna con dataset asignado
             try {
                 const res = await fetch('/api/materiauna');
                 const result = await res.json();
                 const select = document.getElementById('selectMateria');
                 select.innerHTML = '<option value="">Seleccione una asignatura...</option>';
+                listaMateriasGlobal = result.success ? result.data : (Array.isArray(result) ? result : []);
 
-                const listaGeneral = result.success ? result.data : (Array.isArray(result) ? result : []);
-
-                // Filtrar exclusivamente por cédula del asesor
-                listaMateriasAsesorGlobal = listaGeneral.filter(m =>
-                    String(m.cedula_asesor || "").trim() === cedulaAsesorActual
-                );
-
-                if (Array.isArray(listaMateriasAsesorGlobal)) {
-                    listaMateriasAsesorGlobal.forEach(mat => {
+                if (Array.isArray(listaMateriasGlobal)) {
+                    listaMateriasGlobal.forEach(mat => {
                         const opt = document.createElement('option');
                         opt.value = mat.codigo;
                         opt.textContent = `${mat.codigo} - ${mat.descripcion}`;
@@ -327,6 +319,7 @@
                 const codCarrera = alumnoEncontrado.codigo_carrera || '';
                 document.getElementById('codigoCarrera').value = codCarrera;
 
+                // Buscar la descripción de la carrera por su código
                 const carreraEncontrada = listaCarrerasGlobal.find(c => String(c.codigo).trim() === String(codCarrera).trim());
                 document.getElementById('descripcionCarrera').value = carreraEncontrada ? (carreraEncontrada.nombre_carrera || carreraEncontrada.descripcion) : (alumnoEncontrado.descripcion_carrera || '');
 
@@ -347,7 +340,7 @@
             document.getElementById('correccionId').value = '';
             document.getElementById('modalTitulo').textContent = 'Registrar Nueva Corrección';
             document.getElementById('nombreAsesor').value = asesorActual.nombre || asesorActual.usuario;
-            document.getElementById('cedulaAsesor').value = cedulaAsesorActual;
+            document.getElementById('cedulaAsesor').value = asesorActual.cedula;
 
             const mensajeAlumno = document.getElementById('mensajeAlumno');
             mensajeAlumno.textContent = 'Seleccione un alumno del listado para autocompletar sus datos.';
@@ -364,7 +357,7 @@
             if (!item) return;
 
             document.getElementById('formCorreccion').reset();
-            document.getElementById('correccionId').value = id;
+            document.getElementById('correccionId').value = item.id;
             document.getElementById('modalTitulo').textContent = 'Editar Corrección';
 
             document.getElementById('selectAlumno').value = item.cedula_alumno || '';
@@ -372,6 +365,7 @@
             document.getElementById('nombreAlumno').value = item.nombre_alumno || '';
             document.getElementById('codigoCarrera').value = item.codigo_carrera || '';
 
+            // Asignar descripción de carrera
             const carreraEncontrada = listaCarrerasGlobal.find(c => String(c.codigo).trim() === String(item.codigo_carrera).trim());
             document.getElementById('descripcionCarrera').value = carreraEncontrada ? (carreraEncontrada.nombre_carrera || carreraEncontrada.descripcion) : (item.descripcion_carrera || '');
 
@@ -386,7 +380,7 @@
             document.getElementById('selectSemestre').value = item.semestre || '';
 
             document.getElementById('nombreAsesor').value = item.nombre_asesor || asesorActual.nombre;
-            document.getElementById('cedulaAsesor').value = item.cedula_asesor || cedulaAsesorActual;
+            document.getElementById('cedulaAsesor').value = item.cedula_asesor || asesorActual.cedula;
 
             let fechaItem = item.fecha ? new Date(item.fecha) : new Date();
             document.getElementById('fechaHora').value = fechaItem.toLocaleDateString('es-ES');
@@ -457,7 +451,7 @@
                 Swal.fire({
                     icon: 'warning',
                     title: 'Campos incompletos',
-                    text: 'Por favor, complete todos los campos obligatorios incluyendo el semestre y la asignatura.',
+                    text: 'Por favor, complete todos los campos obligatorios incluyendo el semestre.',
                     confirmButtonColor: '#0d6efd'
                 });
                 return;
@@ -474,11 +468,9 @@
                 nombre_alumno: nombreAlumno,
                 codigo_carrera: document.getElementById('codigoCarrera').value,
                 codigo_materia: codigoMateria,
-                descripcion_materia: descripcionMateria,
                 tipo_correccion: codigoTarea,
-                descripcion_tarea: descripcionTarea,
                 semestre: semestre,
-                cedula_asesor: cedulaAsesorActual,
+                cedula_asesor: document.getElementById('cedulaAsesor').value,
                 nombre_asesor: nombreAsesor,
                 fecha: new Date().toISOString()
             };
@@ -589,7 +581,7 @@
                                 spanUsuario.textContent = sesion.user.nombre || sesion.user.usuario;
                             }
                         })
-                        .catch(err => console.error("Error al obtener sesión de usuario en el navbar:", err));
+                        .catch(err => console.error("Error al obtener sesión de usuario:", err));
                 })
                 .catch(err => console.error("Error al cargar el navbar:", err));
         });

@@ -31,7 +31,6 @@
             font-size: 0.85rem !important;
             vertical-align: middle;
         }
-        /* Estilo para los controles compactos */
         
         .select-materia-compact {
             max-width: 250px;
@@ -62,7 +61,7 @@
                 <div class="row g-2 justify-content-md-end align-items-end">
                     <div class="col-6 col-sm-auto">
                         <label for="filtroSemestre" class="form-label fw-semibold text-start d-block mb-1" style="font-size: 0.8rem;">Semestre</label>
-                        <select id="filtroSemestre" class="form-select form-select-sm border-success shadow-sm" style="border-width: 2px;" onchange="filtrarCalificacionesPorMateria()">
+                        <select id="filtroSemestre" class="form-select form-select-sm border-success shadow-sm" style="border-width: 2px;" onchange="cargarMaterias(); filtrarCalificacionesPorMateria();">
                         </select>
                     </div>
                     <div class="col-6 col-sm-auto">
@@ -122,7 +121,7 @@
                 </div>
                 <div class="modal-footer py-2">
                     <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-sm btn-success" onclick="procesarAgregarAlumno()"><i class="bi bi-plus-circle me-1"></i> Agregar a  Asignatura</button>
+                    <button type="button" class="btn btn-sm btn-success" onclick="procesarAgregarAlumno()"><i class="bi bi-plus-circle me-1"></i> Agregar a Asignatura</button>
                 </div>
             </div>
         </div>
@@ -209,7 +208,7 @@
                     if (elUsuario) {
                         elUsuario.textContent = dataUser.user.nombre || dataUser.user.usuario;
                     }
-                    cedulaAsesorActual = dataUser.user.cedula || dataUser.user.id || '';
+                    cedulaAsesorActual = String(dataUser.user.cedula || dataUser.user.id || '').trim();
                 } else {
                     window.location.href = '/';
                     return;
@@ -242,40 +241,61 @@
         /*
                 async function cargarMaterias() {
                     try {
-                        const res = await fetch('/api/materias');
-                        const data = await res.json();
+                        const semestreSeleccionado = document.getElementById('filtroSemestre').value;
                         const selectFiltro = document.getElementById('filtroCodigoMateria');
+                        selectFiltro.innerHTML = '<option value="">Cargando asignaturas...</option>';
 
-                        selectFiltro.innerHTML = '<option value="">Seleccione materia</option>';
+                        if (!semestreSeleccionado) {
+                            selectFiltro.innerHTML = '<option value="">Seleccione semestre primero</option>';
+                            return;
+                        }
 
-                        const lista = data.success ? data.data : data;
-                        if (Array.isArray(lista)) {
-                            // Ordenar las materias por código en orden ascendente (soporta números y texto)
-                            lista.sort((a, b) => String(a.codigo).localeCompare(String(b.codigo), undefined, {
+                        const res = await fetch(`/api/materias?semestre=${encodeURIComponent(semestreSeleccionado)}`);
+                        const data = await res.json();
+
+                        selectFiltro.innerHTML = '<option value="">Seleccione Asignatura</option>';
+
+                        const lista = data.success ? data.data : (Array.isArray(data) ? data : []);
+                        if (lista.length > 0) {
+                            const listaAsesor = lista.filter(m =>
+                                String(m.cedula_asesor || "").trim() === cedulaAsesorActual &&
+                                String(m.semestre || "").trim() === String(semestreSeleccionado).trim()
+                            );
+
+                            if (listaAsesor.length === 0) {
+                                selectFiltro.innerHTML = '<option value="">No hay asignaturas para este semestre</option>';
+                                listaMateriasGlobal = [];
+                                return;
+                            }
+
+                            listaAsesor.sort((a, b) => String(a.codigo).localeCompare(String(b.codigo), undefined, {
                                 numeric: true,
                                 sensitivity: 'base'
                             }));
 
-                            listaMateriasGlobal = lista;
+                            listaMateriasGlobal = listaAsesor;
 
-                            lista.forEach(m => {
+                            listaAsesor.forEach(m => {
                                 const codigo = m.codigo;
                                 const descripcion = m.descripcion || '';
                                 selectFiltro.innerHTML += `<option value="${codigo}">${codigo} - ${descripcion}</option>`;
                             });
+                        } else {
+                            selectFiltro.innerHTML = '<option value="">No hay asignaturas para este semestre</option>';
+                            listaMateriasGlobal = [];
                         }
                     } catch (error) {
-                        console.error("Error al cargar asignatura:", error);
+                        console.error("Error al cargar asignaturas:", error);
+                        document.getElementById('filtroCodigoMateria').innerHTML = '<option value="">Error de conexión</option>';
                     }
                 }
         */
 
-
         async function cargarMaterias() {
             try {
+                // Tomamos el semestre directamente del combobox (formulario)
                 const semestreSeleccionado = document.getElementById('filtroSemestre').value;
                 const selectFiltro = document.getElementById('filtroCodigoMateria');
-
                 selectFiltro.innerHTML = '<option value="">Cargando asignaturas...</option>';
 
                 if (!semestreSeleccionado) {
@@ -283,14 +303,14 @@
                     return;
                 }
 
-                // Enviamos el semestre como parámetro para que el servidor filtre por las tablas del asesor
-                const res = await fetch(`/api/materias?semestre=${encodeURIComponent(semestreSeleccionado)}`);
+                // Consultamos el nuevo endpoint enviando el semestre del formulario
+                const res = await fetch(`/api/materias-por-tablas?semestre=${encodeURIComponent(semestreSeleccionado)}`);
                 const data = await res.json();
 
                 selectFiltro.innerHTML = '<option value="">Seleccione Asignatura</option>';
 
                 const lista = data.success ? data.data : [];
-                if (Array.isArray(lista) && lista.length > 0) {
+                if (lista.length > 0) {
                     lista.sort((a, b) => String(a.codigo).localeCompare(String(b.codigo), undefined, {
                         numeric: true,
                         sensitivity: 'base'
@@ -309,8 +329,11 @@
                 }
             } catch (error) {
                 console.error("Error al cargar asignaturas:", error);
+                document.getElementById('filtroCodigoMateria').innerHTML = '<option value="">Error de conexión</option>';
             }
         }
+
+
 
 
         async function cargarTodosLosAlumnos() {
@@ -321,13 +344,11 @@
 
                 const lista = data.success ? data.data : data;
                 if (Array.isArray(lista)) {
-                    // Orden ascendente por número de cédula
                     listaAlumnosGlobal = lista.sort((a, b) => {
                         const numA = parseInt((a.cedula || '').replace(/\D/g, '')) || 0;
                         const numB = parseInt((b.cedula || '').replace(/\D/g, '')) || 0;
                         return numA - numB;
                     });
-
 
                     selectAlumno.innerHTML = '<option value="">-- Seleccionar un Alumno --</option>';
                     listaAlumnosGlobal.forEach(a => {
@@ -449,17 +470,16 @@
             if (!codigoSeleccionado) {
                 labelNombreMateria.textContent = '';
                 thead.innerHTML = `
-                            <tr>
-                                style="background-color: #1F91DC !important; color: #ffffff !important; font-size: 0.85rem !important; font-weight: 700 !important; position: sticky; top: 0; z-index: 10;"
-                                <th>Items</th>
-                                <th class="text-start">Apellido y nombre</th>
-                                <th class="text-start">Cédula</th>
-                                <th class="text-start">Cod. Carrera</th>
-                                <th>Calificación</th>
-                                <th>Descripción</th>
-                                <th class="text-center">Acciones</th>
-                            </tr>
-                        `;
+                    <tr>
+                        <th>Items</th>
+                        <th class="text-start">Apellido y nombre</th>
+                        <th class="text-start">Cédula</th>
+                        <th class="text-start">Cod. Carrera</th>
+                        <th>Calificación</th>
+                        <th>Descripción</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                `;
                 tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">Seleccione una asignatura para ver los objetivos y calificaciones.</td></tr>`;
                 return;
             }
@@ -480,17 +500,17 @@
                 }
 
                 thead.innerHTML = `
-                            <tr>
-                                <th>Items</th>
-                                <th class="text-start">Apellido y nombre</th>
-                                <th class="text-start">Cédula</th>
-                                <th class="text-start">Cod. Carrera</th>
-                                ${thObjetivosHtml}
-                                <th>Calificación</th>
-                                <th>Descripción</th>
-                                <th class="text-center">Acciones</th>
-                            </tr>
-                        `;
+                    <tr>
+                        <th>Items</th>
+                        <th class="text-start">Apellido y nombre</th>
+                        <th class="text-start">Cédula</th>
+                        <th class="text-start">Cod. Carrera</th>
+                        ${thObjetivosHtml}
+                        <th>Calificación</th>
+                        <th>Descripción</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                `;
 
                 tbody.innerHTML = `<tr><td colspan="${7 + numObj}" class="text-center text-muted py-4">Cargando registros del semestre ${semestreSeleccionado}...</td></tr>`;
 
@@ -500,8 +520,6 @@
                     listaAlumnosActuales = resultado.success ? resultado.data : [];
                     if (listaAlumnosActuales.length > 0) {
                         tbody.innerHTML = '';
-
-                        // 1. Inicializamos el contador en 1 antes del bucle
                         let contadorItem = 1;
 
                         for (const item of listaAlumnosActuales) {
@@ -522,7 +540,6 @@
 
                             tbody.innerHTML += `
                                 <tr data-id="${item.id}">
-                                    <!-- 2. Mostramos el contador ascendente y lo incrementamos -->
                                     <td>${contadorItem++}</td>
                                     <td class="text-start">${item.nombre_alumno || '-'}</td>
                                     <td class="text-start">${item.cedula_alumno || '-'}</td>
@@ -538,9 +555,8 @@
                                             <i class="bi bi-trash-fill"></i>
                                         </button>
                                     </td>
-                                </tr>`; /**/
+                                </tr>`;
                         }
-
                     } else {
                         let colspanTotal = 7 + numObj;
                         tbody.innerHTML = `<tr><td colspan="${colspanTotal}" class="text-center text-muted py-4">No hay alumnos registrados para esta materia en el semestre ${semestreSeleccionado}.</td></tr>`;
@@ -552,12 +568,6 @@
             }
         }
 
-
-
-
-        // Resto de la función para pintar el tbody...
-
-        // FUNCIÓN PARA ABRIR EL MODAL Y CARGAR LOS OBJETIVOS DEL ALUMNO
         async function editarCalificacion(btn, idAlumno) {
             const item = listaAlumnosActuales.find(a => String(a.id) === String(idAlumno));
             if (!item) {
@@ -565,7 +575,6 @@
                 return;
             }
 
-            // 1. Rellenar datos básicos en el modal
             document.getElementById('calificacionId').value = item.id;
             document.getElementById('modalNombreAlumno').textContent = item.nombre_alumno || 'Sin Nombre';
             document.getElementById('modalCedulaAlumno').textContent = `Cédula: ${item.cedula_alumno || '--'}`;
@@ -577,14 +586,11 @@
             contenedorObj.innerHTML = '';
 
             if (materiaEncontrada && Array.isArray(materiaEncontrada.objetivos)) {
-                // Ordenar objetivos por número
                 materiaEncontrada.objetivos.sort((a, b) => a.nro_objetivo - b.nro_objetivo);
 
                 materiaEncontrada.objetivos.forEach(obj => {
                     const nroObj = obj.nro_objetivo;
                     const pesoObj = parseFloat(obj.peso) || 0;
-
-                    // Obtener la nota actual que tenga el alumno en este objetivo
                     const notaActual = item[`obj${nroObj}`] !== undefined ? item[`obj${nroObj}`] : (item[`obj_${nroObj}`] || 0);
 
                     contenedorObj.innerHTML += `
@@ -607,15 +613,9 @@
                 contenedorObj.innerHTML = '<p class="text-danger small text-center">No se encontraron los objetivos de esta materia.</p>';
             }
 
-            // 2. Calcular los valores iniciales dentro del modal
             await recalcularNotaFinal();
-
-            // 3. Mostrar el modal de calificaciones
             modalCalificacionInstance.show();
         }
-
-
-
 
         async function recalcularNotaFinal() {
             const filasObjetivos = document.querySelectorAll('#contenedorObjetivosModal > div');
@@ -628,7 +628,6 @@
                 if (select && spanPeso) {
                     const valorObjetivo = parseFloat(select.value) || 0;
                     const pesoObjetivo = parseFloat(spanPeso.textContent) || 0;
-
                     pesosAcumuladosParcial += (pesoObjetivo * valorObjetivo);
                 }
             });
@@ -662,70 +661,11 @@
             const letraAsignada = numeroALetras(notaParcialDefinitiva);
             document.getElementById('modalCalificacionLetras').value = letraAsignada;
         }
-        /*
-                function guardarCalificacionesObjetivos() {
-                    const idAlumno = document.getElementById('calificacionId').value;
-                    const codigoMateria = document.getElementById('filtroCodigoMateria').value;
-
-                    const textoCedulaModal = document.getElementById('modalCedulaAlumno').textContent;
-                    const cedulaAlumno = textoCedulaModal.replace('Cédula:', '').trim();
-
-                    const selects = document.querySelectorAll('.input-objetivo');
-
-                    let objetivosData = {};
-                    let notaFinal = parseFloat(document.getElementById('modalCalificacionDefinitiva').value) || 0;
-                    let notaFinalLetra = document.getElementById('modalCalificacionLetras').value || numeroALetras(notaFinal);
-
-                    selects.forEach(sel => {
-                        const nro = sel.getAttribute('data-nro');
-                        const val = parseInt(sel.value) || 0;
-                        objetivosData[`obj${nro}`] = val;
-                    });
-
-                    const payload = {
-                        id: idAlumno,
-                        calificacion_codigo: codigoMateria,
-                        cedula_alumno: cedulaAlumno,
-                        objetivos: objetivosData,
-                        nota_final: notaFinal,
-                        nota_final_letra: notaFinalLetra
-                    };
-
-                    fetch('/api/calificaciones-alumnos/objetivos', {
-                            method: 'PUT',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify(payload)
-                        })
-                        .then(res => res.json())
-                        .then(result => {
-                            if (result.success) {
-                                modalCalificacionInstance.hide();
-                                Swal.fire({
-                                    icon: 'success',
-                                    title: 'Actualizado',
-                                    text: 'Calificaciones guardadas con éxito.',
-                                    timer: 1500,
-                                    showConfirmButton: false
-                                });
-                                filtrarCalificacionesPorMateria();
-                            } else {
-                                Swal.fire('Error', result.message || 'No se pudieron guardar las calificaciones.', 'error');
-                            }
-                        })
-                        .catch(err => {
-                            console.error("Error al actualizar:", err);
-                            Swal.fire('Error de Conexión', 'No se pudo comunicar con el servidor.', 'error');
-                        });
-                }
-        */
-
 
         function guardarCalificacionesObjetivos() {
             const idAlumno = document.getElementById('calificacionId').value;
             const codigoMateria = document.getElementById('filtroCodigoMateria').value;
-            const semestreSeleccionado = document.getElementById('filtroSemestre').value; // 👈 Capturar semestre
+            const semestreSeleccionado = document.getElementById('filtroSemestre').value;
 
             const textoCedulaModal = document.getElementById('modalCedulaAlumno').textContent;
             const cedulaAlumno = textoCedulaModal.replace('Cédula:', '').trim();
@@ -746,7 +686,7 @@
                 id: idAlumno,
                 calificacion_codigo: codigoMateria,
                 cedula_alumno: cedulaAlumno,
-                semestre: semestreSeleccionado, // 👈 Incluido en el payload
+                semestre: semestreSeleccionado,
                 objetivos: objetivosData,
                 nota_final: notaFinal,
                 nota_final_letra: notaFinalLetra
@@ -826,8 +766,6 @@
                 }
             });
         }
-
-
 
         document.addEventListener("DOMContentLoaded", function() {
             fetch('/views/navbar.html')

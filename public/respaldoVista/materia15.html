@@ -221,7 +221,6 @@
                 const data = await res.json();
 
                 if (data.success && Array.isArray(data.data)) {
-                    // Filtrar estrictamente por la cédula del asesor en la sesión actual
                     catalogoMateriasGlobal = data.data.filter(mat => String(mat.cedula_asesor || "").trim() === cedulaAsesorGlobal);
 
                     if (catalogoMateriasGlobal.length === 0) {
@@ -380,6 +379,7 @@
                 }
                 contenedorCal.classList.remove('d-none');
 
+                // Generar filas por defecto si la tabla está vacía
                 if (tablaCal && tablaCal.children.length === 0) {
                     for (let i = 0; i < 5; i++) {
                         agregarFilaCalificacion();
@@ -426,17 +426,12 @@
 
             const calificaciones = [];
             document.querySelectorAll('#tablaEscalaCalificaciones tr').forEach(fila => {
-                const pesoInput = fila.querySelector('.calif-peso');
-                const califInput = fila.querySelector('.calif-valor');
-
-                if (pesoInput && califInput && pesoInput.value !== '' && califInput.value !== '') {
-                    const pesoVal = pesoInput.value.replace(',', '.');
-                    const califVal = califInput.value.replace(',', '.');
-                    calificaciones.push({
-                        peso_acumulado: parseFloat(pesoVal) || 0,
-                        calificacion: parseFloat(califVal) || 0
-                    });
-                }
+                const pesoVal = fila.querySelector('.calif-peso').value.replace(',', '.');
+                const califVal = fila.querySelector('.calif-valor').value.replace(',', '.');
+                calificaciones.push({
+                    peso_acumulado: parseFloat(pesoVal) || 0,
+                    calificacion: parseFloat(califVal) || 0
+                });
             });
 
             const payload = {
