@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Calificaciones - Asesores UNA</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <style>
+        .table-custom-header th {
+            background-color: #1F91DC !important;
+            color: #ffffff !important;
+            font-size: 0.85rem !important;
+            font-weight: 700 !important;
+            text-align: center;
+            vertical-align: middle;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .table-custom-header th:nth-child(2),
+        .table-custom-header th:nth-child(3),
+        .table-custom-header th:nth-child(4) {
+            text-align: left;
+        }
+        
+        .table-custom-body td {
+            font-size: 0.85rem !important;
+            vertical-align: middle;
+        }
+        /* Estilo para los controles compactos */
+        
+        .select-materia-compact {
+            max-width: 250px;
+        }
+        
+        @media (max-width: 576px) {
+            .select-materia-compact {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-light">
+
+    <!-- CONTENEDOR DINÁMICO PARA EL NAVBAR -->
+    <div id="navbar-container"></div>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="container-fluid container-lg mt-3 mt-md-4">
+        <div class="row gy-3 mb-3 align-items-end">
+            <div class="col-12 col-md-5">
+                <h3 class="fw-bold text-primary mb-0 fs-4 fs-md-3"><i class="bi bi-award-fill me-2"></i>Módulo de Calificaciones</h3>
+                <p id="nombreMateriaSeleccionada" class="text-muted fw-semibold mt-1 mb-0" style="font-size: 0.95rem; min-height: 24px;"></p>
+            </div>
+
+            <div class="col-12 col-md-7">
+                <div class="row g-2 justify-content-md-end align-items-end">
+                    <div class="col-6 col-sm-auto">
+                        <label for="filtroSemestre" class="form-label fw-semibold text-start d-block mb-1" style="font-size: 0.8rem;">Semestre</label>
+                        <select id="filtroSemestre" class="form-select form-select-sm border-success shadow-sm" style="border-width: 2px;" onchange="filtrarCalificacionesPorMateria()">
+                        </select>
+                    </div>
+                    <div class="col-6 col-sm-auto">
+                        <label for="filtroCodigoMateria" class="form-label fw-semibold text-start d-block mb-1" style="font-size: 0.8rem;">Código Asignatura</label>
+                        <select id="filtroCodigoMateria" class="form-select form-select-sm select-materia-compact border-success shadow-sm" style="border-width: 2px;" onchange="filtrarCalificacionesPorMateria()">
+                            <option value="">Seleccione Asignatura</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-sm-auto mt-2 mt-sm-0">
+                        <button class="btn btn-sm btn-success w-100 text-nowrap shadow-sm py-1" onclick="abrirModalRegistrarAlumno()"><i class="bi bi-plus-circle me-1"></i> Registrar Alumnos</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body p-0">
+                <div class="table-responsive" style="max-height: 550px; overflow-y: auto;">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-custom-header" id="tablaCabecera">
+                            <tr>
+                                <th>Items</th>
+                                <th class="text-start">Apellido y nombre</th>
+                                <th class="text-start">Cédula</th>
+                                <th class="text-start">Cod. Carrera</th>
+                                <th>Calificación</th>
+                                <th>Descripción</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaCalificaciones" class="table-custom-body">
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-4">Seleccione una asignatura para ver los objetivos y calificaciones.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL REGISTRAR ALUMNO POR COMBOBOX -->
+    <div class="modal fade" id="modalRegistrarAlumno" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white py-2">
+                    <h5 class="modal-title fs-6"><i class="bi bi-person-plus-fill me-2"></i>Registrar Alumno en la asignatura</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="selectAlumnoBusqueda" class="form-label fw-semibold" style="font-size: 0.85rem;">Seleccionar Alumno (Orden Descendente Cédula)</label>
+                        <select id="selectAlumnoBusqueda" class="form-select form-select-sm border-primary">
+                            <option value="">Cargando lista de alumnos...</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-sm btn-success" onclick="procesarAgregarAlumno()"><i class="bi bi-plus-circle me-1"></i> Agregar a  Asignatura</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CARGAR / EDITAR CALIFICACIÓN -->
+    <div class="modal fade" id="modalCalificacion" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm" style="max-width: 400px;">
+            <div class="modal-content rounded-0 shadow">
+                <div class="modal-header bg-primary text-white rounded-0 py-2">
+                    <h6 class="modal-title fs-6"><i class="bi bi-cloud-arrow-up-fill me-2"></i>Calificar Objetivos</h6>
+                    <button type="button" class="btn-close btn-close-white btn-sm" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-3">
+                    <input type="hidden" id="calificacionId">
+
+                    <div class="p-2 mb-2 bg-light border rounded-0">
+                        <h6 id="modalNombreAlumno" class="fw-bold text-primary mb-0" style="font-size: 0.85rem;">Nombre y Apellido</h6>
+                        <p id="modalCedulaAlumno" class="text-secondary mb-0" style="font-size: 0.75rem;">Cédula: --</p>
+                    </div>
+
+                    <div id="contenedorObjetivosModal" class="mb-2"></div>
+
+                    <div class="row align-items-center bg-white p-2 border rounded-0 m-0 mb-2">
+                        <div class="col-7 p-0">
+                            <label class="form-label fw-bold text-dark mb-0" style="font-size: 0.8rem;">Pesos Acumulados:</label>
+                        </div>
+                        <div class="col-5 pe-0">
+                            <input type="text" class="form-control form-control-sm text-center fw-bold text-primary bg-light" id="modalPesosAcumulados" readonly value="0">
+                        </div>
+                    </div>
+
+                    <div class="row align-items-center bg-white p-2 border rounded-0 m-0 mb-2">
+                        <div class="col-7 p-0">
+                            <label class="form-label fw-bold text-dark mb-0" style="font-size: 0.8rem;">Calificación Definitiva:</label>
+                        </div>
+                        <div class="col-5 pe-0">
+                            <input type="text" class="form-control form-control-sm text-center fw-bold text-success bg-light" id="modalCalificacionDefinitiva" readonly value="0">
+                        </div>
+                    </div>
+
+                    <div class="row align-items-center bg-white p-2 border rounded-0 m-0">
+                        <div class="col-7 p-0">
+                            <label class="form-label fw-bold text-dark mb-0" style="font-size: 0.8rem;">Calificación (Letras):</label>
+                        </div>
+                        <div class="col-5 pe-0">
+                            <input type="text" class="form-control form-control-sm text-center fw-bold text-secondary bg-light" id="modalCalificacionLetras" readonly value="Cero">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer rounded-0 py-1 px-2">
+                    <button type="button" class="btn btn-secondary btn-sm rounded-0" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="button" class="btn btn-primary btn-sm rounded-0" onclick="guardarCalificacionesObjetivos()">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        let modalCalificacionInstance = null;
+        let modalAlumnoInstance = null;
+        let listaMateriasGlobal = [];
+        let listaAlumnosGlobal = [];
+        let listaAlumnosActuales = [];
+        let cedulaAsesorActual = '';
+
+        document.addEventListener("DOMContentLoaded", async() => {
+            modalCalificacionInstance = new bootstrap.Modal(document.getElementById('modalCalificacion'));
+            modalAlumnoInstance = new bootstrap.Modal(document.getElementById('modalRegistrarAlumno'));
+
+            inicializarSemestres();
+            await verificarSesionYCargar();
+        });
+
+        async function verificarSesionYCargar() {
+            try {
+                const resUser = await fetch('/api/user-session');
+                const dataUser = await resUser.json();
+
+                if (dataUser.authenticated) {
+                    const elUsuario = document.getElementById('nombreUsuario');
+                    if (elUsuario) {
+                        elUsuario.textContent = dataUser.user.nombre || dataUser.user.usuario;
+                    }
+                    cedulaAsesorActual = dataUser.user.cedula || dataUser.user.id || '';
+                } else {
+                    window.location.href = '/';
+                    return;
+                }
+
+                await cargarMaterias();
+                await cargarTodosLosAlumnos();
+            } catch (e) {
+                console.error("Error al verificar sesión", e);
+            }
+        }
+
+        function inicializarSemestres() {
+            const selectSemestre = document.getElementById('filtroSemestre');
+            const anioActual = new Date().getFullYear();
+            const mesActual = new Date().getMonth() + 1;
+
+            selectSemestre.innerHTML = `
+                <option value="${anioActual}-1">${anioActual}-1</option>
+                <option value="${anioActual}-2">${anioActual}-2</option>
+                <option value="${anioActual - 1}-2">${anioActual - 1}-2</option>
+            `;
+
+            if (mesActual <= 7) {
+                selectSemestre.value = `${anioActual}-1`;
+            } else {
+                selectSemestre.value = `${anioActual}-2`;
+            }
+        }
+
+        async function cargarMaterias() {
+            try {
+                const res = await fetch('/api/materias');
+                const data = await res.json();
+                const selectFiltro = document.getElementById('filtroCodigoMateria');
+
+                selectFiltro.innerHTML = '<option value="">Seleccione materia</option>';
+
+                const lista = data.success ? data.data : data;
+                if (Array.isArray(lista)) {
+                    // Ordenar las materias por código en orden ascendente (soporta números y texto)
+                    lista.sort((a, b) => String(a.codigo).localeCompare(String(b.codigo), undefined, {
+                        numeric: true,
+                        sensitivity: 'base'
+                    }));
+
+                    listaMateriasGlobal = lista;
+
+                    lista.forEach(m => {
+                        const codigo = m.codigo;
+                        const descripcion = m.descripcion || '';
+                        selectFiltro.innerHTML += `<option value="${codigo}">${codigo} - ${descripcion}</option>`;
+                    });
+                }
+            } catch (error) {
+                console.error("Error al cargar asignatura:", error);
+            }
+        }
+
+
+
+        async function cargarTodosLosAlumnos() {
+            try {
+                const res = await fetch('/api/alumnos');
+                const data = await res.json();
+                const selectAlumno = document.getElementById('selectAlumnoBusqueda');
+
+                const lista = data.success ? data.data : data;
+                if (Array.isArray(lista)) {
+                    // Orden ascendente por número de cédula
+                    listaAlumnosGlobal = lista.sort((a, b) => {
+                        const numA = parseInt((a.cedula || '').replace(/\D/g, '')) || 0;
+                        const numB = parseInt((b.cedula || '').replace(/\D/g, '')) || 0;
+                        return numA - numB;
+                    });
+
+
+                    selectAlumno.innerHTML = '<option value="">-- Seleccionar un Alumno --</option>';
+                    listaAlumnosGlobal.forEach(a => {
+                        selectAlumno.innerHTML += `<option value="${a.id}">${a.cedula} - ${a.nombre}</option>`;
+                    });
+                } else {
+                    selectAlumno.innerHTML = '<option value="">No hay alumnos disponibles</option>';
+                }
+            } catch (error) {
+                console.error("Error al cargar la lista de alumnos:", error);
+            }
+        }
+
+        function numeroALetras(val) {
+            const num = parseFloat(val);
+            if (isNaN(num) || num === 0) return 'Cero';
+
+            const unidades = ['', 'Uno', 'Dos', 'Tres', 'Cuatro', 'Cinco', 'Seis', 'Siete', 'Ocho', 'Nueve', 'Diez', 'Once', 'Doce', 'Trece', 'Catorce', 'Quince', 'Dieciséis', 'Diecisiete', 'Dieciocho', 'Diecinueve', 'Veinte'];
+            if (num >= 0 && num <= 20 && Number.isInteger(num)) {
+                return unidades[num];
+            }
+            return String(val);
+        }
+
+        function abrirModalRegistrarAlumno() {
+            const codigoMateriaSeleccionada = document.getElementById('filtroCodigoMateria').value;
+            if (!codigoMateriaSeleccionada) {
+                Swal.fire('Atención', 'Debe seleccionar una asignatura primero antes de registrar alumnos.', 'warning');
+                return;
+            }
+
+            document.getElementById('selectAlumnoBusqueda').value = '';
+            modalAlumnoInstance.show();
+        }
+
+        function procesarAgregarAlumno() {
+            const idAlumnoSel = document.getElementById('selectAlumnoBusqueda').value;
+            if (!idAlumnoSel) {
+                Swal.fire('Atención', 'Por favor seleccione un alumno de la lista.', 'warning');
+                return;
+            }
+
+            const alumnoObj = listaAlumnosGlobal.find(a => String(a.id) === String(idAlumnoSel));
+            if (alumnoObj) {
+                agregarAlumnoACarritos(alumnoObj);
+            }
+        }
+
+        function agregarAlumnoACarritos(alumno) {
+            const codigoMateriaSeleccionada = document.getElementById('filtroCodigoMateria').value;
+            if (!codigoMateriaSeleccionada) {
+                Swal.fire('Atención', 'Debe seleccionar una materia en el combobox superior antes de agregar el alumno.', 'warning');
+                return;
+            }
+
+            const semestreSeleccionado = document.getElementById('filtroSemestre').value;
+
+            const datosCalificacion = {
+                calificacion_codigo: codigoMateriaSeleccionada,
+                id: alumno.id,
+                nombre_alumno: alumno.nombre,
+                cedula_alumno: alumno.cedula,
+                codigo_carrera: alumno.codigo_carrera || alumno.cod_carrera || '',
+                cedula_asesor: cedulaAsesorActual,
+                semestre: semestreSeleccionado
+            };
+
+            fetch('/api/calificaciones-alumnos', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(datosCalificacion)
+                })
+                .then(response => response.json())
+                .then(result => {
+                    modalAlumnoInstance.hide();
+                    if (result.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Alumno Registrado',
+                            text: `Se ha agregado a ${alumno.nombre} correctamente.`,
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                        filtrarCalificacionesPorMateria();
+                    } else {
+                        Swal.fire('Error', result.message || 'No se pudo registrar el alumno.', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error("Error al guardar:", error);
+                    modalAlumnoInstance.hide();
+                    Swal.fire('Error de Conexión', 'No se pudo comunicar con el servidor.', 'error');
+                });
+        }
+
+        async function obtenerCodigoCarreraPorCedula(cedula) {
+            if (!cedula) return '-';
+            try {
+                const res = await fetch(`/api/alumnos/buscar/${encodeURIComponent(cedula)}`);
+                const data = await res.json();
+                if (data.success && data.data) {
+                    return data.data.codigo_carrera || data.data.cod_carrera || '-';
+                }
+            } catch (e) {
+                console.error("No se pudo obtener la carrera:", e);
+            }
+            return '-';
+        }
+
+        async function filtrarCalificacionesPorMateria() {
+            const codigoSeleccionado = document.getElementById('filtroCodigoMateria').value;
+            const semestreSeleccionado = document.getElementById('filtroSemestre').value;
+            const labelNombreMateria = document.getElementById('nombreMateriaSeleccionada');
+            const thead = document.getElementById('tablaCabecera');
+            const tbody = document.getElementById('tablaCalificaciones');
+
+            if (!codigoSeleccionado) {
+                labelNombreMateria.textContent = '';
+                thead.innerHTML = `
+                            <tr>
+                                style="background-color: #1F91DC !important; color: #ffffff !important; font-size: 0.85rem !important; font-weight: 700 !important; position: sticky; top: 0; z-index: 10;"
+                                <th>Items</th>
+                                <th class="text-start">Apellido y nombre</th>
+                                <th class="text-start">Cédula</th>
+                                <th class="text-start">Cod. Carrera</th>
+                                <th>Calificación</th>
+                                <th>Descripción</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        `;
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">Seleccione una asignatura para ver los objetivos y calificaciones.</td></tr>`;
+                return;
+            }
+
+            if (!semestreSeleccionado) {
+                Swal.fire('Atención', 'Debe seleccionar un semestre válido.', 'warning');
+                return;
+            }
+
+            const materiaEncontrada = listaMateriasGlobal.find(m => m.codigo === codigoSeleccionado);
+            if (materiaEncontrada) {
+                labelNombreMateria.textContent = `Asignatura: ${materiaEncontrada.descripcion} (Semestre: ${semestreSeleccionado})`;
+
+                const numObj = parseInt(materiaEncontrada.numobj) || 0;
+                let thObjetivosHtml = '';
+                for (let i = 1; i <= numObj; i++) {
+                    thObjetivosHtml += `<th>Obj ${i}</th>`;
+                }
+
+                thead.innerHTML = `
+                            <tr>
+                                <th>Items</th>
+                                <th class="text-start">Apellido y nombre</th>
+                                <th class="text-start">Cédula</th>
+                                <th class="text-start">Cod. Carrera</th>
+                                ${thObjetivosHtml}
+                                <th>Calificación</th>
+                                <th>Descripción</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        `;
+
+                tbody.innerHTML = `<tr><td colspan="${7 + numObj}" class="text-center text-muted py-4">Cargando registros del semestre ${semestreSeleccionado}...</td></tr>`;
+
+                try {
+                    const res = await fetch(`/api/calificaciones/${codigoSeleccionado}?semestre=${encodeURIComponent(semestreSeleccionado)}`);
+                    const resultado = await res.json();
+                    listaAlumnosActuales = resultado.success ? resultado.data : [];
+                    if (listaAlumnosActuales.length > 0) {
+                        tbody.innerHTML = '';
+
+                        // 1. Inicializamos el contador en 1 antes del bucle
+                        let contadorItem = 1;
+
+                        for (const item of listaAlumnosActuales) {
+                            let tdObjetivosHtml = '';
+                            for (let i = 1; i <= numObj; i++) {
+                                const notaObj = item[`obj${i}`] !== undefined ? item[`obj${i}`] : (item[`obj_${i}`] || 0);
+                                tdObjetivosHtml += `<td class="text-center">${notaObj}</td>`;
+                            }
+
+                            const notaFinal = item.nota_final !== undefined && item.nota_final !== null ? item.nota_final : 0;
+                            const notaFinalLetra = item.nota_final_letra || numeroALetras(notaFinal);
+
+                            let codCarreraAlumno = item.codigo_carrera || item.cod_carrera;
+                            if (!codCarreraAlumno && item.cedula_alumno) {
+                                codCarreraAlumno = await obtenerCodigoCarreraPorCedula(item.cedula_alumno);
+                            }
+                            codCarreraAlumno = codCarreraAlumno || '-';
+
+                            tbody.innerHTML += `
+                                <tr data-id="${item.id}">
+                                    <!-- 2. Mostramos el contador ascendente y lo incrementamos -->
+                                    <td>${contadorItem++}</td>
+                                    <td class="text-start">${item.nombre_alumno || '-'}</td>
+                                    <td class="text-start">${item.cedula_alumno || '-'}</td>
+                                    <td class="text-start">${codCarreraAlumno}</td>
+                                    ${tdObjetivosHtml}
+                                    <td class="text-center fw-bold text-success">${notaFinal}</td>
+                                    <td class="text-muted">${notaFinalLetra}</td>
+                                    <td class="text-center">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editarCalificacion(this, '${item.id}')" title="Cargar / Editar Calificación">
+                                            <i class="bi bi-cloud-arrow-up-fill"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="eliminarCalificacionAlumno('${item.cedula_alumno}', '${item.nombre_alumno || 'Alumno'}')" title="Eliminar Alumno de la Materia">
+                                            <i class="bi bi-trash-fill"></i>
+                                        </button>
+                                    </td>
+                                </tr>`; /**/
+                        }
+
+                    } else {
+                        let colspanTotal = 7 + numObj;
+                        tbody.innerHTML = `<tr><td colspan="${colspanTotal}" class="text-center text-muted py-4">No hay alumnos registrados para esta materia en el semestre ${semestreSeleccionado}.</td></tr>`;
+                    }
+                } catch (error) {
+                    console.error("Error al cargar calificaciones:", error);
+                    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">Error al cargar los datos.</td></tr>`;
+                }
+            }
+        }
+
+
+
+
+        // Resto de la función para pintar el tbody...
+
+        // FUNCIÓN PARA ABRIR EL MODAL Y CARGAR LOS OBJETIVOS DEL ALUMNO
+        async function editarCalificacion(btn, idAlumno) {
+            const item = listaAlumnosActuales.find(a => String(a.id) === String(idAlumno));
+            if (!item) {
+                Swal.fire('Error', 'No se encontró la información del alumno.', 'error');
+                return;
+            }
+
+            // 1. Rellenar datos básicos en el modal
+            document.getElementById('calificacionId').value = item.id;
+            document.getElementById('modalNombreAlumno').textContent = item.nombre_alumno || 'Sin Nombre';
+            document.getElementById('modalCedulaAlumno').textContent = `Cédula: ${item.cedula_alumno || '--'}`;
+
+            const codigoMateria = document.getElementById('filtroCodigoMateria').value;
+            const materiaEncontrada = listaMateriasGlobal.find(m => m.codigo === codigoMateria);
+
+            const contenedorObj = document.getElementById('contenedorObjetivosModal');
+            contenedorObj.innerHTML = '';
+
+            if (materiaEncontrada && Array.isArray(materiaEncontrada.objetivos)) {
+                // Ordenar objetivos por número
+                materiaEncontrada.objetivos.sort((a, b) => a.nro_objetivo - b.nro_objetivo);
+
+                materiaEncontrada.objetivos.forEach(obj => {
+                    const nroObj = obj.nro_objetivo;
+                    const pesoObj = parseFloat(obj.peso) || 0;
+
+                    // Obtener la nota actual que tenga el alumno en este objetivo
+                    const notaActual = item[`obj${nroObj}`] !== undefined ? item[`obj${nroObj}`] : (item[`obj_${nroObj}`] || 0);
+
+                    contenedorObj.innerHTML += `
+                        <div class="row align-items-center bg-white p-2 border rounded-0 m-0 mb-2">
+                            <div class="col-7 p-0">
+                                <label class="form-label fw-bold text-dark mb-0" style="font-size: 0.8rem;">
+                                    Obj ${nroObj} (Peso: <span class="obj-peso text-muted">${pesoObj.toFixed(2)}</span>):
+                                </label>
+                            </div>
+                            <div class="col-5 pe-0">
+                                <select class="form-select form-select-sm text-center fw-bold input-objetivo" data-nro="${nroObj}" onchange="recalcularNotaFinal()">
+                                    <option value="0" ${notaActual == 0 ? 'selected' : ''}>0 - No Logrado</option>
+                                    <option value="1" ${notaActual == 1 ? 'selected' : ''}>1 - Logrado</option>
+                                </select>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                contenedorObj.innerHTML = '<p class="text-danger small text-center">No se encontraron los objetivos de esta materia.</p>';
+            }
+
+            // 2. Calcular los valores iniciales dentro del modal
+            await recalcularNotaFinal();
+
+            // 3. Mostrar el modal de calificaciones
+            modalCalificacionInstance.show();
+        }
+
+
+
+
+        async function recalcularNotaFinal() {
+            const filasObjetivos = document.querySelectorAll('#contenedorObjetivosModal > div');
+            let pesosAcumuladosParcial = 0;
+
+            filasObjetivos.forEach(fila => {
+                const select = fila.querySelector('.input-objetivo');
+                const spanPeso = fila.querySelector('.obj-peso');
+
+                if (select && spanPeso) {
+                    const valorObjetivo = parseFloat(select.value) || 0;
+                    const pesoObjetivo = parseFloat(spanPeso.textContent) || 0;
+
+                    pesosAcumuladosParcial += (pesoObjetivo * valorObjetivo);
+                }
+            });
+
+            document.getElementById('modalPesosAcumulados').value = pesosAcumuladosParcial.toFixed(2);
+
+            const codigoSeleccionado = document.getElementById('filtroCodigoMateria').value;
+            let notaParcialDefinitiva = pesosAcumuladosParcial;
+
+            try {
+                const response = await fetch('/api/calcular-definitiva', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        codigo_materia: codigoSeleccionado,
+                        peso_acumulado: pesosAcumuladosParcial
+                    })
+                });
+                const resultado = await response.json();
+
+                if (resultado.success && resultado.calificacion_definitiva !== undefined) {
+                    notaParcialDefinitiva = resultado.calificacion_definitiva;
+                }
+            } catch (e) {
+                console.error("Error al calcular la nota parcial definitiva:", e);
+            }
+
+            document.getElementById('modalCalificacionDefinitiva').value = notaParcialDefinitiva;
+            const letraAsignada = numeroALetras(notaParcialDefinitiva);
+            document.getElementById('modalCalificacionLetras').value = letraAsignada;
+        }
+
+        function guardarCalificacionesObjetivos() {
+            const idAlumno = document.getElementById('calificacionId').value;
+            const codigoMateria = document.getElementById('filtroCodigoMateria').value;
+
+            const textoCedulaModal = document.getElementById('modalCedulaAlumno').textContent;
+            const cedulaAlumno = textoCedulaModal.replace('Cédula:', '').trim();
+
+            const selects = document.querySelectorAll('.input-objetivo');
+
+            let objetivosData = {};
+            let notaFinal = parseFloat(document.getElementById('modalCalificacionDefinitiva').value) || 0;
+            let notaFinalLetra = document.getElementById('modalCalificacionLetras').value || numeroALetras(notaFinal);
+
+            selects.forEach(sel => {
+                const nro = sel.getAttribute('data-nro');
+                const val = parseInt(sel.value) || 0;
+                objetivosData[`obj${nro}`] = val;
+            });
+
+            const payload = {
+                id: idAlumno,
+                calificacion_codigo: codigoMateria,
+                cedula_alumno: cedulaAlumno,
+                objetivos: objetivosData,
+                nota_final: notaFinal,
+                nota_final_letra: notaFinalLetra
+            };
+
+            fetch('/api/calificaciones-alumnos/objetivos', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                })
+                .then(res => res.json())
+                .then(result => {
+                    if (result.success) {
+                        modalCalificacionInstance.hide();
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Actualizado',
+                            text: 'Calificaciones guardadas con éxito.',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                        filtrarCalificacionesPorMateria();
+                    } else {
+                        Swal.fire('Error', result.message || 'No se pudieron guardar las calificaciones.', 'error');
+                    }
+                })
+                .catch(err => {
+                    console.error("Error al actualizar:", err);
+                    Swal.fire('Error de Conexión', 'No se pudo comunicar con el servidor.', 'error');
+                });
+        }
+
+        function eliminarCalificacionAlumno(cedulaAlumno, nombreAlumno) {
+            const codigoMateria = document.getElementById('filtroCodigoMateria').value;
+
+            if (!codigoMateria || !cedulaAlumno) {
+                Swal.fire('Atención', 'Debe seleccionar una asignatura y asegurar que el alumno posea cédula.', 'warning');
+                return;
+            }
+
+            Swal.fire({
+                title: '¿Estás seguro?',
+                text: `Se eliminarán por completo todos los datos y calificaciones de "${nombreAlumno}" en la tabla de esta materia.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch(`/api/calificaciones-alumnos/${encodeURIComponent(codigoMateria)}/${encodeURIComponent(cedulaAlumno)}`, {
+                            method: 'DELETE'
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Eliminado',
+                                    text: 'El registro del alumno fue eliminado exitosamente.',
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                });
+                                filtrarCalificacionesPorMateria();
+                            } else {
+                                Swal.fire('Error', data.message || 'No se pudo eliminar el registro.', 'error');
+                            }
+                        })
+                        .catch(err => {
+                            console.error('Error de conexión al eliminar:', err);
+                            Swal.fire('Error de Conexión', 'No se pudo comunicar con el servidor.', 'error');
+                        });
+                }
+            });
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            fetch('/views/navbar.html')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('navbar-container').innerHTML = data;
+
+                    fetch('/api/user-session')
+                        .then(res => res.json())
+                        .then(sesion => {
+                            const spanUsuario = document.getElementById('nombreUsuario');
+                            if (spanUsuario && sesion.authenticated && sesion.user) {
+                                spanUsuario.textContent = sesion.user.nombre || sesion.user.usuario;
+                            }
+                        })
+                        .catch(err => console.error("Error al obtener sesión de usuario en el navbar:", err));
+                })
+                .catch(err => console.error("Error al cargar el navbar:", err));
+        });
+    </script>
+</body>
+
+</html>

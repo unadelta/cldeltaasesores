@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Materias - Sistema Asesores UNA</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+
+<body class="bg-light">
+
+    <!-- NAVBAR PRINCIPAL -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold d-flex align-items-center" href="/dashboard">
+                <img src="/jpg/logouna.jpg" alt="Logo UNA" height="35" class="bg-white rounded p-1 me-2 shadow-sm" onerror="this.style.display='none'">
+                <span>Asesores UNA</span>
+            </a>
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarNavDropdown">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard">Inicio</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle text-white fw-semibold active" aria-current="page" href="#" id="navbarDropdownAdmin" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-shield-lock me-1"></i> Administrador
+                        </a>
+                        <ul class="dropdown-menu shadow" aria-labelledby="navbarDropdownAdmin">
+                            <li><a class="dropdown-item" href="/asesor"><i class="bi bi-people me-2"></i>Asesores</a></li>
+                            <li><a class="dropdown-item" href="/carrera"><i class="bi bi-mortarboard me-2"></i>Carreras</a></li>
+                            <li><a class="dropdown-item active" href="/materia"><i class="bi bi-book me-2"></i>Materias</a></li>
+                            <li><a class="dropdown-item" href="/tarea"><i class="bi bi-check2-square me-2"></i>Tareas</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-white" href="/alumno"><i class="bi bi-mortarboard-fill me-1"></i> Alumnos</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-white" href="/asesoria"><i class="bi bi-journal-text me-1"></i> Asesorias</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-white" href="/tarea"><i class="bi bi-list-task me-1"></i> Tareas</a>
+                    </li>
+                </ul>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle text-white fw-semibold" href="#" data-bs-toggle="dropdown">Reportes</a>
+                    <ul class="dropdown-menu shadow">
+                        <li><a class="dropdown-item" href="/reporasesoria">Reporte Asesorias</a></li>
+                        <li><a class="dropdown-item" href="#">Reporte Calificaciones</a></li>
+                    </ul>
+                </li>
+                <div class="d-flex align-items-center text-white ms-auto">
+                    <span class="me-2"><i class="bi bi-person-circle"></i></span>
+                    <span id="nombreUsuario" class="me-3 fw-semibold">Cargando...</span>
+                    <button onclick="cerrarSesion()" class="btn btn-outline-light btn-sm">
+                        <i class="bi bi-box-arrow-right me-1"></i> Salir
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="container mt-4">
+        <div class="row mb-3 align-items-center">
+            <div class="col-sm-6">
+                <h3 class="fw-bold text-primary"><i class="bi bi-book me-2"></i>Módulo de Materias</h3>
+            </div>
+            <div class="col-sm-6 text-sm-end mt-2 mt-sm-0">
+                <button class="btn btn-success" onclick="abrirModalCrear()">
+                    <i class="bi bi-plus-circle me-1"></i> Nueva Materia
+                </button>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-primary">
+                            <tr>
+                                <th>Código</th>
+                                <th>Descripción</th>
+                                <th>Nro. Objetivos</th>
+                                <th>Mín. Aprobatorio</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaMaterias">
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">Cargando registros...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PARA CREAR MATERIA -->
+    <div class="modal fade" id="modalMateria" tabindex="-1" aria-labelledby="modalMateriaLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form id="formMateria" onsubmit="guardarMateria(event)">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title" id="modalMateriaLabel">Registrar Materia</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="materiaId">
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="codigo" class="form-label fw-semibold">Código de Materia</label>
+                                <input type="text" class="form-control" id="codigo" required autocomplete="off">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="descripcion" class="form-label fw-semibold">Descripción de la Materia</label>
+                                <input type="text" class="form-control" id="descripcion" required autocomplete="off">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="numobj" class="form-label fw-semibold">Número de Objetivos (6-14)</label>
+                                <input type="number" class="form-control" id="numobj" min="6" max="14" required onchange="generarCamposPesos()">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="minapoba" class="form-label fw-semibold">Mínimo Aprobatorio</label>
+                                <input type="number" step="0.01" class="form-control" id="minapoba" required placeholder="Ingrese el mínimo aprobatorio">
+                            </div>
+                        </div>
+
+                        <div id="contenedorPesos" class="mt-3 p-3 border rounded bg-light d-none">
+                            <label class="form-label fw-bold">Asignar peso a cada objetivo:</label>
+                            <div id="listaPesos" class="row g-2"></div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" id="btnGuardar">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let modalMateriaInstance = null;
+
+        document.addEventListener("DOMContentLoaded", async() => {
+            modalMateriaInstance = new bootstrap.Modal(document.getElementById('modalMateria'));
+            await verificarSesionYCargar();
+        });
+
+        async function verificarSesionYCargar() {
+            try {
+                const res = await fetch('/api/user-session');
+                const data = await res.json();
+
+                if (data.authenticated) {
+                    document.getElementById('nombreUsuario').textContent = data.user.nombre;
+                    await cargarMaterias();
+                } else {
+                    window.location.href = '/';
+                }
+            } catch (err) {
+                console.error("Error al verificar sesión", err);
+            }
+        }
+
+        async function cargarMaterias() {
+            try {
+                const res = await fetch('/api/materias');
+                const data = await res.json();
+                const tbody = document.getElementById('tablaMaterias');
+                tbody.innerHTML = '';
+
+                if (data.success && data.data.length > 0) {
+                    data.data.forEach(materia => {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${materia.codigo}</td>
+                                <td>${materia.descripcion}</td>
+                                <td>${materia.numobj || '-'}</td>
+                                <td>${materia.minapoba || '-'}</td>
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-outline-danger" onclick="eliminarMateria('${materia.codigo}')" title="Eliminar">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">No hay materias registradas.</td></tr>`;
+                }
+            } catch (err) {
+                console.error("Error al cargar materias", err);
+            }
+        }
+
+        function generarCamposPesos() {
+            const numObj = parseInt(document.getElementById('numobj').value);
+            const contenedor = document.getElementById('contenedorPesos');
+            const lista = document.getElementById('listaPesos');
+
+            if (numObj >= 6 && numObj <= 14) {
+                contenedor.classList.remove('d-none');
+                lista.innerHTML = '';
+                for (let i = 1; i <= numObj; i++) {
+                    lista.innerHTML += `
+                        <div class="col-md-3">
+                            <label class="small fw-semibold">Obj ${i}:</label>
+                            <input type="number" step="0.01" class="form-control peso-input" data-obj="${i}" required>
+                        </div>`;
+                }
+            } else {
+                contenedor.classList.add('d-none');
+            }
+        }
+
+        function abrirModalCrear() {
+            document.getElementById('formMateria').reset();
+            document.getElementById('materiaId').value = '';
+            document.getElementById('contenedorPesos').classList.add('d-none');
+            document.getElementById('modalMateriaLabel').textContent = 'Registrar Materia';
+            modalMateriaInstance.show();
+        }
+
+        async function guardarMateria(e) {
+            e.preventDefault();
+            const codigo = document.getElementById('codigo').value.trim();
+            const descripcion = document.getElementById('descripcion').value.trim();
+            const numobj = parseInt(document.getElementById('numobj').value);
+            const minapoba = parseFloat(document.getElementById('minapoba').value);
+
+            const pesosInputs = document.querySelectorAll('.peso-input');
+            const pesos = Array.from(pesosInputs).map(input => parseFloat(input.value));
+
+            if (!document.getElementById('materiaId').value) {
+                try {
+                    const resCheck = await fetch(`/api/materias/verificar?codigo=${encodeURIComponent(codigo)}`);
+                    const dataCheck = await resCheck.json();
+
+                    if (dataCheck.existe) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Código duplicado',
+                            text: 'Código de materia ya existe',
+                            confirmButtonText: 'Entendido'
+                        });
+                        return;
+                    }
+                } catch (err) {
+                    console.error("Error al verificar el código:", err);
+                }
+            }
+
+            const payload = {
+                codigo,
+                descripcion,
+                numobj,
+                minapoba,
+                pesos
+            };
+
+            try {
+                const res = await fetch('/api/materias', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    modalMateriaInstance.hide();
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Éxito!',
+                        text: 'Materia y objetivos registrados correctamente',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    await cargarMaterias();
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.message || 'Error al guardar la materia.'
+                    });
+                }
+            } catch (err) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error de conexión',
+                    text: 'Ocurrió un error de conexión con el servidor.'
+                });
+            }
+        }
+
+        async function eliminarMateria(codigo) {
+            const result = await Swal.fire({
+                title: '¿Está seguro?',
+                text: "Se eliminará la materia y todos sus objetivos asociados.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            });
+
+            if (!result.isConfirmed) return;
+
+            try {
+                const res = await fetch(`/api/materias/${codigo}`, {
+                    method: 'DELETE'
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    Swal.fire('Eliminado', data.message, 'success');
+                    await cargarMaterias();
+                } else {
+                    Swal.fire('Error', data.message || 'No se pudo eliminar', 'error');
+                }
+            } catch (err) {
+                Swal.fire('Error', 'Error de conexión con el servidor', 'error');
+            }
+        }
+
+        function cerrarSesion() {
+            window.location.href = '/';
+        }
+    </script>
+</body>
+
+</html>

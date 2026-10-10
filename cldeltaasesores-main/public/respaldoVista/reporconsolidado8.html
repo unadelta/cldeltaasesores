@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporte Consolidado por Asignatura - UNA Delta Amacuro</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <style>
+        @media print {
+            /* Márgenes un 30% más amplios (aprox. 6.5mm) */
+            @page {
+                size: landscape;
+                margin: 6.5mm;
+            }
+            .no-print {
+                display: none !important;
+            }
+            body {
+                background-color: white !important;
+                -webkit-print-color-adjust: exact;
+                font-size: 11.5px !important;
+                /* Aumentado 30% (de 9px a 11.5px) */
+            }
+            .card {
+                border: none !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            #areaImpresion {
+                padding: 0 !important;
+            }
+            .border-bottom {
+                padding-bottom: 3px !important;
+                margin-bottom: 6px !important;
+            }
+            .border-bottom img {
+                height: 32.5px !important;
+                /* Aumentado 30% (de 25px a ~32.5px) */
+                margin-bottom: 3px !important;
+            }
+            .border-bottom h5 {
+                font-size: 13px !important;
+                /* Aumentado 30% (de 10px a 13px) */
+                margin: 0 !important;
+            }
+            .border-bottom h6 {
+                font-size: 11.5px !important;
+                /* Aumentado 30% (de 9px a 11.5px) */
+                margin: 0 !important;
+            }
+            .border-bottom h4 {
+                font-size: 14.5px !important;
+                /* Aumentado 30% (de 11px a 14.5px) */
+                margin: 2px 0 0 0 !important;
+            }
+            .border-bottom p {
+                font-size: 10.5px !important;
+                /* Aumentado 30% (de 8px a 10.5px) */
+                margin: 0 !important;
+            }
+            /* Tablas aumentadas un 30% (de 8.5px a 11px) */
+            .table {
+                font-size: 11px !important;
+                margin-bottom: 6px !important;
+            }
+            .table th,
+            .table td {
+                padding: 3px 5px !important;
+            }
+            .firmas-section {
+                page-break-inside: avoid;
+                margin-top: 20px !important;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-light">
+
+    <!-- NAVBAR PRINCIPAL -->
+    <div id="navbar-container" class="no-print"></div>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="container my-4">
+
+        <!-- FILTROS Y ACCIONES (NO SE IMPRIMEN) -->
+        <div class="card border-0 shadow-sm mb-4 no-print">
+            <div class="card-body">
+                <h5 class="fw-bold text-primary mb-3"><i class="bi bi-filter-circle me-2"></i>Generar Reporte Consolidado por Asignatura</h5>
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label for="fechaInicio" class="form-label fw-semibold">Fecha de Inicio</label>
+                        <input type="date" class="form-control" id="fechaInicio" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="fechaFin" class="form-label fw-semibold">Fecha de Fin</label>
+                        <input type="date" class="form-control" id="fechaFin" required>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <button class="btn btn-primary me-2" onclick="generarReporte()"><i class="bi bi-search me-1"></i> Consultar</button>
+                        <button class="btn btn-secondary" onclick="window.print()"><i class="bi bi-printer me-1"></i> Imprimir / PDF</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VISTA DEL REPORTE -->
+        <div class="card border-0 shadow-sm p-4" id="areaImpresion">
+
+            <!-- ENCABEZADO INSTITUCIONAL CON LOGO -->
+            <div class="text-center border-bottom pb-2 mb-3">
+                <div class="d-flex align-items-center justify-content-center mb-1">
+                    <img src="/jpg/logouna.jpg" alt="Logo UNA" height="50" class="bg-white rounded p-1 shadow-sm" onerror="this.style.display='none'">
+                </div>
+                <h5 class="text-uppercase fw-bold text-secondary m-0" style="font-size: 15px;">Universidad Nacional Abierta</h5>
+                <h6 class="fw-semibold text-muted m-0" style="font-size: 14px;">Centro Local Delta Amacuro</h6>
+                <h4 class="fw-bold text-primary mt-1 mb-0" style="font-size: 18px;">Reporte Consolidado por Asignatura (Tareas y Asesorías)</h4>
+                <p class="text-muted small mb-0" id="textoRangoFechas" style="font-size: 13px;">Período: No seleccionado</p>
+            </div>
+
+            <!-- CONTENIDO CONSOLIDADO -->
+            <div id="contenidoReporte">
+                <div class="text-center text-muted py-5">
+                    <i class="bi bi-info-circle display-6 mb-2 d-block"></i> Seleccione un rango de fechas y haga clic en <strong>Consultar</strong> para generar el reporte consolidado.
+                </div>
+            </div>
+
+            <!-- PIE DE PÁGINA CON FIRMAS -->
+            <div class="row mt-4 pt-4 firmas-section" id="seccionFirmas" style="display: none;">
+                <div class="col-6 text-center">
+                    <div style="border-top: 1px solid #000; width: 70%; margin: 0 auto 5px auto;"></div>
+                    <p class="fw-bold mb-1" id="nombreAsesorFirma" style="font-size: 12px;">Asesor de la Carrera</p>
+                    <p class="text-muted small mb-0" style="font-size: 10.5px;">Asesor Responsable</p>
+                </div>
+                <div class="col-6 text-center">
+                    <div style="border-top: 1px solid #000; width: 70%; margin: 0 auto 5px auto;"></div>
+                    <p class="fw-bold mb-1" style="font-size: 12px;">Dra. Yovinza Salazar</p>
+                    <p class="text-muted small mb-0" style="font-size: 10.5px;">Jefa de la Unidad Académica</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        let nombreAsesorActual = "Asesor de la Carrera";
+
+        document.addEventListener("DOMContentLoaded", async() => {
+            const hoy = new Date();
+            const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
+            const ultimoDia = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).toISOString().split('T')[0];
+
+            document.getElementById('fechaInicio').value = primerDia;
+            document.getElementById('fechaFin').value = ultimoDia;
+
+            try {
+                const resUser = await fetch('/api/user-session');
+                const dataUser = await resUser.json();
+                if (dataUser.authenticated && dataUser.user) {
+                    nombreAsesorActual = dataUser.user.nombre || dataUser.user.usuario;
+                }
+            } catch (e) {
+                console.error("Error al obtener sesión de usuario:", e);
+            }
+        });
+
+        async function generarReporte() {
+            const fechaInicio = document.getElementById('fechaInicio').value;
+            const fechaFin = document.getElementById('fechaFin').value;
+
+            if (!fechaInicio || !fechaFin) {
+                Swal.fire('Campos requeridos', 'Por favor seleccione la fecha de inicio y fin.', 'warning');
+                return;
+            }
+
+            document.getElementById('textoRangoFechas').textContent = `Período desde: ${fechaInicio} hasta: ${fechaFin}`;
+
+            try {
+                const res = await fetch(`/api/reporte_actividades?inicio=${fechaInicio}&fin=${fechaFin}`);
+                const data = await res.json();
+
+                if (data.success) {
+                    renderizarReporte(data);
+                    document.getElementById('seccionFirmas').style.display = 'flex';
+                    document.getElementById('nombreAsesorFirma').textContent = nombreAsesorActual;
+                } else {
+                    Swal.fire('Error', data.message || 'No se pudo generar el reporte.', 'error');
+                }
+            } catch (error) {
+                console.error("Error al consultar reporte:", error);
+                Swal.fire('Error', 'Error de conexión con el servidor.', 'error');
+            }
+        }
+
+        function renderizarReporte(data) {
+            const contenedor = document.getElementById('contenidoReporte');
+            const {
+                por_asignatura
+            } = data;
+
+            let htmlPorAsignatura = '';
+            if (por_asignatura && por_asignatura.length > 0) {
+                const ignoreKeys = ['codigo_materia', 'cantidad_alumno', 'id', 'carrera', 'semestre'];
+
+                let columnasDinamicas = Object.keys(por_asignatura[0]).filter(k => !ignoreKeys.includes(k));
+
+                const ordenDeseado = ['TP', 'TSP', 'TEG', 'PROY'];
+                columnasDinamicas.sort((a, b) => {
+                    let indexA = ordenDeseado.indexOf(a.toUpperCase());
+                    let indexB = ordenDeseado.indexOf(b.toUpperCase());
+                    if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+                    if (indexA !== -1) return -1;
+                    if (indexB !== -1) return 1;
+                    return a.localeCompare(b);
+                });
+
+                let headersDinamicos = columnasDinamicas.map(col => `<th class="text-center">${col}</th>`).join('');
+
+                let totalesColumna = {};
+                columnasDinamicas.forEach(col => totalesColumna[col] = 0);
+                let totalAlumnosGeneral = 0;
+
+                let filasAsig = por_asignatura.map(item => {
+                    totalAlumnosGeneral += parseInt(item.cantidad_alumno || 0);
+
+                    let celdasDinamicas = columnasDinamicas.map(col => {
+                        let valor = parseInt(item[col] || 0);
+                        totalesColumna[col] += valor;
+                        return `<td class="text-center">${valor}</td>`;
+                    }).join('');
+
+                    return `<tr>
+                        <td>${item.codigo_materia}</td>
+                        <td class="text-center"><span class="badge bg-secondary">${item.cantidad_alumno || 0}</span></td>
+                        ${celdasDinamicas}
+                    </tr>`;
+                }).join('');
+
+                let celdasTotalesFooter = columnasDinamicas.map(col => {
+                    return `<td class="text-center fw-bold">${totalesColumna[col]}</td>`;
+                }).join('');
+
+                htmlPorAsignatura = `
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Código asignatura</th>
+                                    <th class="text-center">Cantidad Alumno</th>
+                                    ${headersDinamicos}
+                                </tr>
+                            </thead>
+                            <tbody>${filasAsig}</tbody>
+                            <tfoot class="table-group-divider bg-light">
+                                <tr class="fw-bold">
+                                    <td class="text-end">Totales:</td>
+                                    <td class="text-center">${totalAlumnosGeneral}</td>
+                                    ${celdasTotalesFooter}
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>`;
+            } else {
+                htmlPorAsignatura = `<div class="alert alert-info py-2">No se registraron datos en el período seleccionado.</div>`;
+            }
+
+            contenedor.innerHTML = htmlPorAsignatura;
+        }
+
+        // Cargar Navbar dinámicamente
+        document.addEventListener("DOMContentLoaded", function() {
+            fetch('/views/navbar.html')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('navbar-container').innerHTML = data;
+                })
+                .catch(err => console.error("Error al cargar el navbar:", err));
+        });
+    </script>
+</body>
+
+</html>

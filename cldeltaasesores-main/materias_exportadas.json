@@ -1,0 +1,1382 @@
+[
+    {
+        "id": 221,
+        "codigo": "011",
+        "descripcion": "SERVICIO COMUNITARIO"
+    },
+    {
+        "id": 295,
+        "codigo": "050",
+        "descripcion": "Educación Inicial"
+    },
+    {
+        "id": 2,
+        "codigo": "051",
+        "descripcion": "SALUD ALTERACIONES Y PREVENCIÓN EN EDUCACIÓN INI"
+    },
+    {
+        "id": 3,
+        "codigo": "052",
+        "descripcion": "DESARROLLO DEL NIÑO DE 0 A 3 AÑOS"
+    },
+    {
+        "id": 4,
+        "codigo": "053",
+        "descripcion": "DESARROLLO PSICOMOTOR EN EDUCACION INICIAL"
+    },
+    {
+        "id": 5,
+        "codigo": "054",
+        "descripcion": "DESARROLLO COGNOSCITIVO DEL NIÑO DE 4 A 7 AÑOS"
+    },
+    {
+        "id": 6,
+        "codigo": "055",
+        "descripcion": "PRÁCTICA I DESARROLLO DEL NIÑO DE 0 A 3 AÑOS"
+    },
+    {
+        "id": 7,
+        "codigo": "056",
+        "descripcion": "EVALUACIÓN Y PLANIFICACIÓN EN EDUCACIÓN INICIAL"
+    },
+    {
+        "id": 8,
+        "codigo": "057",
+        "descripcion": "DESARROLLO SOCIAL Y EMOCIONAL DEL NIÑO DE 4 A 7 AN"
+    },
+    {
+        "id": 9,
+        "codigo": "058",
+        "descripcion": "LA FAMILIA, LA COMUNIDAD Y EL NIÑO EN EDUCACIÓN IN"
+    },
+    {
+        "id": 10,
+        "codigo": "059",
+        "descripcion": "PRÁCTICA II DESARROLLO COGNOSCITIVO, SOCIOEMOCI"
+    },
+    {
+        "id": 11,
+        "codigo": "060",
+        "descripcion": "CREATIVIDAD EN EDUCACIÓN INICIAL"
+    },
+    {
+        "id": 12,
+        "codigo": "061",
+        "descripcion": "PRÁCTICA III EL MAESTRO EN AULA"
+    },
+    {
+        "id": 13,
+        "codigo": "062",
+        "descripcion": "EXPRESIÓN Y CULTURA EN EDUCACIÓN INICIAL"
+    },
+    {
+        "id": 14,
+        "codigo": "063",
+        "descripcion": "SOLUCIÓN A PROBLEMAS EDUCATIVOS EN EDUCACIÓN IN"
+    },
+    {
+        "id": 15,
+        "codigo": "064",
+        "descripcion": "PRACTICA IV PROCESOS ADMINISTRATIVOS EN CENTROS"
+    },
+    {
+        "id": 222,
+        "codigo": "106",
+        "descripcion": "PRESENTACION A LA FISICA"
+    },
+    {
+        "id": 297,
+        "codigo": "107",
+        "descripcion": "LOGICA"
+    },
+    {
+        "id": 18,
+        "codigo": "108",
+        "descripcion": "INGLES"
+    },
+    {
+        "id": 225,
+        "codigo": "115",
+        "descripcion": "LENGUA Y COMUNICACIÓN"
+    },
+    {
+        "id": 20,
+        "codigo": "116",
+        "descripcion": "INTRODUCCIÓN A LA INFORMATICA"
+    },
+    {
+        "id": 227,
+        "codigo": "117",
+        "descripcion": "AMBIENTE Y DESARROLLO SOSTENIBLE EN VENEZUELA"
+    },
+    {
+        "id": 22,
+        "codigo": "118",
+        "descripcion": "METODOLOGIA DE LA INVESTIGACION"
+    },
+    {
+        "id": 23,
+        "codigo": "119",
+        "descripcion": "TEMAS DE ETICA"
+    },
+    {
+        "id": 24,
+        "codigo": "120",
+        "descripcion": "LENGUA Y COMUNICACION EN EDUCACION"
+    },
+    {
+        "id": 25,
+        "codigo": "121",
+        "descripcion": "PROBLEMÁTICA DEL DESARROLLO VENEZOLANO"
+    },
+    {
+        "id": 26,
+        "codigo": "122",
+        "descripcion": "INTRODUCCIÓN A LA HERMENEUTICA"
+    },
+    {
+        "id": 27,
+        "codigo": "126",
+        "descripcion": "INTRODUCCION A LA INVESTIGACION"
+    },
+    {
+        "id": 28,
+        "codigo": "175",
+        "descripcion": "MATEMATICA I"
+    },
+    {
+        "id": 231,
+        "codigo": "176",
+        "descripcion": "MATEMATICA I"
+    },
+    {
+        "id": 29,
+        "codigo": "177",
+        "descripcion": "MATEMATICA I"
+    },
+    {
+        "id": 232,
+        "codigo": "178",
+        "descripcion": "MATEMATICA II"
+    },
+    {
+        "id": 30,
+        "codigo": "179",
+        "descripcion": "MATEMATICA II"
+    },
+    {
+        "id": 31,
+        "codigo": "200",
+        "descripcion": "INTRODUCCIÓN A LA INGENIERÍA INDUSTRIAL"
+    },
+    {
+        "id": 32,
+        "codigo": "201",
+        "descripcion": "SEGURIDAD E HIGIENE INDUSTRIAL"
+    },
+    {
+        "id": 33,
+        "codigo": "202",
+        "descripcion": "PROCESOS DE MANUFACTURAS"
+    },
+    {
+        "id": 34,
+        "codigo": "203",
+        "descripcion": "CONTROL DE PRODUCCIÓN"
+    },
+    {
+        "id": 35,
+        "codigo": "204",
+        "descripcion": "MANEJO DE MATERIALES"
+    },
+    {
+        "id": 36,
+        "codigo": "205",
+        "descripcion": "CONTROL DE CALIDAD"
+    },
+    {
+        "id": 37,
+        "codigo": "206",
+        "descripcion": "INGENIERIA DE METODOS"
+    },
+    {
+        "id": 38,
+        "codigo": "207",
+        "descripcion": "MANTENIMIENTO INDUSTRIAL"
+    },
+    {
+        "id": 39,
+        "codigo": "208",
+        "descripcion": "DIBUJO INDUSTRIAL"
+    },
+    {
+        "id": 40,
+        "codigo": "209",
+        "descripcion": "QUIMICA"
+    },
+    {
+        "id": 41,
+        "codigo": "216",
+        "descripcion": "INGENIERIA DE PLANTA"
+    },
+    {
+        "id": 42,
+        "codigo": "222",
+        "descripcion": "ECONOMÍA PARA INGENIEROS"
+    },
+    {
+        "id": 43,
+        "codigo": "223",
+        "descripcion": "GERENCIA INDUSTRIAL"
+    },
+    {
+        "id": 44,
+        "codigo": "225",
+        "descripcion": "EVALUACION DE PROYECTOS"
+    },
+    {
+        "id": 45,
+        "codigo": "228",
+        "descripcion": "INSTRUMENTACIÓN Y CONTROL"
+    },
+    {
+        "id": 46,
+        "codigo": "231",
+        "descripcion": "INGENIERIA DE MATERIALES"
+    },
+    {
+        "id": 47,
+        "codigo": "232",
+        "descripcion": "MECANICA RACIONAL"
+    },
+    {
+        "id": 48,
+        "codigo": "233",
+        "descripcion": "ELECTROTECNIA"
+    },
+    {
+        "id": 49,
+        "codigo": "234",
+        "descripcion": "TERMOFLUIDOS"
+    },
+    {
+        "id": 50,
+        "codigo": "235",
+        "descripcion": "GERENCIA ORGANIZACIONAL"
+    },
+    {
+        "id": 51,
+        "codigo": "236",
+        "descripcion": "LOGISTICA INDUSTRIAL"
+    },
+    {
+        "id": 52,
+        "codigo": "237",
+        "descripcion": "PRACTICA PROFESIONAL I"
+    },
+    {
+        "id": 53,
+        "codigo": "238",
+        "descripcion": "PRACTICA PROFESIONAL II"
+    },
+    {
+        "id": 54,
+        "codigo": "240",
+        "descripcion": "PROCESOS QUÍMICOS"
+    },
+    {
+        "id": 55,
+        "codigo": "241",
+        "descripcion": "GESTIÓN DE CALIDAD"
+    },
+    {
+        "id": 56,
+        "codigo": "251",
+        "descripcion": "PSICOLOGÍA DEL TRABAJO"
+    },
+    {
+        "id": 57,
+        "codigo": "252",
+        "descripcion": "PREVENCIÓN DE RIESGO I"
+    },
+    {
+        "id": 58,
+        "codigo": "255",
+        "descripcion": "PREVENCION DE RIESGO II"
+    },
+    {
+        "id": 59,
+        "codigo": "257",
+        "descripcion": "PASANTIA"
+    },
+    {
+        "id": 60,
+        "codigo": "258",
+        "descripcion": "ERGONOMIA"
+    },
+    {
+        "id": 61,
+        "codigo": "259",
+        "descripcion": "LEGISLACION LABORAL"
+    },
+    {
+        "id": 234,
+        "codigo": "300",
+        "descripcion": "FISICA GENERAL"
+    },
+    {
+        "id": 62,
+        "codigo": "300",
+        "descripcion": "FISICA GENERAL"
+    },
+    {
+        "id": 63,
+        "codigo": "305",
+        "descripcion": "TEORÍA DE DECISIONES"
+    },
+    {
+        "id": 64,
+        "codigo": "306",
+        "descripcion": "TEORIA DE SISTEMAS"
+    },
+    {
+        "id": 65,
+        "codigo": "310",
+        "descripcion": "OPTIMIZACIÓN NO LINEAL"
+    },
+    {
+        "id": 66,
+        "codigo": "311",
+        "descripcion": "BASE DE DATOS"
+    },
+    {
+        "id": 67,
+        "codigo": "312",
+        "descripcion": "PROGRAMACIÓN DE SISTEMAS"
+    },
+    {
+        "id": 68,
+        "codigo": "315",
+        "descripcion": "INVESTIGACIÓN DE OPERACIONES I"
+    },
+    {
+        "id": 69,
+        "codigo": "316",
+        "descripcion": "MICROPROCESADORES"
+    },
+    {
+        "id": 70,
+        "codigo": "321",
+        "descripcion": "INVESTIGACIÓN DE OPERACIONES IV"
+    },
+    {
+        "id": 71,
+        "codigo": "323",
+        "descripcion": "COMPUTACION I"
+    },
+    {
+        "id": 72,
+        "codigo": "324",
+        "descripcion": "COMPUTACION II"
+    },
+    {
+        "id": 73,
+        "codigo": "326",
+        "descripcion": "FISICA GENERAL II"
+    },
+    {
+        "id": 74,
+        "codigo": "327",
+        "descripcion": "INTRODUCCIÓN A LA INGENIERÍA DE SISTEMAS"
+    },
+    {
+        "id": 75,
+        "codigo": "330",
+        "descripcion": "PROCESAMIENTO DE DATOS"
+    },
+    {
+        "id": 76,
+        "codigo": "332",
+        "descripcion": "GRAFOS Y MATRICES"
+    },
+    {
+        "id": 77,
+        "codigo": "333",
+        "descripcion": "ARQUITECTURA DEL COMPUTADOR"
+    },
+    {
+        "id": 78,
+        "codigo": "334",
+        "descripcion": "COMPUTACIÓN GRÁFICA"
+    },
+    {
+        "id": 79,
+        "codigo": "335",
+        "descripcion": "SISTEMAS DE INFORMACION I"
+    },
+    {
+        "id": 80,
+        "codigo": "336",
+        "descripcion": "SISTEMAS DE INFORMACIÓN II"
+    },
+    {
+        "id": 81,
+        "codigo": "337",
+        "descripcion": "SIMULACION DE SISTEMAS"
+    },
+    {
+        "id": 82,
+        "codigo": "338",
+        "descripcion": "SISTEMAS DE INFORMACION III"
+    },
+    {
+        "id": 83,
+        "codigo": "339",
+        "descripcion": "PRACTICA PROFESIONAL I"
+    },
+    {
+        "id": 84,
+        "codigo": "341",
+        "descripcion": "PRACTICA PROFESIONAL II"
+    },
+    {
+        "id": 85,
+        "codigo": "342",
+        "descripcion": "REDES DE COMPUTADORAS"
+    },
+    {
+        "id": 86,
+        "codigo": "347",
+        "descripcion": "INTRODUCCIÓN A LA INTELIGENCIA ARTIFICIAL Y A LOS "
+    },
+    {
+        "id": 87,
+        "codigo": "348",
+        "descripcion": "INVESTIGACION DE OPERACIONES II"
+    },
+    {
+        "id": 88,
+        "codigo": "349",
+        "descripcion": "ORGANIZACIÓN Y MÉTODOS"
+    },
+    {
+        "id": 89,
+        "codigo": "358",
+        "descripcion": "SISTEMAS OPERATIVOS"
+    },
+    {
+        "id": 90,
+        "codigo": "370",
+        "descripcion": "FUNDAMENTOS DEL COMPUTADOR"
+    },
+    {
+        "id": 91,
+        "codigo": "371",
+        "descripcion": "TECNOLOGÍA WEB"
+    },
+    {
+        "id": 92,
+        "codigo": "372",
+        "descripcion": "MANTENIMIENTO PREVENTIVO Y CORRECTIVO"
+    },
+    {
+        "id": 93,
+        "codigo": "373",
+        "descripcion": "MANTENIMIENTO PERFECTIVO Y ADAPTATIVO"
+    },
+    {
+        "id": 94,
+        "codigo": "374",
+        "descripcion": "MARCO LEGAL NFORMÁTICO"
+    },
+    {
+        "id": 95,
+        "codigo": "375",
+        "descripcion": "PASANTIA"
+    },
+    {
+        "id": 96,
+        "codigo": "405",
+        "descripcion": "DESARROLLO DE HABILIDADES COGNOSCITIVAS"
+    },
+    {
+        "id": 97,
+        "codigo": "408",
+        "descripcion": "MATEMATICA I"
+    },
+    {
+        "id": 98,
+        "codigo": "410",
+        "descripcion": "GEOGRAFIA GENERAL"
+    },
+    {
+        "id": 99,
+        "codigo": "411",
+        "descripcion": "DESARROLLO PSICOSOCIAL DEL LENGUAJE"
+    },
+    {
+        "id": 100,
+        "codigo": "412",
+        "descripcion": "EDUCACION BASICA"
+    },
+    {
+        "id": 101,
+        "codigo": "414",
+        "descripcion": "MATEMATICA II"
+    },
+    {
+        "id": 102,
+        "codigo": "416",
+        "descripcion": "GEOGRAFIA DE VENEZUELA"
+    },
+    {
+        "id": 103,
+        "codigo": "420",
+        "descripcion": "GEOMETRIA"
+    },
+    {
+        "id": 104,
+        "codigo": "421",
+        "descripcion": "PLANIFICACION DE LA INSTRUCCION"
+    },
+    {
+        "id": 105,
+        "codigo": "423",
+        "descripcion": "SEM DESARR PERS DISEN PUBLIC PERIODICAS"
+    },
+    {
+        "id": 106,
+        "codigo": "427",
+        "descripcion": "TECNICAS Y RECURSOS PARA EL APRENDIZAJE"
+    },
+    {
+        "id": 107,
+        "codigo": "428",
+        "descripcion": "HISTORIA UNIVERSAL"
+    },
+    {
+        "id": 108,
+        "codigo": "431",
+        "descripcion": "ARTES PLASTICAS"
+    },
+    {
+        "id": 109,
+        "codigo": "433",
+        "descripcion": "EVALUACION"
+    },
+    {
+        "id": 110,
+        "codigo": "434",
+        "descripcion": "FORMACION CIUDADANA"
+    },
+    {
+        "id": 111,
+        "codigo": "437",
+        "descripcion": "MUSICA Y ARTES ESCENICAS"
+    },
+    {
+        "id": 112,
+        "codigo": "440",
+        "descripcion": "INTRODUCCION A LA INFORMATICA"
+    },
+    {
+        "id": 113,
+        "codigo": "444",
+        "descripcion": "EDUCACION FISICA Y DEPORTES"
+    },
+    {
+        "id": 114,
+        "codigo": "451",
+        "descripcion": "SEMINARIO DE INVESTIGACION EDUCATIVA"
+    },
+    {
+        "id": 115,
+        "codigo": "454",
+        "descripcion": "ANALISIS GRAMATICAL"
+    },
+    {
+        "id": 116,
+        "codigo": "457",
+        "descripcion": "LITERATURA VENEZOLANA I"
+    },
+    {
+        "id": 117,
+        "codigo": "465",
+        "descripcion": "PROCESOS CULTURALES DE LA VENEZUELA CONTEMPOR"
+    },
+    {
+        "id": 118,
+        "codigo": "468",
+        "descripcion": "NUEVAS FORMAS DE PARTICIPACION CIUDADANA"
+    },
+    {
+        "id": 119,
+        "codigo": "469",
+        "descripcion": "HISTORIA Y GEOGRAFIA REGIONAL"
+    },
+    {
+        "id": 120,
+        "codigo": "471",
+        "descripcion": "PRACTICA DOCENTE I"
+    },
+    {
+        "id": 121,
+        "codigo": "472",
+        "descripcion": "PRACTICA DOCENTE II"
+    },
+    {
+        "id": 122,
+        "codigo": "473",
+        "descripcion": "PRACTICA DOCENTE III"
+    },
+    {
+        "id": 123,
+        "codigo": "474",
+        "descripcion": "PRACTICA DOCENTE IV"
+    },
+    {
+        "id": 124,
+        "codigo": "475",
+        "descripcion": "PRACTICA DOCENTE V"
+    },
+    {
+        "id": 125,
+        "codigo": "476",
+        "descripcion": "MATEMATICA"
+    },
+    {
+        "id": 126,
+        "codigo": "477",
+        "descripcion": "FUNDAMENTOS DE LA EDUCACIÓN"
+    },
+    {
+        "id": 127,
+        "codigo": "478",
+        "descripcion": "LECTOESCRITURA"
+    },
+    {
+        "id": 128,
+        "codigo": "479",
+        "descripcion": "ENSEÑANZA DE LA MATEMATICA"
+    },
+    {
+        "id": 129,
+        "codigo": "480",
+        "descripcion": "EDUCACION AMBIENTAL"
+    },
+    {
+        "id": 130,
+        "codigo": "481",
+        "descripcion": "LITERATURA INFANTIL Y JUVENIL"
+    },
+    {
+        "id": 131,
+        "codigo": "483",
+        "descripcion": "PLANIFICACION DE LA ENSENANZA"
+    },
+    {
+        "id": 132,
+        "codigo": "484",
+        "descripcion": "GEOGRAFIA GENERAL Y DE VENEZUELA"
+    },
+    {
+        "id": 133,
+        "codigo": "485",
+        "descripcion": "CIENCIAS NATURALES I"
+    },
+    {
+        "id": 134,
+        "codigo": "486",
+        "descripcion": "EDUCACION ESTETICA"
+    },
+    {
+        "id": 135,
+        "codigo": "487",
+        "descripcion": "DIDACTICA PARA EL DOCENTE INTEGRADOR"
+    },
+    {
+        "id": 136,
+        "codigo": "488",
+        "descripcion": "HISTORIA DE VENEZUELA"
+    },
+    {
+        "id": 137,
+        "codigo": "489",
+        "descripcion": "CIENCIAS NATURALES II"
+    },
+    {
+        "id": 138,
+        "codigo": "490",
+        "descripcion": "SEM DESARR PERS COMUNICACION EFICAZ"
+    },
+    {
+        "id": 139,
+        "codigo": "491",
+        "descripcion": "ENSEÑANZA DE LA LENGUA"
+    },
+    {
+        "id": 140,
+        "codigo": "492",
+        "descripcion": "SEMINARIO PRACTICO FORMACION PARA EL TRABAJO"
+    },
+    {
+        "id": 141,
+        "codigo": "493",
+        "descripcion": "EVALUACION"
+    },
+    {
+        "id": 142,
+        "codigo": "494",
+        "descripcion": "EDUCACION FISICA Y RECREACION"
+    },
+    {
+        "id": 143,
+        "codigo": "495",
+        "descripcion": "PRACTICA DE ACCION DOCENTE"
+    },
+    {
+        "id": 144,
+        "codigo": "497",
+        "descripcion": "PRACTICA DE PROMOCION DE CAMBIO"
+    },
+    {
+        "id": 145,
+        "codigo": "498",
+        "descripcion": "SEM DESARR PERS LIDERAZG UNA ESTRAT PARA EL CAM"
+    },
+    {
+        "id": 146,
+        "codigo": "516",
+        "descripcion": "FUNDAMENTOS DE LA ACCION DOCENTE"
+    },
+    {
+        "id": 147,
+        "codigo": "517",
+        "descripcion": "FILOSOFÍA DE LA EDUCACIÓN"
+    },
+    {
+        "id": 148,
+        "codigo": "524",
+        "descripcion": "DESARROLLO DEL SISTEMA EDUCATIVO VENEZOLANO"
+    },
+    {
+        "id": 149,
+        "codigo": "530",
+        "descripcion": "PLANIFICACIÓN EDUCATIVA"
+    },
+    {
+        "id": 150,
+        "codigo": "532",
+        "descripcion": "MATEMÁTICAS Y CIENCIAS"
+    },
+    {
+        "id": 151,
+        "codigo": "534",
+        "descripcion": "EVALUACION EDUCATIVA"
+    },
+    {
+        "id": 152,
+        "codigo": "536",
+        "descripcion": "GERENCIA EDUCATIVA"
+    },
+    {
+        "id": 153,
+        "codigo": "542",
+        "descripcion": "DIDÁCTICA DE LA ARITMÉTICA"
+    },
+    {
+        "id": 154,
+        "codigo": "545",
+        "descripcion": "TEORÍA DE LA EDUCACIÓN MATEMÁTICA"
+    },
+    {
+        "id": 155,
+        "codigo": "547",
+        "descripcion": "DIDACTICA DEL ALGEBRA Y LA TRIGONOMETRIA"
+    },
+    {
+        "id": 156,
+        "codigo": "551",
+        "descripcion": "EVALUACIÓN DE LOS APRENDIZAJES EN MATEMATICA"
+    },
+    {
+        "id": 157,
+        "codigo": "552",
+        "descripcion": "DIDÁCTICA DE LA GEOMETRIA"
+    },
+    {
+        "id": 158,
+        "codigo": "559",
+        "descripcion": "APRENDIZAJE DE LA LECTURA Y LA ESCRITURA"
+    },
+    {
+        "id": 159,
+        "codigo": "560",
+        "descripcion": "DESARROLLO PERSONAL DEL DOCENTE"
+    },
+    {
+        "id": 160,
+        "codigo": "562",
+        "descripcion": "DESARROLLO DEL LENGUAJE"
+    },
+    {
+        "id": 161,
+        "codigo": "564",
+        "descripcion": "LITERATURA INFANTIL"
+    },
+    {
+        "id": 162,
+        "codigo": "570",
+        "descripcion": "DESARROLLO PSICOLÓGICO"
+    },
+    {
+        "id": 294,
+        "codigo": "570/",
+        "descripcion": "DESARROLLO PSICOLÓGICO"
+    },
+    {
+        "id": 163,
+        "codigo": "571",
+        "descripcion": "PSICOLOGIA EDUCATIVA"
+    },
+    {
+        "id": 164,
+        "codigo": "575",
+        "descripcion": "TÓPICOS DE MATEMATICA"
+    },
+    {
+        "id": 165,
+        "codigo": "576",
+        "descripcion": "SOCIOLOGIA DE LA EDUCACIÓN Y DESARROLLO COMUNIT"
+    },
+    {
+        "id": 166,
+        "codigo": "577",
+        "descripcion": "DIDÁCTICA DE LA ESTOCÁSTICA"
+    },
+    {
+        "id": 167,
+        "codigo": "578",
+        "descripcion": "INVESTIGACIÓN EDUCATIVA"
+    },
+    {
+        "id": 168,
+        "codigo": "579",
+        "descripcion": "PRACTICUM I"
+    },
+    {
+        "id": 169,
+        "codigo": "580",
+        "descripcion": "PRACTICUM II"
+    },
+    {
+        "id": 170,
+        "codigo": "592",
+        "descripcion": "DESARROLLO Y PATOLOGIA DEL LENGUAJE"
+    },
+    {
+        "id": 235,
+        "codigo": "601",
+        "descripcion": "INTRODUCCION A LA ADMINISTRACION"
+    },
+    {
+        "id": 172,
+        "codigo": "602",
+        "descripcion": "TEORÍA DE LA ORGANIZACIÓN"
+    },
+    {
+        "id": 238,
+        "codigo": "604",
+        "descripcion": "ADMINISTRACION PUBLICA"
+    },
+    {
+        "id": 239,
+        "codigo": "605",
+        "descripcion": "SISTEMAS ADMINISTRATIVOS"
+    },
+    {
+        "id": 240,
+        "codigo": "606",
+        "descripcion": "SISTEMAS DE INFORMACION"
+    },
+    {
+        "id": 241,
+        "codigo": "607",
+        "descripcion": "ADMINISTRACIÓN POR PROYECTO"
+    },
+    {
+        "id": 242,
+        "codigo": "608",
+        "descripcion": "CONTROL DE GESTION"
+    },
+    {
+        "id": 296,
+        "codigo": "612",
+        "descripcion": "CONTABILIDAD INTERMEDIA"
+    },
+    {
+        "id": 243,
+        "codigo": "613",
+        "descripcion": "INVESTIGACIÓN ADMINISTRATIVA"
+    },
+    {
+        "id": 244,
+        "codigo": "614",
+        "descripcion": "ADMINISTRACION DE RECURSOS HUMANOS"
+    },
+    {
+        "id": 245,
+        "codigo": "615",
+        "descripcion": "RIESGOS Y SEGUROS"
+    },
+    {
+        "id": 246,
+        "codigo": "616",
+        "descripcion": "REASEGUROS"
+    },
+    {
+        "id": 247,
+        "codigo": "617",
+        "descripcion": "CONTABILIDAD INTERMEDIA APLICADA AL SEGURO"
+    },
+    {
+        "id": 248,
+        "codigo": "618",
+        "descripcion": "CONTABILIDAD COMPUTARIZADA"
+    },
+    {
+        "id": 249,
+        "codigo": "619",
+        "descripcion": "ADMINISTRACIÓN DEL RIESGO I"
+    },
+    {
+        "id": 250,
+        "codigo": "620",
+        "descripcion": "FUNDAMENTOS DE INGENIERIA"
+    },
+    {
+        "id": 251,
+        "codigo": "621",
+        "descripcion": "QUIMICA"
+    },
+    {
+        "id": 252,
+        "codigo": "625",
+        "descripcion": "INFORMATICA GERENCIAL"
+    },
+    {
+        "id": 253,
+        "codigo": "631",
+        "descripcion": "FUNDAMENTOS DE CONTABILIDAD"
+    },
+    {
+        "id": 254,
+        "codigo": "632",
+        "descripcion": "CONTABILIDAD INTERMEDIA"
+    },
+    {
+        "id": 255,
+        "codigo": "633",
+        "descripcion": "CONTABILIDAD SUPERIOR I"
+    },
+    {
+        "id": 256,
+        "codigo": "634",
+        "descripcion": "CONTABILIDAD GUBERNAMENTAL"
+    },
+    {
+        "id": 257,
+        "codigo": "636",
+        "descripcion": "MODELOS CONTABLES"
+    },
+    {
+        "id": 258,
+        "codigo": "637",
+        "descripcion": "CONTABILIDAD DE COSTOS I"
+    },
+    {
+        "id": 259,
+        "codigo": "638",
+        "descripcion": "SISTEMAS TRIBUTARIOS"
+    },
+    {
+        "id": 260,
+        "codigo": "639",
+        "descripcion": "CONTABILIDAD SUPERIOR II"
+    },
+    {
+        "id": 261,
+        "codigo": "641",
+        "descripcion": "TEORIA ECONOMICA I"
+    },
+    {
+        "id": 262,
+        "codigo": "642",
+        "descripcion": "TEORIA ECONÓMICA II"
+    },
+    {
+        "id": 263,
+        "codigo": "644",
+        "descripcion": "ECONOMIA Y SEGUROS"
+    },
+    {
+        "id": 264,
+        "codigo": "646",
+        "descripcion": "TEORIA DEL RIESGO"
+    },
+    {
+        "id": 265,
+        "codigo": "648",
+        "descripcion": "ADMINISTRACIÓN DEL RIESGO II"
+    },
+    {
+        "id": 266,
+        "codigo": "649",
+        "descripcion": "CONTABILIDAD SUPERIOR III"
+    },
+    {
+        "id": 267,
+        "codigo": "650",
+        "descripcion": "CONTABILIDAD DE COSTOS II"
+    },
+    {
+        "id": 268,
+        "codigo": "651",
+        "descripcion": "DERECHO MERCANTIL"
+    },
+    {
+        "id": 269,
+        "codigo": "653",
+        "descripcion": "DERECHO LABORAL"
+    },
+    {
+        "id": 270,
+        "codigo": "654",
+        "descripcion": "DERECHO APLICADO AL SEGURO"
+    },
+    {
+        "id": 174,
+        "codigo": "655",
+        "descripcion": "COSTO INDUSTRIAL"
+    },
+    {
+        "id": 271,
+        "codigo": "661",
+        "descripcion": "ADMINISTRACIÓN FINANCIERA"
+    },
+    {
+        "id": 272,
+        "codigo": "663",
+        "descripcion": "FINANZAS Y PRESUPUESTO PUBLICO"
+    },
+    {
+        "id": 273,
+        "codigo": "665",
+        "descripcion": "ANALISIS DE ESTADOS FINANCIEROS I"
+    },
+    {
+        "id": 274,
+        "codigo": "666",
+        "descripcion": "ANALISIS DE ESTADOS FINANCIEROS II"
+    },
+    {
+        "id": 275,
+        "codigo": "669",
+        "descripcion": "PRESUPUESTO EMPRESARIAL"
+    },
+    {
+        "id": 276,
+        "codigo": "671",
+        "descripcion": "MERCADOTECNIA"
+    },
+    {
+        "id": 277,
+        "codigo": "672",
+        "descripcion": "INVESTIGACION DE MERCADO"
+    },
+    {
+        "id": 278,
+        "codigo": "673",
+        "descripcion": "CONTABILIDAD FISCAL"
+    },
+    {
+        "id": 279,
+        "codigo": "681",
+        "descripcion": "PLANIFICACIÓN Y CONTROL DE LA PRODUCCIÓN"
+    },
+    {
+        "id": 280,
+        "codigo": "691",
+        "descripcion": "AUDITORIA I"
+    },
+    {
+        "id": 281,
+        "codigo": "692",
+        "descripcion": "AUDITORIA II"
+    },
+    {
+        "id": 282,
+        "codigo": "696",
+        "descripcion": "PASANTIA (Riesgos y Seguros)"
+    },
+    {
+        "id": 283,
+        "codigo": "697",
+        "descripcion": "PASANTIA (Contaduría)"
+    },
+    {
+        "id": 284,
+        "codigo": "699",
+        "descripcion": "PASANTIA (Administración)"
+    },
+    {
+        "id": 175,
+        "codigo": "733",
+        "descripcion": "MATEMATICA III"
+    },
+    {
+        "id": 285,
+        "codigo": "734",
+        "descripcion": "MATEMATICA III"
+    },
+    {
+        "id": 176,
+        "codigo": "735",
+        "descripcion": "MATEMATICA IV"
+    },
+    {
+        "id": 177,
+        "codigo": "737",
+        "descripcion": "INTRODUCCIÓN A LA PROBABILIDAD"
+    },
+    {
+        "id": 178,
+        "codigo": "738",
+        "descripcion": "INFERENCIA ESTADISTICA"
+    },
+    {
+        "id": 179,
+        "codigo": "739",
+        "descripcion": "MATEMÁTICA V"
+    },
+    {
+        "id": 286,
+        "codigo": "743",
+        "descripcion": "ELEMENTOS ACTUARIALES"
+    },
+    {
+        "id": 287,
+        "codigo": "745",
+        "descripcion": "ESTADÍSTICA GENERAL"
+    },
+    {
+        "id": 288,
+        "codigo": "746",
+        "descripcion": "ESTADÍSTICA APLICADA"
+    },
+    {
+        "id": 180,
+        "codigo": "747",
+        "descripcion": "PROBABILIDAD"
+    },
+    {
+        "id": 181,
+        "codigo": "748",
+        "descripcion": "ESTADISTICA"
+    },
+    {
+        "id": 182,
+        "codigo": "749",
+        "descripcion": "CALCULO Ι"
+    },
+    {
+        "id": 183,
+        "codigo": "750",
+        "descripcion": "CÁLCULO II"
+    },
+    {
+        "id": 184,
+        "codigo": "751",
+        "descripcion": "CALCULO III"
+    },
+    {
+        "id": 185,
+        "codigo": "752",
+        "descripcion": "ALGEBRA I"
+    },
+    {
+        "id": 186,
+        "codigo": "753",
+        "descripcion": "ALGEBRA II"
+    },
+    {
+        "id": 187,
+        "codigo": "754",
+        "descripcion": "GEOMETRIA"
+    },
+    {
+        "id": 188,
+        "codigo": "755",
+        "descripcion": "ECUACIONES DIFERENCIALES"
+    },
+    {
+        "id": 189,
+        "codigo": "756",
+        "descripcion": "CALCULO INTEGRAL"
+    },
+    {
+        "id": 190,
+        "codigo": "757",
+        "descripcion": "ALGEBRA I"
+    },
+    {
+        "id": 191,
+        "codigo": "758",
+        "descripcion": "CALCULO VECTORIAL"
+    },
+    {
+        "id": 192,
+        "codigo": "759",
+        "descripcion": "ALGEBRA II"
+    },
+    {
+        "id": 193,
+        "codigo": "760",
+        "descripcion": "HISTORIA DE LAS MATEMATICAS"
+    },
+    {
+        "id": 194,
+        "codigo": "761",
+        "descripcion": "DIDACTICA DEL CALCULO"
+    },
+    {
+        "id": 195,
+        "codigo": "762",
+        "descripcion": "ANALISIS I"
+    },
+    {
+        "id": 196,
+        "codigo": "763",
+        "descripcion": "TOPICOS NUMERICOS EN CALCULO Y ALGEBRA"
+    },
+    {
+        "id": 197,
+        "codigo": "764",
+        "descripcion": "PROBABILIDAD Y ESTADISTICA I"
+    },
+    {
+        "id": 198,
+        "codigo": "765",
+        "descripcion": "DIDACTICA DEL ALGEBRA LINEAL Y LA PROBABILIDAD"
+    },
+    {
+        "id": 199,
+        "codigo": "766",
+        "descripcion": "ANALISIS II"
+    },
+    {
+        "id": 200,
+        "codigo": "767",
+        "descripcion": "ECUACIONES DIFERENCIALES"
+    },
+    {
+        "id": 201,
+        "codigo": "768",
+        "descripcion": "TOPOLOGIA"
+    },
+    {
+        "id": 202,
+        "codigo": "769",
+        "descripcion": "PRACTICA DOCENTE"
+    },
+    {
+        "id": 203,
+        "codigo": "770",
+        "descripcion": "TÓPICOS DE ANALISIS MATEMATICO"
+    },
+    {
+        "id": 204,
+        "codigo": "771",
+        "descripcion": "OPTIMIZACION NO LINEAL"
+    },
+    {
+        "id": 205,
+        "codigo": "772",
+        "descripcion": "PROBABILIDAD Y ESTADISTICA II"
+    },
+    {
+        "id": 206,
+        "codigo": "773",
+        "descripcion": "MODELOS MATEMATICOS"
+    },
+    {
+        "id": 207,
+        "codigo": "775",
+        "descripcion": "SISTEMAS DINAMICOS DISCRETOS"
+    },
+    {
+        "id": 208,
+        "codigo": "776",
+        "descripcion": "TOPICOS EN OPTIMIZACION I"
+    },
+    {
+        "id": 209,
+        "codigo": "778",
+        "descripcion": "ANALISIS DE DATOS"
+    },
+    {
+        "id": 210,
+        "codigo": "779",
+        "descripcion": "PROGRAMACION LINEAL"
+    },
+    {
+        "id": 211,
+        "codigo": "780",
+        "descripcion": "TEORIA DE JUEGOS"
+    },
+    {
+        "id": 212,
+        "codigo": "781",
+        "descripcion": "INTRODUCCION A LOS ELEMENTOS FINITOS"
+    },
+    {
+        "id": 213,
+        "codigo": "782",
+        "descripcion": "ALGEBRA LINEAL NUMERICA"
+    },
+    {
+        "id": 214,
+        "codigo": "783",
+        "descripcion": "INTRODUCCION A LOS ESPACIOS DE HILBERT Y SUS OPER"
+    },
+    {
+        "id": 289,
+        "codigo": "810",
+        "descripcion": "REDACCION DE INFORMES TECNICOS"
+    },
+    {
+        "id": 290,
+        "codigo": "811",
+        "descripcion": "FUNDAMENTOS BASICOS EN LA ELABORACION DE PROYE"
+    },
+    {
+        "id": 217,
+        "codigo": "812",
+        "descripcion": "ELABORACION PERIODICA DE PUBLICACIONES ESCOLARE"
+    },
+    {
+        "id": 291,
+        "codigo": "813",
+        "descripcion": "LIDERAZGO"
+    },
+    {
+        "id": 219,
+        "codigo": "814",
+        "descripcion": "SEMINARIO DE ACCION SOCIAL"
+    },
+    {
+        "id": 293,
+        "codigo": "816",
+        "descripcion": "FORMACION DE MICROEMPRESAS"
+    }
+]

@@ -30,12 +30,15 @@ const pool = mysql.createPool({
     host: process.env.MYSQLHOST || process.env.DB_HOST || 'localhost',
     user: process.env.MYSQLUSER || process.env.DB_USER || 'root',
     password: process.env.MYSQLPASSWORD !== undefined ? process.env.MYSQLPASSWORD : (process.env.DB_PASSWORD || ''),
-    database: process.env.MYSQLDATABASE || process.env.DB_NAME || 'asesores', // 👈 Aquí se define 'asesores' por defecto a nivel local
+    database: process.env.MYSQLDATABASE || process.env.DB_NAME || 'asesores',
     port: process.env.MYSQLPORT || process.env.DB_PORT || 3306,
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
-    connectTimeout: 10000 // 10 segundos de límite para evitar que se quede congelado
+    connectTimeout: 10000,
+    ssl: process.env.DB_HOST && process.env.DB_HOST !== 'localhost' ? {
+        rejectUnauthorized: false
+    } : undefined
 });
 
 // Definir la variable db para que funcione en todo el servidor con el pool
@@ -60,6 +63,28 @@ pool.getConnection((err, connection) => {
         // Es muy importante liberar la conexión de vuelta al pool
         connection.release();
     }
+});
+
+
+// Consulta ligera a la BD cada 5 minutos (300,000 milisegundos)
+setInterval(() => {
+  db.query("SELECT 1", (err) => {
+    if (err) {
+      console.error("⚠️ Error en el ping de mantenimiento a la BD:", err.message);
+    } else {
+      console.log("🔄 Keep-alive ejecutado: Conexión activa con Aiven.");
+    }
+  });
+}, 5 * 60 * 1000);
+
+// Endpoint simple por si quieres probarlo desde el navegador
+app.get("/ping", (req, res) => {
+  db.query("SELECT 1", (err) => {
+    if (err) {
+      return res.status(500).json({ status: "error", message: err.message });
+    }
+    res.json({ status: "ok", message: "Base de datos y servidor activos" });
+  });
 });
 
 // Configuración de Middlewares

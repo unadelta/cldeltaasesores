@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Correcciones - Asesores UNA</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+</head>
+
+<body class="bg-light">
+
+    <!-- NAVBAR PRINCIPAL -->
+    <div id="navbar-container"></div>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="container mt-4">
+        <div class="row mb-3 align-items-center">
+            <div class="col-sm-6">
+                <h3 class="fw-bold text-primary"><i class="bi bi-pencil-square me-2"></i>Módulo de Registro de Correcciones</h3>
+            </div>
+            <div class="col-sm-6 text-sm-end">
+                <button class="btn btn-success" onclick="abrirModalCorreccion()"><i class="bi bi-plus-circle me-1"></i> Registrar Nueva Corrección</button>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-primary">
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Alumno</th>
+                                <th>Cédula</th>
+                                <th>Carrera</th>
+                                <th>Tarea</th>
+                                <th>Materia</th>
+                                <th>Asesor</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaCorrecciones">
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-4">Cargando registros...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL REGISTRAR CORRECCIÓN -->
+    <div class="modal fade" id="modalCorreccion" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form id="formCorreccion" onsubmit="guardarCorreccion(event)">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title">Registrar Nueva Corrección</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+
+                        <!-- 1. Búsqueda de Alumno por Combobox -->
+                        <div class="mb-3">
+                            <label for="selectAlumno" class="form-label fw-semibold">Buscar Alumno</label>
+                            <select id="selectAlumno" class="form-select" required>
+                                <option value="">Seleccione un alumno...</option>
+                            </select>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="cedulaAlumno" class="form-label fw-semibold">Cédula</label>
+                                <input type="text" class="form-control bg-light" id="cedulaAlumno" placeholder="Cédula" readonly required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="nombreAlumno" class="form-label fw-semibold">Nombre</label>
+                                <input type="text" class="form-control bg-light" id="nombreAlumno" placeholder="Nombre" readonly required>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="codigoCarrera" class="form-label fw-semibold">Cod Carrera</label>
+                                <input type="text" class="form-control bg-light" id="codigoCarrera" placeholder="Cod Carrera" readonly>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="descripcionCarrera" class="form-label fw-semibold">Carrera</label>
+                                <input type="text" class="form-control bg-light" id="descripcionCarrera" placeholder="Carrera" readonly>
+                            </div>
+                        </div>
+
+                        <hr class="my-3">
+
+                        <!-- 2. Selección de Materia (Tabla materia_una) -->
+                        <div class="mb-3">
+                            <label for="selectMateria" class="form-label fw-semibold">Seleccionar Materia</label>
+                            <select id="selectMateria" class="form-select" required>
+                                <option value="">Seleccione una materia...</option>
+                            </select>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="codigoMateria" class="form-label fw-semibold">Cod. materia</label>
+                                <input type="text" class="form-control bg-light" id="codigoMateria" placeholder="Cod. materia" readonly required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="descripcionMateria" class="form-label fw-semibold">Materia</label>
+                                <input type="text" class="form-control bg-light" id="descripcionMateria" placeholder="Materia" readonly required>
+                            </div>
+                        </div>
+
+                        <hr class="my-3">
+
+                        <!-- 3. Selección del Tipo de Tarea -->
+                        <div class="mb-3">
+                            <label for="selectTarea" class="form-label fw-semibold">Seleccionar Tipo de Tarea</label>
+                            <select id="selectTarea" class="form-select" required>
+                                <option value="">Seleccione un tipo de tarea...</option>
+                            </select>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="codigoTarea" class="form-label fw-semibold">Cod. Tarea</label>
+                                <input type="text" class="form-control bg-light" id="codigoTarea" placeholder="Cod. Tarea" readonly required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="descripcionTarea" class="form-label fw-semibold">Tarea</label>
+                                <input type="text" class="form-control bg-light" id="descripcionTarea" placeholder="Tarea" readonly required>
+                            </div>
+                        </div>
+
+                        <hr class="my-3">
+
+                        <div class="row">
+                            <!-- Asesor (Automático por sesión) -->
+                            <div class="col-md-6 mb-3">
+                                <label for="nombreAsesor" class="form-label fw-semibold">Asesor Responsable</label>
+                                <input type="text" class="form-control bg-light" id="nombreAsesor" readonly required>
+                                <input type="hidden" id="cedulaAsesor">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="fechaHora" class="form-label fw-semibold">Fecha y Hora</label>
+                                <input type="text" class="form-control bg-light" id="fechaHora" readonly required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="btnCancelar">Cancelar</button>
+                        <button type="submit" class="btn btn-success" id="btnGuardar">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let modalInstance = null;
+        let asesorActual = {};
+
+        document.addEventListener("DOMContentLoaded", async() => {
+            modalInstance = new bootstrap.Modal(document.getElementById('modalCorreccion'));
+            await inicializarDatos();
+            await cargarControlCorrecciones();
+
+            // Eventos para autocompletar campos al cambiar los comboboxes
+            document.getElementById('selectAlumno').addEventListener('change', function() {
+                const opt = this.options[this.selectedIndex];
+                document.getElementById('cedulaAlumno').value = opt.dataset.cedula || '';
+                document.getElementById('nombreAlumno').value = opt.dataset.nombre || '';
+                document.getElementById('codigoCarrera').value = opt.dataset.codigocarrera || '';
+                document.getElementById('descripcionCarrera').value = opt.dataset.descripcioncarrera || '';
+            });
+
+            document.getElementById('selectMateria').addEventListener('change', function() {
+                const opt = this.options[this.selectedIndex];
+                document.getElementById('codigoMateria').value = opt.dataset.codigo || '';
+                document.getElementById('descripcionMateria').value = opt.dataset.descripcion || '';
+            });
+
+            document.getElementById('selectTarea').addEventListener('change', function() {
+                const opt = this.options[this.selectedIndex];
+                document.getElementById('codigoTarea').value = opt.dataset.codigo || '';
+                document.getElementById('descripcionTarea').value = opt.dataset.descripcion || '';
+            });
+        });
+
+        async function inicializarDatos() {
+            // 1. Obtener sesión del usuario y datos del Asesor
+            try {
+                const resUser = await fetch('/api/user-session');
+                const dataUser = await resUser.json();
+                if (dataUser.authenticated) {
+                    asesorActual = dataUser.user;
+                    document.getElementById('nombreAsesor').value = asesorActual.nombre || asesorActual.usuario;
+                    document.getElementById('cedulaAsesor').value = asesorActual.cedula;
+                } else {
+                    window.location.href = '/';
+                    return;
+                }
+            } catch (e) {
+                console.error("Error al obtener sesión:", e);
+            }
+
+            // 2. Cargar ComboBox Alumnos (con descripcion_carrera)
+            try {
+                const res = await fetch('/api/alumnos');
+                const result = await res.json();
+                const select = document.getElementById('selectAlumno');
+                select.innerHTML = '<option value="">Seleccione un alumno...</option>';
+                const lista = result.success ? result.data : result;
+                if (Array.isArray(lista)) {
+                    lista.forEach(al => {
+                        const opt = document.createElement('option');
+                        opt.value = al.id;
+                        opt.textContent = `${al.cedula} - ${al.nombre}`;
+                        opt.dataset.cedula = al.cedula;
+                        opt.dataset.nombre = al.nombre;
+                        opt.dataset.codigocarrera = al.codigo_carrera || '';
+                        opt.dataset.descripcioncarrera = al.descripcion_carrera || '';
+                        select.appendChild(opt);
+                    });
+                }
+            } catch (err) {
+                console.error("Error al cargar alumnos:", err);
+            }
+
+            // 3. Cargar ComboBox Materias desde la tabla materia_una
+            try {
+                const res = await fetch('/api/materia_una');
+                const result = await res.json();
+                const select = document.getElementById('selectMateria');
+                select.innerHTML = '<option value="">Seleccione una materia...</option>';
+                const lista = result.success ? result.data : result;
+                if (Array.isArray(lista)) {
+                    lista.forEach(mat => {
+                        const opt = document.createElement('option');
+                        opt.value = mat.id;
+                        opt.textContent = `${mat.codigo} - ${mat.descripcion}`;
+                        opt.dataset.codigo = mat.codigo;
+                        opt.dataset.descripcion = mat.descripcion;
+                        select.appendChild(opt);
+                    });
+                }
+            } catch (error) {
+                console.error("Error al cargar materia_una:", error);
+            }
+
+            // 4. Cargar ComboBox Tareas
+            try {
+                const res = await fetch('/api/tareas');
+                const result = await res.json();
+                const select = document.getElementById('selectTarea');
+                select.innerHTML = '<option value="">Seleccione un tipo de tarea...</option>';
+                const lista = result.success ? result.data : result;
+                if (Array.isArray(lista)) {
+                    lista.forEach(tar => {
+                        const opt = document.createElement('option');
+                        opt.value = tar.id;
+                        opt.textContent = `${tar.codigo} - ${tar.descripcion}`;
+                        opt.dataset.codigo = tar.codigo;
+                        opt.dataset.descripcion = tar.descripcion;
+                        select.appendChild(opt);
+                    });
+                }
+            } catch (error) {
+                console.error("Error al cargar tareas:", error);
+            }
+        }
+
+        function abrirModalCorreccion() {
+            document.getElementById('formCorreccion').reset();
+            document.getElementById('nombreAsesor').value = asesorActual.nombre || asesorActual.usuario;
+            document.getElementById('cedulaAsesor').value = asesorActual.cedula;
+
+            // Fecha y hora actual
+            const ahora = new Date();
+            document.getElementById('fechaHora').value = ahora.toLocaleDateString('es-ES') + ' ' + ahora.toLocaleTimeString('es-ES');
+
+            modalInstance.show();
+        }
+        /*
+                async function guardarCorreccion(e) {
+                    e.preventDefault();
+
+                    const data = {
+                        cedula_alumno: document.getElementById('cedulaAlumno').value,
+                        nombre_alumno: document.getElementById('nombreAlumno').value,
+                        codigo_carrera: document.getElementById('codigoCarrera').value,
+                        codigo_materia: document.getElementById('codigoMateria').value,
+                        tipo_correccion: document.getElementById('codigoTarea').value,
+                        cedula_asesor: document.getElementById('cedulaAsesor').value,
+                        nombre_asesor: document.getElementById('nombreAsesor').value,
+                        fecha: new Date().toISOString()
+                    };
+
+                    try {
+                        const res = await fetch('/api/control_correcciones', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(data)
+                        });
+                        const result = await res.json();
+                        if (result.success) {
+                            modalInstance.hide();
+                            document.getElementById('formCorreccion').reset();
+                            await cargarControlCorrecciones();
+                        } else {
+                            alert(result.message || 'Error al guardar la corrección');
+                        }
+                    } catch (error) {
+                        console.error("Error al guardar:", error);
+                        alert('Error de conexión con el servidor.');
+                    }
+                }
+        */
+
+
+        async function guardarCorreccion(e) {
+            e.preventDefault();
+            e.stopPropagation(); // Evita que el evento se propague o dispare por duplicado
+
+            const btnGuardar = document.getElementById('btnGuardar');
+            if (btnGuardar.disabled) return; // Evita doble ejecución si ya se hizo clic
+            btnGuardar.disabled = true;
+            btnGuardar.textContent = 'Guardando...';
+
+            const data = {
+                cedula_alumno: document.getElementById('cedulaAlumno').value,
+                nombre_alumno: document.getElementById('nombreAlumno').value,
+                codigo_carrera: document.getElementById('codigoCarrera').value,
+                codigo_materia: document.getElementById('codigoMateria').value,
+                tipo_correccion: document.getElementById('codigoTarea').value,
+                cedula_asesor: document.getElementById('cedulaAsesor').value,
+                nombre_asesor: document.getElementById('nombreAsesor').value,
+                fecha: new Date().toISOString()
+            };
+
+            try {
+                const res = await fetch('/api/control_correcciones', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+
+                if (result.success) {
+                    modalInstance.hide();
+                    document.getElementById('formCorreccion').reset();
+                    await cargarControlCorrecciones();
+                } else {
+                    alert(result.message || 'Error al guardar la corrección');
+                }
+            } catch (error) {
+                console.error("Error al guardar:", error);
+                alert('Error de conexión con el servidor.');
+            } finally {
+                btnGuardar.disabled = false;
+                btnGuardar.textContent = 'Guardar';
+            }
+        }
+        async function cargarControlCorrecciones() {
+            try {
+                const res = await fetch('/api/control_correcciones');
+                const data = await res.json();
+                const tbody = document.getElementById('tablaCorrecciones');
+                tbody.innerHTML = '';
+
+                const lista = data.success ? data.data : data;
+                if (Array.isArray(lista) && lista.length > 0) {
+                    lista.forEach(item => {
+                        let fechaF = item.fecha ? new Date(item.fecha).toLocaleString('es-ES') : '';
+                        tbody.innerHTML += `<tr>
+                            <td>${fechaF}</td>
+                            <td>${item.nombre_alumno || ''}</td>
+                            <td>${item.cedula_alumno || ''}</td>
+                            <td><span class="badge bg-secondary">${item.descripcion_carrera || item.codigo_carrera || ''}</span></td>
+                            <td><span class="badge bg-warning text-dark">${item.descripcion_tarea || item.tipo_correccion || ''}</span></td>
+                            <td><span class="badge bg-info text-dark">${item.codigo_materia || ''}</span></td>
+                            <td>${item.nombre_asesor || ''}</td>
+                        </tr>`;
+                    });
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">No hay correcciones registradas.</td></tr>`;
+                }
+            } catch (error) {
+                console.error("Error al cargar control de correcciones:", error);
+            }
+        }
+
+        // Cargar Navbar dinámicamente
+        document.addEventListener("DOMContentLoaded", function() {
+            fetch('/views/navbar.html')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('navbar-container').innerHTML = data;
+
+                    fetch('/api/user-session')
+                        .then(res => res.json())
+                        .then(sesion => {
+                            const spanUsuario = document.getElementById('nombreUsuario');
+                            if (spanUsuario && sesion.authenticated && sesion.user) {
+                                spanUsuario.textContent = sesion.user.nombre || sesion.user.usuario;
+                            }
+                        })
+                        .catch(err => console.error("Error al obtener sesión de usuario:", err));
+                })
+                .catch(err => console.error("Error al cargar el navbar:", err));
+        });
+    </script>
+</body>
+
+</html>

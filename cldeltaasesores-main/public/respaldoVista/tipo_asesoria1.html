@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Tipos de Asesoría - Asesores UNA</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+</head>
+
+<body class="bg-light">
+
+    <!-- NAVBAR PRINCIPAL -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold d-flex align-items-center" href="/dashboard">
+                <img src="/jpg/logouna.jpg" alt="Logo UNA" height="35" class="bg-white rounded p-1 me-2 shadow-sm" onerror="this.style.display='none'">
+                <span>Asesores UNA</span>
+            </a>
+            <div class="collapse navbar-collapse" id="navbarNavDropdown">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item"><a class="nav-link" href="/dashboard">Inicio</a></li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle text-white fw-semibold active" href="#" data-bs-toggle="dropdown">Administrador</a>
+                        <ul class="dropdown-menu shadow">
+                            <li><a class="dropdown-item" href="/asesor">Asesores</a></li>
+                            <li><a class="dropdown-item" href="/carrera">Carreras</a></li>
+                            <li><a class="dropdown-item" href="/materia">Materias</a></li>
+                            <li><a class="dropdown-item" href="/tarea">Tareas</a></li>
+                            <li><a class="dropdown-item active fw-bold" href="/tipo_asesoria">Tipo Asesoría</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item"><a class="nav-link text-white" href="/alumno"><i class="bi bi-mortarboard-fill me-1"></i> Alumnos</a></li>
+                    <li class="nav-item"><a class="nav-link text-white" href="/asesoria"><i class="bi bi-journal-text me-1"></i> Asesorías</a></li>
+                    <li class="nav-item"><a class="nav-link text-white" href="/tarea"><i class="bi bi-list-task me-1"></i> Tareas</a></li>
+                </ul>
+                <div class="d-flex align-items-center text-white ms-auto">
+                    <span class="me-2"><i class="bi bi-person-circle"></i></span>
+                    <span id="nombreUsuario" class="me-3 fw-semibold">Cargando...</span>
+                    <button onclick="window.location.href='/'" class="btn btn-outline-light btn-sm"><i class="bi bi-box-arrow-right me-1"></i> Salir</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="container mt-4">
+        <div class="row mb-3 align-items-center">
+            <div class="col-sm-6">
+                <h3 class="fw-bold text-primary"><i class="bi bi-tags-fill me-2"></i>Tipos de Asesoría</h3>
+            </div>
+            <div class="col-sm-6 text-sm-end">
+                <button class="btn btn-success" onclick="abrirModalCrear()"><i class="bi bi-plus-circle me-1"></i> Nuevo Tipo de Asesoría</button>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-primary">
+                            <tr>
+                                <th style="width: 10%;">ID</th>
+                                <th style="width: 25%;">Código</th>
+                                <th style="width: 50%;">Descripción de Asesoría</th>
+                                <th style="width: 15%;" class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaTipoAsesoria">
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">Cargando registros...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL (CREAR / EDITAR) -->
+    <div class="modal fade" id="modalTipoAsesoria" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="formTipoAsesoria" onsubmit="guardarTipoAsesoria(event)">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title" id="modalTipoAsesoriaTitulo">Nuevo Tipo de Asesoría</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="tipoId">
+
+                        <div class="mb-3">
+                            <label for="codigo_ase" class="form-label fw-semibold">Código</label>
+                            <input type="text" class="form-control" id="codigo_ase" placeholder="Ej: AS-01" required autocomplete="off">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="descripcion_asesoria" class="form-label fw-semibold">Descripción de la Asesoría</label>
+                            <input type="text" class="form-control" id="descripcion_asesoria" placeholder="Ej: Asesoría Académica Ordinaria" required autocomplete="off">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" id="btnGuardar">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let modalInstance = null;
+
+        document.addEventListener("DOMContentLoaded", async() => {
+            modalInstance = new bootstrap.Modal(document.getElementById('modalTipoAsesoria'));
+            await cargarSesion();
+            await cargarTiposAsesoria();
+        });
+
+        async function cargarSesion() {
+            try {
+                const res = await fetch('/api/user-session');
+                const data = await res.json();
+                if (data.authenticated) {
+                    document.getElementById('nombreUsuario').textContent = data.user.nombre;
+                } else {
+                    window.location.href = '/';
+                }
+            } catch (err) {
+                console.error("Error al obtener la sesión:", err);
+            }
+        }
+
+        async function cargarTiposAsesoria() {
+            const tbody = document.getElementById('tablaTipoAsesoria');
+            try {
+                const res = await fetch('/api/tipo_asesoria');
+                const data = await res.json();
+
+                const lista = data.success ? data.data : (Array.isArray(data) ? data : (data.resultado || []));
+
+                tbody.innerHTML = '';
+
+                if (Array.isArray(lista) && lista.length > 0) {
+                    lista.forEach(item => {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td><span class="badge bg-light text-dark border">${item.id}</span></td>
+                                <td><span class="badge bg-secondary">${item.codigo_ase || ''}</span></td>
+                                <td class="fw-semibold">${item.descripcion_asesoria || ''}</td>
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-outline-primary me-1" onclick="abrirModalEditar(${item.id}, '${item.codigo_ase || ''}', '${item.descripcion_asesoria || ''}')" title="Editar">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="eliminarTipoAsesoria(${item.id})" title="Eliminar">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4">No hay tipos de asesoría registrados.</td></tr>`;
+                }
+            } catch (err) {
+                console.error("Error al cargar tipos de asesoría:", err);
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center text-danger py-4">Error al conectar con el servidor.</td></tr>`;
+            }
+        }
+
+        function abrirModalCrear() {
+            document.getElementById('formTipoAsesoria').reset();
+            document.getElementById('tipoId').value = '';
+            document.getElementById('modalTipoAsesoriaTitulo').textContent = 'Nuevo Tipo de Asesoría';
+            modalInstance.show();
+        }
+
+        function abrirModalEditar(id, codigo, descripcion) {
+            document.getElementById('tipoId').value = id;
+            document.getElementById('codigo_ase').value = codigo;
+            document.getElementById('descripcion_asesoria').value = descripcion;
+            document.getElementById('modalTipoAsesoriaTitulo').textContent = 'Editar Tipo de Asesoría';
+            modalInstance.show();
+        }
+
+        async function guardarTipoAsesoria(e) {
+            e.preventDefault();
+
+            const id = document.getElementById('tipoId').value;
+            const payload = {
+                codigo_ase: document.getElementById('codigo_ase').value.trim(),
+                descripcion_asesoria: document.getElementById('descripcion_asesoria').value.trim()
+            };
+
+            const url = id ? `/api/tipo_asesoria/${id}` : '/api/tipo_asesoria';
+            const method = id ? 'PUT' : 'POST';
+
+            try {
+                const res = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await res.json();
+
+                if (result.success || res.ok) {
+                    modalInstance.hide();
+                    await cargarTiposAsesoria();
+                } else {
+                    alert(result.message || 'Error al procesar la solicitud.');
+                }
+            } catch (err) {
+                console.error("Error al guardar:", err);
+                alert("Error de conexión al intentar guardar.");
+            }
+        }
+
+        async function eliminarTipoAsesoria(id) {
+            if (!confirm(`¿Está seguro de eliminar el registro ID ${id}?`)) return;
+
+            try {
+                const res = await fetch(`/api/tipo_asesoria/${id}`, {
+                    method: 'DELETE'
+                });
+                const result = await res.json();
+
+                if (result.success || res.ok) {
+                    await cargarTiposAsesoria();
+                } else {
+                    alert(result.message || 'No se pudo eliminar el registro.');
+                }
+            } catch (err) {
+                console.error("Error al eliminar:", err);
+                alert("Error de conexión al eliminar.");
+            }
+        }
+    </script>
+</body>
+
+</html>
