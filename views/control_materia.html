@@ -220,7 +220,10 @@
                         const registroId = item.id || item._id || '';
                         const codigo = item.codigo || '';
                         const descripcion = item.descripcion || '';
-                        const cedulaAsesor = item.cedula_asesor || '<span class="text-muted fst-italic">Sin asignar</span>';
+
+                        // Verificación robusta para capturar la cédula sin importar el nombre de la propiedad
+                        const cedulaVal = item.cedula_asesor || item.cedula || item.cedula_usuario;
+                        const cedulaAsesor = cedulaVal ? `<span class="badge bg-info text-dark">${cedulaVal}</span>` : '<span class="text-muted fst-italic">Sin asignar</span>';
 
                         const tr = document.createElement('tr');
                         tr.innerHTML = `
@@ -261,7 +264,8 @@
             document.getElementById('materiaId').value = id;
             document.getElementById('modalTituloLabel').textContent = 'Editar Materia';
 
-            document.getElementById('selectAsesor').value = registro.cedula_asesor || '';
+            // Seleccionar correctamente el valor de la cédula en el combobox
+            document.getElementById('selectAsesor').value = registro.cedula_asesor || registro.cedula || registro.cedula_usuario || '';
 
             const inputCodigo = document.getElementById('codigoMateria');
             inputCodigo.value = registro.codigo || '';
@@ -323,7 +327,8 @@
             const data = {
                 codigo: codigoIngresado,
                 descripcion: descripcionIngresada,
-                cedula_asesor: cedulaAsesorSeleccionada
+                cedula_asesor: cedulaAsesorSeleccionada,
+                cedula: cedulaAsesorSeleccionada // Cubre ambos nombres por compatibilidad con el backend
             };
 
             const url = modoEdicion ? `/api/materiauna/${idRegistro}` : '/api/materiauna';
