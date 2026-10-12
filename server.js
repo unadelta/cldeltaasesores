@@ -65,7 +65,7 @@ pool.getConnection((err, connection) => {
     }
 });
 
-
+/*
 // Consulta ligera a la BD cada 5 minutos (300,000 milisegundos)
 setInterval(() => {
   db.query("SELECT 1", (err) => {
@@ -86,6 +86,25 @@ app.get("/ping", (req, res) => {
     res.json({ status: "ok", message: "Base de datos y servidor activos" });
   });
 });
+*/
+
+// Ruta de ping para mantener activa la base de datos y evitar el spin-down en Render
+app.get('/api/ping-db', async(req, res) => {
+    try {
+        // Ejecuta una consulta sencilla para mantener activa la conexión
+        await db.query('SELECT 1');
+        res.status(200).send('TiDB Connection Active');
+    } catch (error) {
+        console.error('Error al hacer ping a TiDB:', error);
+        res.status(500).send('Database connection error');
+    }
+});
+
+
+
+
+
+
 
 // Configuración de Middlewares
 app.use(express.json());
