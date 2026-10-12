@@ -36,9 +36,17 @@ const pool = mysql.createPool({
     connectionLimit: 10,
     queueLimit: 0,
     connectTimeout: 10000,
+    /*
     ssl: process.env.DB_HOST && process.env.DB_HOST !== 'localhost' ? {
         rejectUnauthorized: false
     } : undefined
+*/
+    ssl: (process.env.DB_HOST || process.env.MYSQLHOST) && (process.env.DB_HOST !== 'localhost' && process.env.MYSQLHOST !== 'localhost') ? {
+        rejectUnauthorized: false
+    } : undefined
+
+
+
 });
 
 // Definir la variable db para que funcione en todo el servidor con el pool
