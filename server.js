@@ -73,46 +73,18 @@ pool.getConnection((err, connection) => {
     }
 });
 
-/*
-// Consulta ligera a la BD cada 5 minutos (300,000 milisegundos)
-setInterval(() => {
-  db.query("SELECT 1", (err) => {
-    if (err) {
-      console.error("⚠️ Error en el ping de mantenimiento a la BD:", err.message);
-    } else {
-      console.log("🔄 Keep-alive ejecutado: Conexión activa con Aiven.");
-    }
-  });
-}, 5 * 60 * 1000);
-
-// Endpoint simple por si quieres probarlo desde el navegador
-app.get("/ping", (req, res) => {
-  db.query("SELECT 1", (err) => {
-    if (err) {
-      return res.status(500).json({ status: "error", message: err.message });
-    }
-    res.json({ status: "ok", message: "Base de datos y servidor activos" });
-  });
-});
-*/
 
 // Ruta de ping para mantener activa la base de datos y evitar el spin-down en Render
 app.get('/api/ping-db', async(req, res) => {
     try {
-        // Ejecuta una consulta sencilla para mantener activa la conexión
-        await db.query('SELECT 1');
+        // Usamos .promise() para asegurar la compatibilidad con async/await
+        await db.promise().query('SELECT 1');
         res.status(200).send('TiDB Connection Active');
     } catch (error) {
         console.error('Error al hacer ping a TiDB:', error);
         res.status(500).send('Database connection error');
     }
 });
-
-
-
-
-
-
 
 // Configuración de Middlewares
 app.use(express.json());
