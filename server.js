@@ -20,7 +20,6 @@ app.use(express.json()); // Necesario para recibir JSON del frontend
 // Asumiendo que creaste el archivo en ./routes/db_admin.routes.js
 const dbAdminRoutes = require('./routes/db_admin.routes');
 
-
 //Repaldo BD
 
 if (process.env.NODE_ENV !== 'production') {
