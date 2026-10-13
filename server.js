@@ -54,7 +54,7 @@ const pool = mysql.createPool(poolConfig);
 const db = pool;
 
 */
-
+/*
 // --- CONFIGURACIÓN DUAL INTELIGENTE ---
 const modoLocal = process.env.NODE_ENV !== 'production';
 
@@ -69,6 +69,28 @@ const poolConfig = {
     queueLimit: 0,
     connectTimeout: 10000,
     // SSL obligatorio y seguro para TiDB Cloud tanto en producción como si se fuerza conexión remota
+    ssl: {
+        rejectUnauthorized: false
+    }
+};
+
+const pool = mysql.createPool(poolConfig);
+const db = pool;
+*/
+
+
+
+// --- CONFIGURACIÓN DE CONEXIÓN UNIFICADA ---
+const poolConfig = {
+    host: process.env.DB_HOST || process.env.MYSQLHOST,
+    user: process.env.DB_USER || process.env.MYSQLUSER,
+    password: process.env.DB_PASSWORD || process.env.MYSQLPASSWORD,
+    database: process.env.DB_NAME || process.env.MYSQLDATABASE,
+    port: Number(process.env.DB_PORT || process.env.MYSQLPORT || 4000),
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+    connectTimeout: 10000,
     ssl: {
         rejectUnauthorized: false
     }
