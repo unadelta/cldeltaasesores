@@ -26,37 +26,39 @@ const dbAdminRoutes = require('./routes/db_admin.routes');
 if (process.env.NODE_ENV !== 'production') {
     require('dotenv').config();
 }
-const pool = mysql.createPool({
-    host: process.env.MYSQLHOST || process.env.DB_HOST || 'localhost',
-    user: process.env.MYSQLUSER || process.env.DB_USER || 'root',
-    password: process.env.MYSQLPASSWORD !== undefined ? process.env.MYSQLPASSWORD : (process.env.DB_PASSWORD || ''),
-    database: process.env.MYSQLDATABASE || process.env.DB_NAME || 'asesores',
-    port: process.env.MYSQLPORT || process.env.DB_PORT || 3306,
+
+// --- CONFIGURACIÓN DUAL INTELIGENTE ---
+const modoLocal = process.env.NODE_ENV !== 'production';
+
+const poolConfig = {
+    host: modoLocal ? process.env.DB_HOST : process.env.MYSQLHOST,
+    user: modoLocal ? process.env.DB_USER : process.env.MYSQLUSER,
+    password: modoLocal ? process.env.DB_PASSWORD : process.env.MYSQLPASSWORD,
+    database: modoLocal ? process.env.DB_NAME : process.env.MYSQLDATABASE,
+    port: modoLocal ? (process.env.DB_PORT || 3306) : (process.env.MYSQLPORT || 4000),
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
-    connectTimeout: 10000,
-    /*
-    ssl: process.env.DB_HOST && process.env.DB_HOST !== 'localhost' ? {
+    connectTimeout: 10000
+};
+
+// Si estamos en modo producción (nube), agregamos el SSL obligatorio de TiDB Cloud
+if (!modoLocal) {
+    poolConfig.ssl = {
         rejectUnauthorized: false
-    } : undefined
-*/
-    ssl: (process.env.DB_HOST || process.env.MYSQLHOST) && (process.env.DB_HOST !== 'localhost' && process.env.MYSQLHOST !== 'localhost') ? {
-        rejectUnauthorized: false
-    } : undefined
+    };
+}
 
-
-
-});
-
-// Definir la variable db para que funcione en todo el servidor con el pool
+const pool = mysql.createPool(poolConfig);
 const db = pool;
+
+
 
 
 // Prueba explícita de conexión al arrancar el servidor
 pool.getConnection((err, connection) => {
     if (err) {
-        console.error('❌ ERROR: No se pudo conectar a la base de datos de Railway:', err.message);
+        console.error('❌ ERROR: No se pudo conectar a la base de datos d:', err.message);
         if (err.code === 'PROTOCOL_CONNECTION_LOST') {
             console.error('La conexión con la base de datos fue cerrada.');
         }
@@ -353,440 +355,6 @@ app.get('/materia', (req, res) => {
 });
 
 
-
-
-
-
-
-
-
-
-
-
-
-/*
-app.get('/api/materias', async(req, res) => {
-    try {
-        const connection = db.promise();
-
-        // Obtenemos la cédula del asesor desde la sesión activa
-        const cedulaAsesor = req.session && req.session.usuario ? (req.session.usuario.cedula || req.session.usuario.id) : null;
-        const semestreSeleccionado = req.query.semestre;
-
-        // Si no hay sesión o no pasan semestre, podemos devolver la lista general o vacía según prefieras,
-        // pero para el módulo de calificaciones, filtramos si ambos parámetros están presentes.
-        const [materias] = await connection.query('SELECT codigo, descripcion, numobj, minaprueba FROM materia ORDER BY codigo ASC');
-        const [objetivos] = await connection.query('SELECT materia_codigo, nro_objetivo, peso FROM objetivo_materia ORDER BY materia_codigo ASC, nro_objetivo ASC');
-        const [calificaciones] = await connection.query('SELECT cod_materia, peso_acumulado, calificacion_definitiva FROM calificaciones ORDER BY cod_materia ASC, peso_acumulado ASC');
-
-        let materiasFiltradas = materias;
-
-        // Si tenemos la cédula y el semestre, filtramos estrictamente por las tablas dinámicas existentes
-        if (cedulaAsesor && semestreSeleccionado) {
-            const cedulaClean = String(cedulaAsesor).replace(/[^a-zA-Z0-9_]/g, '_');
-            const semestreClean = String(semestreSeleccionado).replace(/[^a-zA-Z0-9_]/g, '_');
-            let materiasDelAsesor = [];
-
-            for (let mat of materias) {
-                const codigoClean = mat.codigo.replace(/[^a-zA-Z0-9_]/g, '_');
-                const nombreTabla = `calificaciones_${codigoClean}_${cedulaClean}_${semestreClean}`;
-
-                try {
-                    // Verificamos si la tabla dinámica existe en la base de datos para este asesor y semestre
-                    await connection.query(`SELECT 1 FROM \`${nombreTabla}\` LIMIT 1`);
-                    materiasDelAsesor.push(mat);
-                } catch (e) {
-                    // La tabla no existe, por lo tanto el asesor no imparte esta materia en este semestre
-                }
-            }
-            materiasFiltradas = materiasDelAsesor;
-        }
-
-        const materiasFinal = materiasFiltradas.map(mat => {
-            return {
-                ...mat,
-                objetivos: objetivos.filter(obj => obj.materia_codigo === mat.codigo).map(o => ({ nro_objetivo: o.nro_objetivo, peso: o.peso })),
-                calificaciones: calificaciones.filter(cal => cal.cod_materia === mat.codigo).map(c => ({ peso_acumulado: c.peso_acumulado, calificacion: c.calificacion_definitiva }))
-            };
-        });
-
-        res.json({ success: true, data: materiasFinal });
-    } catch (err) {
-        console.error('Error al obtener materias:', err);
-        res.status(500).json({ success: false, message: 'Error en el servidor al consultar materias' });
-    }
-});
-
-
-app.get('/api/materias/verificar', (req, res) => {
-    const { codigo } = req.query;
-    db.query('SELECT codigo FROM materia WHERE codigo = ?', [codigo], (err, results) => {
-        if (err) {
-            console.error('Error al verificar duplicado de materia:', err);
-            return res.status(500).json({ success: false, message: 'Error interno al verificar' });
-        }
-        res.json({ existe: results.length > 0 });
-    });
-});
-app.post('/api/materias', async(req, res) => {
-    try {
-        const { codigo, descripcion, minaprueba, numobj, semestre, cedula, objetivos, calificaciones } = req.body;
-
-        // Doble validación: Busca la cédula en el body (cliente) o en la sesión activa (servidor)
-        const cedulaAsesor = cedula || (req.session && req.session.usuario ? req.session.usuario.cedula : null);
-
-        if (!cedulaAsesor) {
-            return res.status(401).json({ success: false, message: 'No se pudo identificar la cédula del asesor en la sesión.' });
-        }
-
-        if (!semestre) {
-            return res.status(400).json({ success: false, message: 'El semestre es requerido.' });
-        }
-
-        if (!codigo || !descripcion || !numobj || !minaprueba) {
-            return res.status(400).json({ success: false, message: 'Faltan campos obligatorios básicos.' });
-        }
-
-        const connection = db.promise();
-
-        const [materiasExistentes] = await connection.query(
-            'SELECT codigo FROM materia WHERE codigo = ?', [codigo]
-        );
-
-        if (materiasExistentes.length > 0) {
-            return res.status(400).json({
-                success: false,
-                message: `El código de asignatura '${codigo}' ya se encuentra registrado en el sistema.`
-            });
-        }
-
-        await connection.query(
-            'INSERT INTO materia (codigo, descripcion, numobj, minaprueba) VALUES (?, ?, ?, ?)', [codigo, descripcion, numobj, minaprueba]
-        );
-
-        if (Array.isArray(objetivos) && objetivos.length > 0) {
-            for (let obj of objetivos) {
-                await connection.query(
-                    'INSERT INTO objetivo_materia (materia_codigo, nro_objetivo, peso) VALUES (?, ?, ?)', [codigo, obj.nro_objetivo, obj.peso]
-                );
-            }
-        }
-
-        if (Array.isArray(calificaciones) && calificaciones.length > 0) {
-            for (let cal of calificaciones) {
-                await connection.query(
-                    'INSERT INTO calificaciones (cod_materia, peso_acumulado, calificacion_definitiva) VALUES (?, ?, ?)', [codigo, cal.peso_acumulado, cal.calificacion]
-                );
-            }
-        }
-
-        // Sanitización para cumplir estrictamente con: calificaciones_codigo_cedula_semestre
-        const codigoClean = codigo.replace(/[^a-zA-Z0-9_]/g, '_');
-        const cedulaClean = String(cedulaAsesor).replace(/[^a-zA-Z0-9_]/g, '_');
-        const semestreClean = semestre.replace(/[^a-zA-Z0-9_]/g, '_');
-
-        const nombreTablaCalificaciones = `calificaciones_${codigoClean}_${cedulaClean}_${semestreClean}`;
-
-        const queryCrearTabla = `
-            CREATE TABLE IF NOT EXISTS \`${nombreTablaCalificaciones}\` (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                cedula_estudiante VARCHAR(20) NOT NULL,
-                calificacion_definitiva DECIMAL(5,2) DEFAULT 0.00,
-                fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-        `;
-
-        await connection.query(queryCrearTabla);
-
-        res.json({
-            success: true,
-            message: 'Asignatura registrada y tabla de calificaciones creada exitosamente.'
-        });
-
-    } catch (err) {
-        console.error("Error al registrar asignatura y crear tabla:", err);
-        res.status(500).json({ success: false, message: 'Error interno del servidor.' });
-    }
-});
-
-app.get('/api/materias', async(req, res) => {
-    try {
-        const connection = db.promise();
-
-        // Obtenemos la cédula del asesor desde la sesión activa
-        const cedulaAsesor = req.session && req.session.usuario ? (req.session.usuario.cedula || req.session.usuario.id) : null;
-        const semestreSeleccionado = req.query.semestre;
-
-        const [materias] = await connection.query('SELECT codigo, descripcion, numobj, minaprueba FROM materia ORDER BY codigo ASC');
-        const [objetivos] = await connection.query('SELECT materia_codigo, nro_objetivo, peso FROM objetivo_materia ORDER BY materia_codigo ASC, nro_objetivo ASC');
-        const [calificaciones] = await connection.query('SELECT cod_materia, peso_acumulado, calificacion_definitiva FROM calificaciones ORDER BY cod_materia ASC, peso_acumulado ASC');
-
-        let materiasFiltradas = materias;
-
-        // Si tenemos la cédula y el semestre, filtramos mediante la tabla 'asesor_carrera' 
-        // en lugar de depender de que la tabla física de calificaciones de alumnos ya exista.
-        if (cedulaAsesor && semestreSeleccionado) {
-            const [asignaturasAsesor] = await connection.query(
-                `SELECT DISTINCT asignatura FROM asesor_carrera WHERE TRIM(asesor_cedula) = TRIM(?) AND TRIM(semestre) = TRIM(?)`, [cedulaAsesor, semestreSeleccionado]
-            );
-
-            const codigosAsignaturas = asignaturasAsesor.map(row => row.asignatura);
-
-            // Filtramos las materias generales que coinciden con las asignadas al asesor en este semestre
-            materiasFiltradas = materias.filter(mat => codigosAsignaturas.includes(mat.codigo));
-        }
-
-        const materiasFinal = materiasFiltradas.map(mat => {
-            return {
-                ...mat,
-                objetivos: objetivos.filter(obj => obj.materia_codigo === mat.codigo).map(o => ({ nro_objetivo: o.nro_objetivo, peso: o.peso })),
-                calificaciones: calificaciones.filter(cal => cal.cod_materia === mat.codigo).map(c => ({ peso_acumulado: c.peso_acumulado, calificacion: c.calificacion_definitiva }))
-            };
-        });
-
-        res.json({ success: true, data: materiasFinal });
-    } catch (err) {
-        console.error('Error al obtener materias:', err);
-        res.status(500).json({ success: false, message: 'Error en el servidor al consultar materias' });
-    }
-});
-
-app.get('/api/materias/verificar', (req, res) => {
-    const { codigo } = req.query;
-    db.query('SELECT codigo FROM materia WHERE codigo = ?', [codigo], (err, results) => {
-        if (err) {
-            console.error('Error al verificar duplicado de materia:', err);
-            return res.status(500).json({ success: false, message: 'Error interno al verificar' });
-        }
-        res.json({ existe: results.length > 0 });
-    });
-});
-
-*/
-
-
-
-
-// ==========================================
-// CRUD Y CONSULTA PARA EL MÓDULO DE MATERIAS
-// ==========================================
-/*
-// 1. OBTENER MATERIAS (Filtradas por la cédula del asesor logueado)
-app.get('/api/materias', async(req, res) => {
-    try {
-        const connection = db.promise();
-
-        // Obtenemos la cédula del asesor desde la sesión activa
-        const cedulaAsesor = req.session && req.session.usuario ? (req.session.usuario.cedula || req.session.usuario.id) : null;
-
-        let queryMaterias = 'SELECT id, codigo, descripcion, numobj, minaprueba, cedula_asesor FROM materia';
-        let queryParams = [];
-
-        if (cedulaAsesor) {
-            queryMaterias += ' WHERE TRIM(cedula_asesor) = TRIM(?)';
-            queryParams.push(cedulaAsesor);
-        } else {
-            queryMaterias += ' WHERE cedula_asesor IS NULL OR cedula_asesor = ""';
-        }
-
-        queryMaterias += ' ORDER BY codigo ASC';
-
-        const [materias] = await connection.query(queryMaterias, queryParams);
-        const [objetivos] = await connection.query('SELECT materia_codigo, nro_objetivo, peso FROM objetivo_materia ORDER BY materia_codigo ASC, nro_objetivo ASC');
-        const [calificaciones] = await connection.query('SELECT cod_materia, peso_acumulado, calificacion_definitiva FROM calificaciones ORDER BY cod_materia ASC, peso_acumulado ASC');
-
-        const materiasFinal = materias.map(mat => {
-            return {
-                ...mat,
-                objetivos: objetivos.filter(obj => obj.materia_codigo === mat.codigo).map(o => ({ nro_objetivo: o.nro_objetivo, peso: o.peso })),
-                calificaciones: calificaciones.filter(cal => cal.cod_materia === mat.codigo).map(c => ({ peso_acumulado: c.peso_acumulado, calificacion: c.calificacion_definitiva }))
-            };
-        });
-
-        res.json({ success: true, data: materiasFinal });
-    } catch (err) {
-        console.error('Error al obtener materias:', err);
-        res.status(500).json({ success: false, message: 'Error en el servidor al consultar materias' });
-    }
-});
-
-// 2. VERIFICAR DUPLICADO DE MATERIA
-app.get('/api/materias/verificar', (req, res) => {
-    const { codigo } = req.query;
-    db.query('SELECT codigo FROM materia WHERE codigo = ?', [codigo], (err, results) => {
-        if (err) {
-            console.error('Error al verificar duplicado de materia:', err);
-            return res.status(500).json({ success: false, message: 'Error interno al verificar' });
-        }
-        res.json({ existe: results.length > 0 });
-    });
-});
-
-// 3. REGISTRAR NUEVA MATERIA (POST)
-app.post('/api/materias', async(req, res) => {
-    try {
-        const { codigo, descripcion, minaprueba, numobj } = req.body;
-        const cedulaAsesor = req.session && req.session.usuario ? req.session.usuario.cedula : null;
-
-        if (!codigo || !descripcion) {
-            return res.status(400).json({ success: false, message: 'El código y la descripción son obligatorios.' });
-        }
-
-        const connection = db.promise();
-        const [existente] = await connection.query('SELECT id FROM materia WHERE codigo = ?', [codigo]);
-
-        if (existente.length > 0) {
-            return res.status(400).json({ success: false, message: `La materia con código ${codigo} ya existe.` });
-        }
-
-        const queryInsert = `
-            INSERT INTO materia (codigo, descripcion, minaprueba, numobj, cedula_asesor) 
-            VALUES (?, ?, ?, ?, ?)
-        `;
-        const [result] = await connection.query(queryInsert, [
-            codigo,
-            descripcion,
-            minaprueba || 0,
-            numobj || 0,
-            cedulaAsesor
-        ]);
-
-        res.json({ success: true, message: 'Materia registrada exitosamente.', id: result.insertId });
-    } catch (err) {
-        console.error('Error al registrar materia:', err);
-        res.status(500).json({ success: false, message: 'Error en el servidor al registrar la materia.' });
-    }
-});
-*/
-// 4. ACTUALIZAR MATERIA EXISTENTE (PUT) - Desde materia.html
-/*
-app.put('/api/materias/:id', async(req, res) => {
-    try {
-        const { id } = req.params;
-        const { codigo, descripcion, minaprueba, numobj } = req.body;
-        const cedulaAsesor = req.session && req.session.usuario ? req.session.usuario.cedula : null;
-
-        if (!codigo || !descripcion) {
-            return res.status(400).json({ success: false, message: 'El código y la descripción son obligatorios.' });
-        }
-
-        const connection = db.promise();
-
-        // Verificar que la materia pertenezca al asesor o exista
-        const queryUpdate = `
-            UPDATE materia 
-            SET codigo = ?, descripcion = ?, minaprueba = ?, numobj = ? 
-            WHERE id = ?
-        `;
-        const [result] = await connection.query(queryUpdate, [
-            codigo,
-            descripcion,
-            minaprueba || 0,
-            numobj || 0,
-            id
-        ]);
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ success: false, message: 'Materia no encontrada.' });
-        }
-
-        res.json({ success: true, message: 'Materia actualizada correctamente.' });
-    } catch (err) {
-        console.error('Error al actualizar materia:', err);
-        res.status(500).json({ success: false, message: 'Error en el servidor al actualizar la materia.' });
-    }
-});
-*/
-/*
-app.put('/api/materias/:id', async(req, res) => {
-    try {
-        const { id } = req.params;
-        const { codigo, descripcion, minaprueba, numobj, cedula, objetivos, calificaciones } = req.body;
-
-        // Obtenemos la cédula del asesor desde el body o la sesión activa
-        const cedulaAsesor = cedula || (req.session && req.session.usuario ? req.session.usuario.cedula : null);
-
-        if (!codigo || !descripcion) {
-            return res.status(400).json({ success: false, message: 'El código y la descripción son obligatorios.' });
-        }
-
-        const connection = db.promise();
-
-        // Actualización incluyendo la cédula del asesor
-        const queryUpdate = `
-            UPDATE materia 
-            SET codigo = ?, descripcion = ?, minaprueba = ?, numobj = ?, cedula_asesor = ? 
-            WHERE id = ? OR codigo = ?
-        `;
-        const [result] = await connection.query(queryUpdate, [
-            codigo,
-            descripcion,
-            minaprueba || 0,
-            numobj || 0,
-            cedulaAsesor || null,
-            id,
-            id
-        ]);
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ success: false, message: 'Materia no encontrada.' });
-        }
-
-        // Sincronizar objetivos si vienen en la petición
-        if (Array.isArray(objetivos)) {
-            await connection.query('DELETE FROM objetivo_materia WHERE materia_codigo = ?', [codigo]);
-            for (let obj of objetivos) {
-                await connection.query(
-                    'INSERT INTO objetivo_materia (materia_codigo, nro_objetivo, peso) VALUES (?, ?, ?)', [codigo, obj.nro_objetivo, obj.peso]
-                );
-            }
-        }
-
-        // Sincronizar calificaciones si vienen en la petición
-        if (Array.isArray(calificaciones)) {
-            await connection.query('DELETE FROM calificaciones WHERE cod_materia = ?', [codigo]);
-            for (let cal of calificaciones) {
-                await connection.query(
-                    'INSERT INTO calificaciones (cod_materia, peso_acumulado, calificacion_definitiva) VALUES (?, ?, ?)', [codigo, cal.peso_acumulado, cal.calificacion]
-                );
-            }
-        }
-
-        res.json({ success: true, message: 'Materia actualizada correctamente.' });
-    } catch (err) {
-        console.error('Error al actualizar materia:', err);
-        res.status(500).json({ success: false, message: 'Error en el servidor al actualizar la materia.' });
-    }
-});
-*/
-
-/*********************************************************** */
-
-// EN EL POST /api/materias (Registro)
-/*
-app.post('/api/materias', async(req, res) => {
-    try {
-        const { codigo, descripcion, minaprueba, numobj, semestre, cedula, objetivos, calificaciones } = req.body;
-        const cedulaAsesor = cedula || (req.session && req.session.usuario ? req.session.usuario.cedula : null);
-
-        // ... validaciones previas ...
-
-        const connection = db.promise();
-
-        // Guardar la materia incluyendo el campo semestre
-        await connection.query(
-            'INSERT INTO materia (codigo, descripcion, numobj, minaprueba, semestre, cedula_asesor) VALUES (?, ?, ?, ?, ?, ?)', [codigo, descripcion, numobj, minaprueba, semestre || null, cedulaAsesor]
-        );
-
-        // ... inserción de objetivos, calificaciones y creación de tabla dinámica ...
-        res.json({ success: true, message: 'Asignatura registrada exitosamente.' });
-    } catch (err) {
-        console.error("Error al registrar asignatura:", err);
-        res.status(500).json({ success: false, message: 'Error interno del servidor.' });
-    }
-});
-*/
-
 app.post('/api/materias', async(req, res) => {
     try {
         const { codigo, descripcion, minaprueba, numobj, semestre, cedula, objetivos, calificaciones } = req.body;
@@ -949,120 +517,6 @@ app.get('/api/materias', async(req, res) => {
     }
 });
 
-/*
-// Endpoint para obtener las materias del asesor basadas en las tablas físicas de calificaciones y el semestre
-app.get('/api/materias-asesor', async(req, res) => {
-    try {
-        // Soporte amplio para capturar la cédula según cómo esté estructurada tu sesión
-        const cedulaAsesor = req.session && req.session.usuario ? (req.session.usuario.cedula || req.session.usuario.id) :
-            (req.session && req.session.cedula ? req.session.cedula : null);
-
-        const semestreFiltro = req.query.semestre;
-
-        if (!cedulaAsesor) {
-            return res.status(401).json({ success: false, message: 'No autenticado o cédula no encontrada en sesión.' });
-        }
-
-        if (!semestreFiltro) {
-            return res.status(400).json({ success: false, message: 'El semestre es requerido.' });
-        }
-
-        const connection = db.promise();
-        const patron = `calificaciones_%_${cedulaAsesor}_${semestreFiltro}`;
-        const [tables] = await connection.query(`SHOW TABLES LIKE ?`, [patron]);
-
-        const materiasEncontradas = [];
-
-        for (let row of tables) {
-            const nombreTabla = Object.values(row)[0];
-            const partes = nombreTabla.split('_');
-            if (partes.length >= 4) {
-                const codigoMateria = partes[1];
-
-                const [materiaInfo] = await connection.query(
-                    'SELECT descripcion, numobj, minaprueba FROM materia WHERE codigo = ?', [codigoMateria]
-                );
-
-                let descripcion = `Asignatura ${codigoMateria}`;
-                let numobj = 0;
-                let minaprueba = 0;
-
-                if (materiaInfo.length > 0) {
-                    descripcion = materiaInfo[0].descripcion;
-                    numobj = materiaInfo[0].numobj;
-                    minaprueba = materiaInfo[0].minaprueba;
-                }
-
-                materiasEncontradas.push({
-                    codigo: codigoMateria,
-                    descripcion: descripcion,
-                    numobj: numobj,
-                    minaprueba: minaprueba,
-                    cedula_asesor: cedulaAsesor,
-                    semestre: semestreFiltro
-                });
-            }
-        }
-
-        res.json({ success: true, data: materiasEncontradas });
-
-    } catch (err) {
-        console.error("Error al listar materias por tablas físicas:", err);
-        res.status(500).json({ success: false, message: 'Error interno del servidor.' });
-    }
-});
-*/
-/*
-// 5. ELIMINAR MATERIA (DELETE)
-app.delete('/api/materias/:id', async(req, res) => {
-    try {
-        const { id } = req.params;
-        const connection = db.promise();
-        const [result] = await connection.query('DELETE FROM materia WHERE id = ?', [id]);
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ success: false, message: 'Materia no encontrada.' });
-        }
-
-        res.json({ success: true, message: 'Materia eliminada correctamente.' });
-    } catch (err) {
-        console.error('Error al eliminar materia:', err);
-        res.status(500).json({ success: false, message: 'Error en el servidor al eliminar la materia.' });
-    }
-});
-
-app.delete('/api/materias/:id', async(req, res) => {
-    try {
-        const { id } = req.params;
-        const connection = db.promise();
-
-        // 1. Primero obtenemos el código de la materia (por si pasan el ID numérico o el código directamente)
-        let codigoMateria = id;
-        const [materiaRows] = await connection.query('SELECT codigo FROM materia WHERE id = ? OR codigo = ?', [id, id]);
-
-        if (materiaRows.length > 0) {
-            codigoMateria = materiaRows[0].codigo;
-        }
-
-        // 2. Eliminamos los registros dependientes para mantener la integridad de la base de datos
-        await connection.query('DELETE FROM objetivo_materia WHERE materia_codigo = ?', [codigoMateria]);
-        await connection.query('DELETE FROM calificaciones WHERE cod_materia = ?', [codigoMateria]);
-
-        // 3. Eliminamos la materia principal (buscando por id o por código)
-        const [result] = await connection.query('DELETE FROM materia WHERE id = ? OR codigo = ?', [id, id]);
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ success: false, message: 'Materia no encontrada.' });
-        }
-
-        res.json({ success: true, message: 'Materia y sus registros asociados eliminados correctamente.' });
-    } catch (err) {
-        console.error('Error al eliminar materia:', err);
-        res.status(500).json({ success: false, message: 'Error en el servidor al eliminar la materia.' });
-    }
-});
-
-*/
 
 app.delete('/api/materias/:id', async(req, res) => {
     try {
@@ -1118,88 +572,6 @@ app.delete('/api/materias/:id', async(req, res) => {
         res.status(500).json({ success: false, message: 'Error en el servidor al eliminar la materia.' });
     }
 });
-
-// Nuevo endpoint para listar asignaturas basándose estrictamente en las tablas físicas de calificaciones
-/*
-app.get('/api/materias-por-tablas', async(req, res) => {
-    try {
-        const cedulaAsesor = req.session && req.session.usuario ? (req.session.usuario.cedula || req.session.usuario.id) :
-            (req.session && req.session.cedula ? req.session.cedula : null);
-        const semestreFiltro = req.query.semestre;
-
-        if (!cedulaAsesor || !semestreFiltro) {
-            return res.status(400).json({ success: false, message: 'Faltan parámetros de sesión o semestre.' });
-        }
-
-        const connection = db.promise();
-
-        // Patrón estricto para buscar únicamente tablas con el formato: calificaciones_%_cedula_semestre
-        const patron = `calificaciones_%_${cedulaAsesor}_${semestreFiltro}`;
-        const [tables] = await connection.query(`SHOW TABLES LIKE ?`, [patron]);
-
-        const materiasEncontradas = [];
-        const codigosProcesados = new Set();
-
-        for (let row of tables) {
-            const nombreTabla = Object.values(row)[0];
-            const partes = nombreTabla.split('_');
-
-            // Validamos estrictamente el formato de 4 partes: [calificaciones, codigo, cedula, semestre]
-            if (partes.length >= 4 && partes[0] === 'calificaciones') {
-                const codigoMateria = partes[1];
-                const cedulaTabla = partes[2];
-                const semestreTabla = partes[3];
-
-                // Doble validación estricta de que la cédula y el semestre coincidan exactamente con la sesión y el formulario
-                if (cedulaTabla === String(cedulaAsesor) && semestreTabla === String(semestreFiltro)) {
-                    if (!codigosProcesados.has(codigoMateria)) {
-                        codigosProcesados.add(codigoMateria);
-
-                        // Consultar la descripción oficial en la tabla materia
-                        const [materiaInfo] = await connection.query(
-                            'SELECT descripcion, numobj, minaprueba FROM materia WHERE codigo = ?', [codigoMateria]
-                        );
-
-                        let descripcion = `Asignatura ${codigoMateria}`;
-                        let numobj = 5;
-                        let minaprueba = 9.5;
-
-                        if (materiaInfo.length > 0) {
-                            descripcion = materiaInfo[0].descripcion;
-                            numobj = materiaInfo[0].numobj || 5;
-                            minaprueba = materiaInfo[0].minaprueba || 9.5;
-                        }
-
-                        materiasEncontradas.push({
-                            codigo: codigoMateria,
-                            descripcion: descripcion,
-                            numobj: numobj,
-                            minaprueba: minaprueba,
-                            cedula_asesor: cedulaTabla,
-                            semestre: semestreTabla
-                        });
-                    }
-                }
-            }
-        }
-
-        // Ordenar las materias por código
-        materiasEncontradas.sort((a, b) => String(a.codigo).localeCompare(String(b.codigo), undefined, {
-            numeric: true,
-            sensitivity: 'base'
-        }));
-
-        res.json({ success: true, data: materiasEncontradas });
-
-    } catch (err) {
-        console.error("Error al buscar materias por tablas físicas:", err);
-        res.status(500).json({ success: false, message: 'Error interno del servidor.' });
-    }
-});
-
-*/
-
-
 
 
 // Endpoint para eliminar alumno
@@ -1291,175 +663,6 @@ app.get('/api/materias-por-tablas', async(req, res) => {
     }
 });
 
-/***alumnos para eliminar */
-/*
-// Endpoint para obtener la lista de alumnos ordenada para el combobox
-app.get('/api/alumnos', (req, res) => {
-    const query = 'SELECT id, cedula, nombre, codigo_carrera FROM alumno ORDER BY nombre ASC';
-    db.query(query, (err, results) => {
-        if (err) {
-            console.error('❌ Error al obtener alumnos:', err);
-            return res.status(500).json({ success: false, message: 'Error en el servidor al consultar alumnos.' });
-        }
-        res.json({ success: true, data: results });
-    });
-});
-
-
-
-// ACTUALIZAR ALUMNO EXISTENTE (PUT)
-app.put('/api/alumnos/:id', (req, res) => {
-    const { id } = req.params;
-    const { cedula, nombre, codigo_carrera, descripcion_carrera } = req.body;
-
-    if (!cedula || !cedula.trim() || !nombre || !nombre.trim() || !codigo_carrera || !codigo_carrera.trim()) {
-        return res.status(400).json({
-            success: false,
-            message: 'Todos los campos son obligatorios.'
-        });
-    }
-
-    const cedulaLimpia = cedula.trim();
-
-    db.query('SELECT id FROM alumno WHERE cedula = ? AND id != ?', [cedulaLimpia, id], (err, existente) => {
-        if (err) {
-            console.error('Error al verificar duplicado en UPDATE:', err);
-            return res.status(500).json({ success: false, message: 'Error interno del servidor.' });
-        }
-
-        if (existente.length > 0) {
-            return res.status(400).json({
-                success: false,
-                message: `La cédula ${cedulaLimpia} pertenece a otro alumno.`
-            });
-        }
-
-        const sqlUpdate = 'UPDATE alumno SET cedula = ?, nombre = ?, codigo_carrera = ?, descripcion_carrera = ? WHERE id = ?';
-        db.query(sqlUpdate, [cedulaLimpia, nombre.trim(), codigo_carrera.trim(), (descripcion_carrera || '').trim(), id], (err, result) => {
-            if (err) {
-                console.error('Error al actualizar alumno:', err);
-                return res.status(500).json({ success: false, message: 'Error al actualizar los datos en la base de datos.' });
-            }
-
-            if (result.affectedRows === 0) {
-                return res.status(404).json({ success: false, message: 'Alumno no encontrado.' });
-            }
-
-            res.json({
-                success: true,
-                message: 'Alumno actualizado correctamente.'
-            });
-        });
-    });
-});
-
-*/
-
-// ==========================================
-// MÓDULO DE ALUMNOS (API)
-// ==========================================
-
-// 1. Obtener todos los alumnos registrados
-/*
-app.get('/api/alumnos', async(req, res) => {
-    try {
-        const connection = db.promise();
-        const [rows] = await connection.query('SELECT * FROM alumno ORDER BY id DESC');
-        res.json({ success: true, data: rows });
-    } catch (err) {
-        console.error("Error al obtener alumnos:", err);
-        res.status(500).json({ success: false, message: 'Error interno del servidor al obtener alumnos.' });
-    }
-});
-
-// 2. Registrar un nuevo alumno
-app.post('/api/alumnos', async(req, res) => {
-    try {
-        const { cedula, nombre, codigo_carrera, descripcion_carrera } = req.body;
-
-        if (!cedula || !nombre || !codigo_carrera) {
-            return res.status(400).json({ success: false, message: 'Faltan campos obligatorios.' });
-        }
-
-        const connection = db.promise();
-
-        // Verificar si la cédula ya existe
-        const [existing] = await connection.query('SELECT id FROM alumnos WHERE cedula = ?', [cedula]);
-        if (existing.length > 0) {
-            return res.json({ success: false, message: 'La cédula ya se encuentra registrada.' });
-        }
-
-        const query = 'INSERT INTO alumno (cedula, nombre, codigo_carrera, descripcion_carrera) VALUES (?, ?, ?, ?)';
-        const [result] = await connection.query(query, [cedula, nombre, codigo_carrera, descripcion_carrera || '']);
-
-        res.json({ success: true, message: 'Alumno registrado correctamente.', id: result.insertId });
-    } catch (err) {
-        console.error("Error al registrar alumno:", err);
-        res.status(500).json({ success: false, message: 'Error interno del servidor al registrar alumno.' });
-    }
-});
-
-// 3. Actualizar un alumno existente
-app.put('/api/alumnos/:id', async(req, res) => {
-    try {
-        const { id } = req.params;
-        const { cedula, nombre, codigo_carrera, descripcion_carrera } = req.body;
-
-        if (!cedula || !nombre || !codigo_carrera) {
-            return res.status(400).json({ success: false, message: 'Faltan campos obligatorios.' });
-        }
-
-        const connection = db.promise();
-
-        // Verificar si la cédula ya pertenece a otro registro diferente
-        const [existing] = await connection.query('SELECT id FROM alumno WHERE cedula = ? AND id != ?', [cedula, id]);
-        if (existing.length > 0) {
-            return res.json({ success: false, message: 'La cédula ya está asignada a otro alumno.' });
-        }
-
-        const query = 'UPDATE alumno SET cedula = ?, nombre = ?, codigo_carrera = ?, descripcion_carrera = ? WHERE id = ?';
-        const [result] = await connection.query(query, [cedula, nombre, codigo_carrera, descripcion_carrera || '', id]);
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ success: false, message: 'Alumno no encontrado.' });
-        }
-
-        res.json({ success: true, message: 'Alumno actualizado correctamente.' });
-    } catch (err) {
-        console.error("Error al actualizar alumno:", err);
-        res.status(500).json({ success: false, message: 'Error interno del servidor al actualizar alumno.' });
-    }
-});
-
-// 4. Eliminar un alumno
-app.delete('/api/alumnos/:id', async(req, res) => {
-    try {
-        const { id } = req.params;
-        const connection = db.promise();
-
-        // Opcional: puedes validar aquí si el alumno tiene registros dependientes en otras tablas antes de borrar
-        const [result] = await connection.query('DELETE FROM alumno WHERE id = ?', [id]);
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ success: false, message: 'Alumno no encontrado.' });
-        }
-
-        res.json({ success: true, message: 'Alumno eliminado correctamente.' });
-    } catch (err) {
-        console.error("Error al eliminar alumno:", err);
-        // Manejo de error si hay restricciones de llave foránea (registros asociados)
-        if (err.code === 'ER_ROW_IS_REFERENCED_2' || err.errno === 1451) {
-            return res.json({
-                success: false,
-                errorCode: 'REGISTROS_ASOCIADOS',
-                message: 'El alumno tiene registros asociados.'
-            });
-        }
-        res.status(500).json({ success: false, message: 'Error interno del servidor al eliminar alumno.' });
-    }
-});
-
-*/
 
 // ==========================================
 // MÓDULO DE ALUMNOS (Tabla física: alumno)
@@ -1644,9 +847,23 @@ app.get('/asesoria', (req, res) => {
     res.sendFile(path.join(__dirname, 'views', 'asesoria.html'));
 });
 
+
 app.get('/api/control_asesoria', (req, res) => {
-    const query = 'SELECT * FROM control_asesoria ORDER BY id DESC';
-    db.query(query, (err, results) => {
+    // Validar que el usuario tenga sesión activa
+    if (!req.session || !req.session.usuario) {
+        return res.status(401).json({ success: false, message: 'No autorizado. Inicie sesión.' });
+    }
+
+    const cedulaAsesorSesion = req.session.usuario.cedula;
+
+    // Filtrar estrictamente por la cédula del asesor logueado
+    const query = `
+        SELECT * FROM control_asesoria 
+        WHERE TRIM(cedula_asesor) = TRIM(?) 
+        ORDER BY id DESC
+    `;
+
+    db.query(query, [cedulaAsesorSesion], (err, results) => {
         if (err) {
             console.error('Error al obtener asesorías:', err);
             return res.status(500).json({ success: false, error: err.message });
@@ -1654,6 +871,9 @@ app.get('/api/control_asesoria', (req, res) => {
         res.json({ success: true, data: results });
     });
 });
+
+
+
 app.post('/api/control_asesoria', (req, res) => {
     const {
         cedula_alumno,
@@ -1778,6 +998,50 @@ app.delete('/api/control_asesoria/:id', (req, res) => {
 });
 
 
+
+//Correcciones
+app.get('/api/control_correcciones', async(req, res) => {
+    if (!req.session || !req.session.usuario) {
+        return res.status(401).json({ success: false, message: 'No autorizado' });
+    }
+
+    const cedulaAsesorSesion = req.session.usuario.cedula;
+
+    try {
+        const query = `
+            SELECT 
+                cc.id,
+                cc.cedula_alumno,
+                cc.nombre_alumno,
+                cc.codigo_carrera,
+                cc.codigo_materia,
+                cc.cedula_asesor,
+                cc.nombre_asesor,
+                cc.fecha,
+                cc.semestre,
+                MAX(a.descripcion_carrera) AS descripcion_carrera,
+                COALESCE(t.codigo, cc.tipo_correccion, '') AS tipo_correccion,
+                COALESCE(t.descripcion, 'Sin clasificar') AS descripcion_tarea
+            FROM control_correcciones cc
+            LEFT JOIN alumno a ON TRIM(cc.codigo_carrera) COLLATE utf8mb4_general_ci = TRIM(a.codigo_carrera) COLLATE utf8mb4_general_ci
+            LEFT JOIN tarea t ON TRIM(cc.tipo_correccion) COLLATE utf8mb4_general_ci = TRIM(t.codigo) COLLATE utf8mb4_general_ci 
+                              OR TRIM(cc.tipo_correccion) COLLATE utf8mb4_general_ci = CAST(t.id AS CHAR) COLLATE utf8mb4_general_ci
+            WHERE TRIM(cc.cedula_asesor) = TRIM(?)
+            GROUP BY cc.id
+            ORDER BY cc.fecha DESC
+        `;
+
+        const [rows] = await db.promise().query(query, [cedulaAsesorSesion]);
+        res.json({ success: true, data: rows });
+    } catch (err) {
+        console.error('Error al obtener control_correcciones:', err);
+        res.status(500).json({ success: false, message: 'Error en el servidor al consultar los registros' });
+    }
+});
+
+
+
+/*
 app.get('/api/control_correcciones', async(req, res) => {
     try {
         const [rows] = await db.promise().query(`
@@ -1807,6 +1071,7 @@ app.get('/api/control_correcciones', async(req, res) => {
         res.status(500).json({ success: false, message: 'Error en el servidor al consultar los registros' });
     }
 });
+*/
 app.post('/api/control_correcciones', async(req, res) => {
     try {
         const {

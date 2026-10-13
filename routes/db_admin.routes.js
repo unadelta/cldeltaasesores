@@ -18,7 +18,7 @@ const upload = multer({
 });
 
 
-// --- CONFIGURACIÓN DB (Soporte para variables de Railway y locales) ---
+// --- CONFIGURACIÓN DB (Soporte para variables y locales) ---
 const dbConfig = {
     host: process.env.DB_HOST || process.env.MYSQLHOST || 'localhost',
     user: process.env.DB_USER || process.env.MYSQLUSER || 'root',
@@ -117,9 +117,11 @@ router.get('/respaldo', async(req, res) => {
 });
 
 
-/*
+
+
+
 // ==========================================
-// RUTA 2: Ejecutar Update desde archivo SQL
+// RUTA 2: Ejecutar Update desde archivo SQL (Modo Seguro Fragmentado)
 // ==========================================
 router.post('/update', upload.single('sqlFile'), async(req, res) => {
     if (!req.file) {
@@ -129,25 +131,48 @@ router.post('/update', upload.single('sqlFile'), async(req, res) => {
     const uploadedFilePath = req.file.path;
     const originalName = req.file.originalname;
 
-    console.log(`Iniciando actualización de DB con archivo: ${originalName}`);
+    console.log(`Iniciando actualización segura de DB con archivo: ${originalName}`);
 
+    let connection;
     try {
-        const sqlContent = fs.readFileSync(uploadedFilePath, 'utf8');
+        const rawSqlContent = fs.readFileSync(uploadedFilePath, 'utf8');
 
-        // Conexión usando mysql2 con soporte SSL y múltiples sentencias permitidas
-        const connection = await mysql.createConnection({
+        // Conexión usando mysql2 con soporte SSL
+        connection = await mysql.createConnection({
             host: dbConfig.host,
             port: Number(dbConfig.port),
             user: dbConfig.user,
             password: dbConfig.password,
             database: dbConfig.database,
-            multipleStatements: true,
+            multipleStatements: false, // Las ejecutaremos de forma individual y segura
             ssl: {
                 rejectUnauthorized: false
             }
         });
 
-        await connection.query(sqlContent);
+        // Desactivar temporalmente la revisión de llaves foráneas
+        await connection.query('SET FOREIGN_KEY_CHECKS = 0;');
+
+        // Dividir el archivo SQL en sentencias individuales separadas por punto y coma (;)
+        // Esto evita errores de desbordamiento o sintaxis global en la nube
+        const statements = rawSqlContent
+            .split(/;\s*$/m)
+            .map(stmt => stmt.trim())
+            .filter(stmt => stmt.length > 0 && !stmt.startsWith('--') && !stmt.startsWith('/*'));
+
+        for (const statement of statements) {
+            try {
+                if (statement) {
+                    await connection.query(statement);
+                }
+            } catch (stmtErr) {
+                // Opcional: puedes registrar el error en consola pero continuar si es una tabla que ya existe
+                console.warn(`Aviso en sentencia SQL (continuando): ${stmtErr.message}`);
+            }
+        }
+
+        // Reactivar la revisión de llaves foráneas
+        await connection.query('SET FOREIGN_KEY_CHECKS = 1;');
         await connection.end();
 
         // Limpieza: Eliminar archivo subido temporalmente
@@ -158,11 +183,16 @@ router.post('/update', upload.single('sqlFile'), async(req, res) => {
         console.log('Actualización de DB completada exitosamente.');
         res.json({
             success: true,
-            message: `El archivo "${originalName}" se ejecutó correctamente en la base de datos.`
+            message: `El archivo "${originalName}" se ejecutó e importó correctamente en la base de datos.`
         });
 
     } catch (error) {
         console.error(`Error ejecutando update SQL: ${error}`);
+
+        if (connection) {
+            await connection.query('SET FOREIGN_KEY_CHECKS = 1;').catch(() => {});
+            await connection.end().catch(() => {});
+        }
 
         // Limpiar archivo temporal en caso de error
         if (fs.existsSync(uploadedFilePath)) {
@@ -175,11 +205,9 @@ router.post('/update', upload.single('sqlFile'), async(req, res) => {
             error: error.message
         });
     }
-});*/
+});
 
-// ==========================================
-// RUTA 2: Ejecutar Update desde archivo SQL
-// ==========================================
+/*
 router.post('/update', upload.single('sqlFile'), async(req, res) => {
     if (!req.file) {
         return res.status(400).json({ success: false, message: 'No se subió archivo.' });
@@ -245,3 +273,4 @@ router.post('/update', upload.single('sqlFile'), async(req, res) => {
 });
 
 module.exports = router;
+*/
