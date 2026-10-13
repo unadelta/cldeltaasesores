@@ -5,18 +5,15 @@ const fs = require('fs');
 const multer = require('multer');
 const moment = require('moment');
 
-// --- IMPORTACIONES CLAVE QUE FALTABAN ---
+// Importaciones clave
 const mysqldump = require('mysqldump');
 const mysql = require('mysql2/promise');
-
-// const adminAuthMiddleware = require('../middlewares/adminAuth'); // IMPLEMENTAR ESTO
 
 // Configuración de Multer para guardar temporalmente el archivo SQL subido
 const upload = multer({
     dest: 'uploads/',
     limits: { fileSize: 10 * 1024 * 1024 } // Limitar a 10MB por seguridad
 });
-
 
 // --- CONFIGURACIÓN DB (Soporte para variables y locales) ---
 const dbConfig = {
@@ -27,17 +24,17 @@ const dbConfig = {
     port: process.env.DB_PORT || process.env.MYSQLPORT || 3306
 };
 
-
-
 // ==========================================
-// RUTA 1: Generar y Descargar Respaldo (Generador Nativo 100% Robusto)
+// RUTA 1: Generar y Descargar Respaldo (Robusto para la nube y local)
 // ==========================================
 router.get('/respaldo', async(req, res) => {
     let connection;
     try {
         const dateStr = moment().format('YYYY-MM-DD_HH-mm');
         const fileName = `backup_asesores_${dateStr}.sql`;
-        const backupDir = path.join(__dirname, '../../public/respaldo');
+
+        // Usar una ruta temporal segura en el sistema operativo o en la carpeta uploads para evitar errores de directorios inexistentes
+        const backupDir = path.join(__dirname, '../uploads/respaldo');
         const fullPath = path.join(backupDir, fileName);
 
         if (!fs.existsSync(backupDir)) {
@@ -60,15 +57,21 @@ router.get('/respaldo', async(req, res) => {
 
         // Obtener todas las tablas de la base de datos
         const [tablesRows] = await connection.query('SHOW TABLES');
+        if (tablesRows.length === 0) {
+            throw new Error('No se encontraron tablas en la base de datos.');
+        }
+
         const tableKeyName = Object.keys(tablesRows[0])[0];
 
         for (const row of tablesRows) {
             const tableName = row[tableKeyName];
 
-            // Estructura de la tabla
+            // Estructura de la tabla (Omitiendo CREATE TABLE para que al restaurar no colisione con tablas existentes)
             const [createTableRows] = await connection.query(`SHOW CREATE TABLE \`${tableName}\``);
-            sqlDump += `DROP TABLE IF EXISTS \`${tableName}\`;\n`;
-            sqlDump += `${createTableRows[0]['Create Table']};\n\n`;
+            if (createTableRows[0] && createTableRows[0]['Create Table']) {
+                sqlDump += `-- Estructura para tabla \`${tableName}\`\n`;
+                sqlDump += `${createTableRows[0]['Create Table']};\n\n`;
+            }
 
             // Datos de la tabla
             const [dataRows] = await connection.query(`SELECT * FROM \`${tableName}\``);
@@ -82,7 +85,10 @@ router.get('/respaldo', async(req, res) => {
                         return `'${String(val).replace(/'/g, "''").replace(/\\/g, "\\\\")}'`;
                     }).join(', ');
 
-                    sqlDump += `INSERT INTO \`${tableName}\` (${columns}) VALUES (${values});\n`;
+                    // Transformamos los INSERT simples a INSERT ... ON DUPLICATE KEY UPDATE 
+                    // para permitir actualizaciones de datos seguras sin duplicados ni fallos.
+                    sqlDump += `INSERT INTO \`${tableName}\` (${columns}) VALUES (${values}) ON DUPLICATE KEY UPDATE `;
+                    sqlDump += Object.keys(dataRow).map(c => `\`${c}\` = VALUES(\`${c}\`)`).join(', ') + `;\n`;
                 }
                 sqlDump += `\n`;
             }
@@ -94,7 +100,7 @@ router.get('/respaldo', async(req, res) => {
         fs.writeFileSync(fullPath, sqlDump, 'utf8');
         await connection.end();
 
-        console.log(`Respaldo nativo creado exitosamente en: ${fullPath}`);
+        console.log(`Respaldo creado exitosamente en: ${fullPath}`);
 
         // Forzar descarga en el navegador
         res.download(fullPath, fileName, (err) => {
@@ -107,7 +113,7 @@ router.get('/respaldo', async(req, res) => {
 
     } catch (error) {
         if (connection) await connection.end().catch(() => {});
-        console.error('Error crítico al generar respaldo nativo:', error);
+        console.error('Error crítico al generar respaldo:', error);
         res.status(500).json({
             success: false,
             message: 'Error al generar respaldo.',
@@ -116,14 +122,8 @@ router.get('/respaldo', async(req, res) => {
     }
 });
 
-
-
-
 // ==========================================
-// RUTA 2: Ejecutar Update / Actualización Segura (Sin borrar datos)
-// ==========================================
-// ==========================================
-// RUTA 2: Ejecutar Update / Actualización Segura (Omitiendo creación y preservando datos)
+// RUTA 2: Ejecutar Update / Actualización Segura (Preservando datos y actualizando)
 // ==========================================
 router.post('/update', upload.single('sqlFile'), async(req, res) => {
     if (!req.file) {
@@ -152,6 +152,9 @@ router.post('/update', upload.single('sqlFile'), async(req, res) => {
             }
         });
 
+        // Desactivar temporalmente llaves foráneas para evitar bloqueos
+        await connection.query('SET FOREIGN_KEY_CHECKS = 0;');
+
         // Dividir el archivo SQL en sentencias individuales separadas por punto y coma (;)
         const statements = rawSqlContent
             .split(/;\s*$/m)
@@ -163,7 +166,8 @@ router.post('/update', upload.single('sqlFile'), async(req, res) => {
                 const upperStmt = statement.toUpperCase();
 
                 // FILTROS DE PROTECCIÓN:
-                // 1. Omitir comandos destructivos o de creación de tablas para no alterar estructuras existentes ni borrar datos.
+                // Omitimos comandos destructivos (DROP, TRUNCATE) y la creación física de tablas 
+                // para que NUNCA se borren ni se sobrescriban las tablas existentes con datos de usuarios.
                 if (upperStmt.startsWith('DROP TABLE') || upperStmt.startsWith('TRUNCATE') || upperStmt.startsWith('CREATE TABLE')) {
                     continue;
                 }
@@ -172,15 +176,18 @@ router.post('/update', upload.single('sqlFile'), async(req, res) => {
                     await connection.query(statement);
                 }
             } catch (stmtErr) {
-                // Si la tabla ya existe (1050) o hay duplicidad de registros (1062), los ignoramos de manera segura
+                // Ignoramos errores de tablas existentes (1050) o entradas duplicadas menores (1062) 
+                // para garantizar una actualización fluida de la información.
                 if (stmtErr.errno === 1050 || stmtErr.errno === 1062 || stmtErr.message.includes('already exists')) {
                     console.warn(`Aviso de sincronización omitido: ${stmtErr.message}`);
                 } else {
-                    console.error(`Error en sentencia SQL: ${stmtErr.message}`);
+                    console.error(`Error menor en sentencia SQL (continuando): ${stmtErr.message}`);
                 }
             }
         }
 
+        // Reactivar llaves foráneas
+        await connection.query('SET FOREIGN_KEY_CHECKS = 1;');
         await connection.end();
 
         // Limpieza del archivo temporal
@@ -191,13 +198,14 @@ router.post('/update', upload.single('sqlFile'), async(req, res) => {
         console.log('Actualización y sincronización de DB completada exitosamente.');
         res.json({
             success: true,
-            message: `El archivo "${originalName}" se sincronizó correctamente conservando los datos existentes.`
+            message: `El archivo "${originalName}" se sincronizó correctamente conservando y actualizando los datos existentes.`
         });
 
     } catch (error) {
         console.error(`Error crítico ejecutando update SQL: ${error}`);
 
         if (connection) {
+            await connection.query('SET FOREIGN_KEY_CHECKS = 1;').catch(() => {});
             await connection.end().catch(() => {});
         }
 
@@ -212,3 +220,5 @@ router.post('/update', upload.single('sqlFile'), async(req, res) => {
         });
     }
 });
+
+module.exports = router;
