@@ -26,6 +26,8 @@ if (process.env.NODE_ENV !== 'production') {
     require('dotenv').config();
 }
 
+/*
+
 // --- CONFIGURACIÓN DUAL INTELIGENTE ---
 const modoLocal = process.env.NODE_ENV !== 'production';
 
@@ -51,9 +53,29 @@ if (!modoLocal) {
 const pool = mysql.createPool(poolConfig);
 const db = pool;
 
+*/
 
+// --- CONFIGURACIÓN DUAL INTELIGENTE ---
+const modoLocal = process.env.NODE_ENV !== 'production';
 
+const poolConfig = {
+    host: modoLocal ? process.env.DB_HOST : process.env.MYSQLHOST,
+    user: modoLocal ? process.env.DB_USER : process.env.MYSQLUSER,
+    password: modoLocal ? process.env.DB_PASSWORD : process.env.MYSQLPASSWORD,
+    database: modoLocal ? process.env.DB_NAME : process.env.MYSQLDATABASE,
+    port: modoLocal ? (process.env.DB_PORT || 3306) : (process.env.MYSQLPORT || 4000),
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+    connectTimeout: 10000,
+    // SSL obligatorio y seguro para TiDB Cloud tanto en producción como si se fuerza conexión remota
+    ssl: {
+        rejectUnauthorized: false
+    }
+};
 
+const pool = mysql.createPool(poolConfig);
+const db = pool;
 // Prueba explícita de conexión al arrancar el servidor
 pool.getConnection((err, connection) => {
     if (err) {
@@ -73,6 +95,10 @@ pool.getConnection((err, connection) => {
         connection.release();
     }
 });
+
+
+
+
 
 
 // Ruta de ping para mantener activa la base de datos y evitar el spin-down en Render
