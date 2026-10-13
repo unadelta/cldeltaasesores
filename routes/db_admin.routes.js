@@ -122,6 +122,9 @@ router.get('/respaldo', async(req, res) => {
 // ==========================================
 // RUTA 2: Ejecutar Update / Actualización Segura (Sin borrar datos)
 // ==========================================
+// ==========================================
+// RUTA 2: Ejecutar Update / Actualización Segura (Omitiendo creación y preservando datos)
+// ==========================================
 router.post('/update', upload.single('sqlFile'), async(req, res) => {
     if (!req.file) {
         return res.status(400).json({ success: false, message: 'No se subió archivo.' });
@@ -130,7 +133,7 @@ router.post('/update', upload.single('sqlFile'), async(req, res) => {
     const uploadedFilePath = req.file.path;
     const originalName = req.file.originalname;
 
-    console.log(`Iniciando actualización y sincronización de DB con archivo: ${originalName}`);
+    console.log(`Iniciando actualización y sincronización segura de DB con archivo: ${originalName}`);
 
     let connection;
     try {
@@ -159,32 +162,21 @@ router.post('/update', upload.single('sqlFile'), async(req, res) => {
             try {
                 const upperStmt = statement.toUpperCase();
 
-                // FILTRO DE PROTECCIÓN: Omitir comandos destructivos para no borrar datos existentes
-                if (upperStmt.startsWith('DROP TABLE') || upperStmt.startsWith('TRUNCATE')) {
-                    console.log(`Comando destructivo omitido por seguridad: ${statement.substring(0, 40)}...`);
+                // FILTROS DE PROTECCIÓN:
+                // 1. Omitir comandos destructivos o de creación de tablas para no alterar estructuras existentes ni borrar datos.
+                if (upperStmt.startsWith('DROP TABLE') || upperStmt.startsWith('TRUNCATE') || upperStmt.startsWith('CREATE TABLE')) {
                     continue;
                 }
 
-                // Si es un INSERT tradicional, transformarlo automáticamente a INSERT ... ON DUPLICATE KEY UPDATE
-                // para que actualice los registros si ya existen en lugar de dar error o duplicar.
-                let finalStatement = statement;
-                if (upperStmt.startsWith('INSERT INTO')) {
-                    // Evitamos duplicados convirtiendo INSERT simple en actualización automática ante conflictos de llave única/primaria
-                    if (!upperStmt.includes('ON DUPLICATE KEY UPDATE')) {
-                        // Opcional: añade una cláusula genérica de actualización o déjalo pasar si la tabla tiene clave primaria
-                    }
-                }
-
-                if (finalStatement) {
-                    await connection.query(finalStatement);
+                if (statement) {
+                    await connection.query(statement);
                 }
             } catch (stmtErr) {
-                // Si la tabla ya existe o hay un conflicto menor de duplicado, se ignora de manera segura para preservar los datos
+                // Si la tabla ya existe (1050) o hay duplicidad de registros (1062), los ignoramos de manera segura
                 if (stmtErr.errno === 1050 || stmtErr.errno === 1062 || stmtErr.message.includes('already exists')) {
-                    console.warn(`Aviso de sincronización (omitido/actualizado): ${stmtErr.message}`);
+                    console.warn(`Aviso de sincronización omitido: ${stmtErr.message}`);
                 } else {
                     console.error(`Error en sentencia SQL: ${stmtErr.message}`);
-                    // Puedes decidir si lanzar el error o dejarlo continuar. Para actualización segura, permitimos continuar.
                 }
             }
         }
