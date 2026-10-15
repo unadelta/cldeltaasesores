@@ -3,155 +3,101 @@ const mysql = require('mysql2');
 require('dotenv').config();
 const path = require('path');
 const fs = require('fs');
-const app = express();
+const cors = require('cors');
 const session = require('express-session');
 
-//Respaldo BD
-const cors = require('cors');
-require('dotenv').config(); // Muy importante para las credenciales
-//Respaldobd
+const app = express();
 
-
-// --- IMPORTANTE: Middlewares globales ---
+// ==========================================
+// 1. MIDDLEWARES GLOBALES Y SESIÓN (¡DEBEN IR PRIMERO!)
+// ==========================================
 app.use(cors());
-app.use(express.json()); // Necesario para recibir JSON del frontend
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+// Configurar la carpeta 'views' como estática para que sirva HTML, CSS, JS e imágenes directamente
 
-// --- Importar las rutas de administración de DB ---
-// Asumiendo que creaste el archivo en ./routes/db_admin.routes.js
-const dbAdminRoutes = require('./routes/db_admin.routes');
+app.use(express.static(path.join(__dirname)));
+app.use(express.static(path.join(__dirname, 'views')));
+app.use(express.static(path.join(__dirname, 'img'))); // O el nombre real de tu carpeta de imágenes
+// Permite que Express sirva todo lo que esté dentro de la carpeta 'public' (incluyendo la carpeta 'jpg' e imágenes)
+app.use(express.static(path.join(__dirname, 'public')));
 
-//Repaldo BD
+app.use(session({
+    secret: 'asesores_una_clave_secreta_2026',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { secure: false } // false para entorno local HTTP en XAMPP
+}));
 
-if (process.env.NODE_ENV !== 'production') {
-    require('dotenv').config();
-}
 
-/*
+// ==========================================
+// 2. CONFIGURACIÓN DE CONEXIÓN DUAL INTELIGENTE
+// ==========================================
+// ==========================================
+// 2. CONFIGURACIÓN DE CONEXIÓN DUAL BLINDADA
+// ==========================================
+const isProduction = process.env.NODE_ENV === 'production';
 
-// --- CONFIGURACIÓN DUAL INTELIGENTE ---
-const modoLocal = process.env.NODE_ENV !== 'production';
-
-const poolConfig = {
-    host: modoLocal ? process.env.DB_HOST : process.env.MYSQLHOST,
-    user: modoLocal ? process.env.DB_USER : process.env.MYSQLUSER,
-    password: modoLocal ? process.env.DB_PASSWORD : process.env.MYSQLPASSWORD,
-    database: modoLocal ? process.env.DB_NAME : process.env.MYSQLDATABASE,
-    port: modoLocal ? (process.env.DB_PORT || 3306) : (process.env.MYSQLPORT || 4000),
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0,
-    connectTimeout: 10000
-};
-
-// Si estamos en modo producción (nube), agregamos el SSL obligatorio de TiDB Cloud
-if (!modoLocal) {
-    poolConfig.ssl = {
-        rejectUnauthorized: false
-    };
-}
-
-const pool = mysql.createPool(poolConfig);
-const db = pool;
-
-*/
-/*
-// --- CONFIGURACIÓN DUAL INTELIGENTE ---
-const modoLocal = process.env.NODE_ENV !== 'production';
+// REGLA ABSOLUTA: Si no estamos en producción, se ignoran las credenciales de la nube 
+// y se usan estrictamente los parámetros locales de XAMPP.
+const dbHost = isProduction ? process.env.MYSQLHOST : 'localhost';
+const dbUser = isProduction ? process.env.MYSQLUSER : (process.env.DB_USER || 'root');
+const dbPassword = isProduction ? process.env.MYSQLPASSWORD : (process.env.DB_PASSWORD !== undefined ? process.env.DB_PASSWORD : '');
+const dbName = isProduction ? (process.env.MYSQLDATABASE || 'asesores') : (process.env.DB_NAME || 'asesores');
+const dbPort = Number(isProduction ? (process.env.MYSQLPORT || 4000) : 3306);
 
 const poolConfig = {
-    host: modoLocal ? process.env.DB_HOST : process.env.MYSQLHOST,
-    user: modoLocal ? process.env.DB_USER : process.env.MYSQLUSER,
-    password: modoLocal ? process.env.DB_PASSWORD : process.env.MYSQLPASSWORD,
-    database: modoLocal ? process.env.DB_NAME : process.env.MYSQLDATABASE,
-    port: modoLocal ? (process.env.DB_PORT || 3306) : (process.env.MYSQLPORT || 4000),
+    host: dbHost,
+    user: dbUser,
+    password: dbPassword,
+    database: dbName,
+    port: dbPort,
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
     connectTimeout: 10000,
-    // SSL obligatorio y seguro para TiDB Cloud tanto en producción como si se fuerza conexión remota
-    ssl: {
-        rejectUnauthorized: false
-    }
+    // El SSL solo se activa si estamos verdaderamente en producción (TiDB Cloud)
+    ...(isProduction && {
+        ssl: {
+            rejectUnauthorized: false
+        }
+    })
 };
 
+// Creamos el pool estándar compatible con callbacks y promesas
 const pool = mysql.createPool(poolConfig);
-const db = pool;
-*/
 
-
-
-// --- CONFIGURACIÓN DE CONEXIÓN UNIFICADA ---
-const poolConfig = {
-    host: process.env.DB_HOST || process.env.MYSQLHOST,
-    user: process.env.DB_USER || process.env.MYSQLUSER,
-    password: process.env.DB_PASSWORD || process.env.MYSQLPASSWORD,
-    database: process.env.DB_NAME || process.env.MYSQLDATABASE,
-    port: Number(process.env.DB_PORT || process.env.MYSQLPORT || 4000),
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0,
-    connectTimeout: 10000,
-    ssl: {
-        rejectUnauthorized: false
-    }
+const db = {
+    query: (...args) => pool.query(...args),
+    execute: (...args) => pool.execute(...args),
+    getConnection: (cb) => pool.getConnection(cb),
+    promise: () => pool.promise()
 };
 
-const pool = mysql.createPool(poolConfig);
-const db = pool;
-// Prueba explícita de conexión al arrancar el servidor
+// Prueba de conexión al arrancar
 pool.getConnection((err, connection) => {
     if (err) {
-        console.error('❌ ERROR: No se pudo conectar a la base de datos d:', err.message);
-        if (err.code === 'PROTOCOL_CONNECTION_LOST') {
-            console.error('La conexión con la base de datos fue cerrada.');
-        }
-        if (err.code === 'ER_CON_COUNT_ERROR') {
-            console.error('La base de datos tiene demasiadas conexiones.');
-        }
-        if (err.code === 'ECONNREFUSED') {
-            console.error('La conexión fue rechazada. Revisa el host y el puerto.');
+        console.error('❌ ERROR de conexión a la base de datos:', err.message);
+        if (!isProduction && (err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT')) {
+            console.error('💡 Consejo: Asegúrate de tener encendido MySQL en el panel de control de XAMPP.');
         }
     } else {
-        console.log('✅ ¡ÉXITO! Conexión exitosa a la base de datos MySQL .');
-        // Es muy importante liberar la conexión de vuelta al pool
+        if (isProduction) {
+            console.log(`✅ [PRODUCCIÓN] Conectado exitosamente a TiDB Cloud ☁️ [Host: ${dbHost}]`);
+        } else {
+            console.log(`✅ [DESARROLLO LOCAL] Conectado exitosamente a XAMPP 🏠 [Host: localhost:3306]`);
+        }
         connection.release();
     }
 });
 
+module.exports = db;
+// Importar rutas secundarias si las usas
+const dbAdminRoutes = require('./routes/db_admin.routes');
+app.use('/api/db', dbAdminRoutes);
 
 
 
-
-
-// Ruta de ping para mantener activa la base de datos y evitar el spin-down en Render
-app.get('/api/ping-db', async(req, res) => {
-    try {
-        // Usamos .promise() para asegurar la compatibilidad con async/await
-        await db.promise().query('SELECT 1');
-        res.status(200).send('TiDB Connection Active');
-    } catch (error) {
-        console.error('Error al hacer ping a TiDB:', error);
-        res.status(500).send('Database connection error');
-    }
-});
-
-// Configuración de Middlewares
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
-app.use('/views', express.static(path.join(__dirname, 'views')));
-
-// Configuración de la Sesión
-app.use(session({
-    secret: 'clave_secreta_asesorias_una',
-    resave: true,
-    saveUninitialized: true,
-    cookie: {
-        secure: false,
-        httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000 // 1 día
-    }
-}));
 
 
 // ==========================================
@@ -170,7 +116,7 @@ app.get('/', (req, res) => {
 // ==========================================
 // RUTA DE AUTENTICACIÓN (LOGIN)
 // ==========================================
-
+/*
 app.post('/api/login', (req, res) => {
     const { usuario, clave } = req.body;
 
@@ -203,6 +149,55 @@ app.post('/api/login', (req, res) => {
         }
     });
 });
+*/
+// ==========================================
+// RUTA DE AUTENTICACIÓN (LOGIN)
+// ==========================================
+
+app.post('/api/login', (req, res) => {
+    const { usuario, clave } = req.body;
+
+    if (!usuario || !clave) {
+        return res.status(400).json({ success: false, message: 'Por favor, ingrese usuario y contraseña.' });
+    }
+
+    const sql = 'SELECT * FROM asesor WHERE usuario = ? AND clave = ?';
+    db.query(sql, [usuario, clave], (err, results) => {
+        if (err) {
+            console.error('Error en el servidor al intentar iniciar sesión:', err);
+            return res.status(500).json({ success: false, message: 'Error interno en el servidor.' });
+        }
+
+        if (results.length > 0) {
+            const asesor = results[0];
+            // Guardar datos en la sesión
+            req.session.usuario = {
+                id: asesor.id,
+                cedula: asesor.cedula,
+                usuario: asesor.usuario,
+                nombre: asesor.nombre,
+                email: asesor.email,
+                rol_id: asesor.rol_id
+            };
+
+            // Forzamos el guardado de la sesión antes de responder con éxito y la ruta de redirección
+            req.session.save((saveErr) => {
+                if (saveErr) {
+                    console.error('Error al guardar la sesión:', saveErr);
+                }
+                res.json({
+                    success: true,
+                    message: 'Autenticación exitosa',
+                    redirectUrl: '/dashboard'
+                });
+            });
+
+        } else {
+            res.status(401).json({ success: false, message: 'Usuario o contraseña incorrectos.' });
+        }
+    });
+});
+
 
 // Endpoint para verificar sesión activa (compatible con /api/user-session y /api/sesion-usuario)
 app.get('/api/user-session', (req, res) => {
@@ -401,7 +396,7 @@ app.get('/materia', (req, res) => {
     res.sendFile(path.join(__dirname, 'views', 'materia.html'));
 });
 
-
+/*
 app.post('/api/materias', async(req, res) => {
     try {
         const { codigo, descripcion, minaprueba, numobj, semestre, cedula, objetivos, calificaciones } = req.body;
@@ -498,9 +493,103 @@ app.post('/api/materias', async(req, res) => {
     }
 });
 
+*/
 
+app.post('/api/materias', async(req, res) => {
+    try {
+        const { codigo, descripcion, minaprueba, numobj, semestre, cedula, objetivos, calificaciones } = req.body;
 
+        const cedulaAsesor = cedula || (req.session && req.session.usuario ? req.session.usuario.cedula : null);
 
+        if (!cedulaAsesor) {
+            return res.status(401).json({ success: false, message: 'No se pudo identificar la cédula del asesor en la sesión.' });
+        }
+
+        if (!semestre) {
+            return res.status(400).json({ success: false, message: 'El semestre es requerido.' });
+        }
+
+        if (!codigo || !descripcion || !numobj || !minaprueba) {
+            return res.status(400).json({ success: false, message: 'Faltan campos obligatorios básicos.' });
+        }
+
+        const connection = db.promise();
+
+        // 1. Verificar si la materia ya existe
+        const [materiasExistentes] = await connection.query(
+            'SELECT codigo FROM materia WHERE codigo = ?', [codigo]
+        );
+
+        if (materiasExistentes.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: `El código de asignatura '${codigo}' ya se encuentra registrado en el sistema.`
+            });
+        }
+
+        // 2. Insertar en la tabla principal materia (incluyendo semestre y cedula_asesor)
+        await connection.query(
+            'INSERT INTO materia (codigo, descripcion, numobj, minaprueba, semestre, cedula_asesor) VALUES (?, ?, ?, ?, ?, ?)', [codigo, descripcion, numobj, minaprueba, semestre, cedulaAsesor]
+        );
+
+        // 3. Insertar los pesos de cada objetivo en la tabla objetivo_materia
+        if (Array.isArray(objetivos) && objetivos.length > 0) {
+            for (let obj of objetivos) {
+                await connection.query(
+                    'INSERT INTO objetivo_materia (materia_codigo, nro_objetivo, peso) VALUES (?, ?, ?)', [codigo, obj.nro_objetivo, obj.peso]
+                );
+            }
+        }
+
+        // 4. Insertar la escala de calificaciones en la tabla calificaciones estática
+        if (Array.isArray(calificaciones) && calificaciones.length > 0) {
+            for (let cal of calificaciones) {
+                await connection.query(
+                    'INSERT INTO calificaciones (cod_materia, peso_acumulado, calificacion_definitiva, cedula_asesor, semestre) VALUES (?, ?, ?, ?, ?)', [codigo, cal.peso_acumulado, cal.calificacion, cedulaAsesor, semestre]
+                );
+            }
+        }
+
+        // 5. Crear dinámicamente la tabla física: calificaciones_codigo_cedula_semestre
+        const codigoClean = codigo.replace(/[^a-zA-Z0-9_]/g, '_');
+        const cedulaClean = String(cedulaAsesor).replace(/[^a-zA-Z0-9_]/g, '_');
+        const semestreClean = semestre.replace(/[^a-zA-Z0-9_]/g, '_');
+
+        const nombreTablaCalificaciones = `calificaciones_${codigoClean}_${cedulaClean}_${semestreClean}`;
+
+        // Generar dinámicamente las columnas de los objetivos (ej. obj1, obj2, obj3...)
+        let columnasObjetivosDinamicas = '';
+        for (let i = 1; i <= parseInt(numobj); i++) {
+            columnasObjetivosDinamicas += `\`obj${i}\` DECIMAL(5,2) DEFAULT 0.00,\n`;
+        }
+
+        const queryCrearTabla = `
+            CREATE TABLE IF NOT EXISTS \`${nombreTablaCalificaciones}\` (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                cedula_estudiante VARCHAR(20) NOT NULL,
+                nombre_alumno VARCHAR(150) DEFAULT '',
+                ${columnasObjetivosDinamicas}
+                nota_final DECIMAL(5,2) DEFAULT 0.00,
+                nota_final_letra VARCHAR(10) DEFAULT '',
+                cedula_asesor VARCHAR(20) DEFAULT NULL,
+                semestre VARCHAR(20) DEFAULT NULL,
+                fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY unique_estudiante (cedula_estudiante)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        `;
+
+        await connection.query(queryCrearTabla);
+
+        res.json({
+            success: true,
+            message: 'Asignatura registrada, objetivos guardados y tabla de calificaciones creada exitosamente.'
+        });
+
+    } catch (err) {
+        console.error("Error al registrar asignatura y crear tabla:", err);
+        res.status(500).json({ success: false, message: 'Error interno del servidor.' });
+    }
+});
 
 // EN EL PUT /api/materias/:id (Edición)
 app.put('/api/materias/:id', async(req, res) => {
@@ -2228,6 +2317,8 @@ app.get('/api/asesorcarrera', (req, res) => {
         res.json({ success: true, data: results });
     });
 });
+
+/*
 // 2. CREAR UN NUEVO REGISTRO EN ASESOR_CARRERA
 app.post('/api/asesorcarrera', (req, res) => {
     const { asesor_cedula, carrera, asignatura, cantidad_alumno, semestre } = req.body;
@@ -2282,9 +2373,32 @@ app.post('/api/asesorcarrera', (req, res) => {
     });
 });
 
+*/
 
+app.post('/api/asesorcarrera', (req, res) => {
+    const { asesor_cedula, carrera, asignatura, cantidad_alumno, semestre } = req.body;
 
+    // ... (tus validaciones existentes) ...
 
+    const insertQuery = `
+                INSERT INTO asesor_carrera (asesor_cedula, carrera, asignatura, cantidad_alumno, semestre) 
+                VALUES (?, ?, ?, ?, ?)
+            `;
+
+    db.query(insertQuery, [asesor_cedula, carrera, asignatura, cantidad_alumno, semestre], (err, result) => {
+        if (err) {
+            console.error('❌ ERROR REAL DE SQL EN ASESOR_CARRERA:', err); // 👈 Añade este log detallado
+            return res.status(500).json({ success: false, message: 'Error: ' + err.message }); // 👈 Muestra el mensaje real temporalmente al cliente
+        }
+
+        res.status(201).json({
+            success: true,
+            message: 'Registro guardado exitosamente.',
+            id: result.insertId
+        });
+    });
+    // ...
+});
 
 
 
