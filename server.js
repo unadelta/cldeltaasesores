@@ -1040,8 +1040,7 @@ app.delete('/api/control_asesoria/:id', (req, res) => {
 });
 
 
-
-//Correcciones
+// Modulo correcciones
 app.get('/api/control_correcciones', async(req, res) => {
     if (!req.session || !req.session.usuario) {
         return res.status(401).json({ success: false, message: 'No autorizado' });
@@ -1068,7 +1067,7 @@ app.get('/api/control_correcciones', async(req, res) => {
             LEFT JOIN alumno a ON TRIM(cc.codigo_carrera) COLLATE utf8mb4_general_ci = TRIM(a.codigo_carrera) COLLATE utf8mb4_general_ci
             LEFT JOIN tarea t ON TRIM(cc.tipo_correccion) COLLATE utf8mb4_general_ci = TRIM(t.codigo) COLLATE utf8mb4_general_ci 
                               OR TRIM(cc.tipo_correccion) COLLATE utf8mb4_general_ci = CAST(t.id AS CHAR) COLLATE utf8mb4_general_ci
-            WHERE TRIM(cc.cedula_asesor) = TRIM(?)
+            WHERE TRIM(cc.cedula_asesor) LIKE CONCAT('%', TRIM(?), '%')
             GROUP BY cc.id
             ORDER BY cc.fecha DESC
         `;
@@ -1076,44 +1075,15 @@ app.get('/api/control_correcciones', async(req, res) => {
         const [rows] = await db.promise().query(query, [cedulaAsesorSesion]);
         res.json({ success: true, data: rows });
     } catch (err) {
-        console.error('Error al obtener control_correcciones:', err);
+        console.error('❌ Error al obtener control_correcciones:', err);
         res.status(500).json({ success: false, message: 'Error en el servidor al consultar los registros' });
     }
 });
 
 
 
-/*
-app.get('/api/control_correcciones', async(req, res) => {
-    try {
-        const [rows] = await db.promise().query(`
-            SELECT 
-                cc.id,
-                cc.cedula_alumno,
-                cc.nombre_alumno,
-                cc.codigo_carrera,
-                cc.codigo_materia,
-                cc.cedula_asesor,
-                cc.nombre_asesor,
-                cc.fecha,
-                cc.semestre, -- 👈 Asegúrate de incluir esto aquí
-                MAX(a.descripcion_carrera) AS descripcion_carrera,
-                COALESCE(t.codigo, cc.tipo_correccion, '') AS tipo_correccion,
-                COALESCE(t.descripcion, 'Sin clasificar') AS descripcion_tarea
-            FROM control_correcciones cc
-            LEFT JOIN alumno a ON TRIM(cc.codigo_carrera) COLLATE utf8mb4_general_ci = TRIM(a.codigo_carrera) COLLATE utf8mb4_general_ci
-            LEFT JOIN tarea t ON TRIM(cc.tipo_correccion) COLLATE utf8mb4_general_ci = TRIM(t.codigo) COLLATE utf8mb4_general_ci 
-                              OR TRIM(cc.tipo_correccion) COLLATE utf8mb4_general_ci = CAST(t.id AS CHAR) COLLATE utf8mb4_general_ci
-            GROUP BY cc.id
-            ORDER BY cc.fecha DESC
-        `);
-        res.json({ success: true, data: rows });
-    } catch (err) {
-        console.error('Error al obtener control_correcciones:', err);
-        res.status(500).json({ success: false, message: 'Error en el servidor al consultar los registros' });
-    }
-});
-*/
+
+
 app.post('/api/control_correcciones', async(req, res) => {
     try {
         const {
@@ -1168,35 +1138,8 @@ app.post('/api/control_correcciones', async(req, res) => {
 
 
 
-app.get('/api/control_correcciones', async(req, res) => {
-    try {
-        const [rows] = await db.promise().query(`
-            SELECT 
-                cc.id,
-                cc.cedula_alumno,
-                cc.nombre_alumno,
-                cc.codigo_carrera,
-                cc.codigo_materia,
-                cc.cedula_asesor,
-                cc.nombre_asesor,
-                cc.fecha,
-                cc.semestre, -- 👈 Asegúrate de que esta línea esté presente
-                MAX(a.descripcion_carrera) AS descripcion_carrera,
-                COALESCE(t.codigo, cc.tipo_correccion, '') AS tipo_correccion,
-                COALESCE(t.descripcion, 'Sin clasificar') AS descripcion_tarea
-            FROM control_correcciones cc
-            LEFT JOIN alumno a ON TRIM(cc.codigo_carrera) COLLATE utf8mb4_general_ci = TRIM(a.codigo_carrera) COLLATE utf8mb4_general_ci
-            LEFT JOIN tarea t ON TRIM(cc.tipo_correccion) COLLATE utf8mb4_general_ci = TRIM(t.codigo) COLLATE utf8mb4_general_ci 
-                              OR TRIM(cc.tipo_correccion) COLLATE utf8mb4_general_ci = CAST(t.id AS CHAR) COLLATE utf8mb4_general_ci
-            GROUP BY cc.id
-            ORDER BY cc.fecha DESC
-        `);
-        res.json({ success: true, data: rows });
-    } catch (err) {
-        console.error('Error al obtener control_correcciones:', err);
-        res.status(500).json({ success: false, message: 'Error en el servidor al consultar los registros' });
-    }
-});
+
+
 
 
 // ==========================================
