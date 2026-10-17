@@ -8,6 +8,8 @@ const session = require('express-session');
 
 const app = express();
 
+const crypto = require('crypto'); // Asegúrate de tener esto arriba en tu server.js
+
 // ==========================================
 // 1. MIDDLEWARES GLOBALES Y SESIÓN (¡DEBEN IR PRIMERO!)
 // ==========================================
@@ -153,7 +155,7 @@ app.post('/api/login', (req, res) => {
 // ==========================================
 // RUTA DE AUTENTICACIÓN (LOGIN)
 // ==========================================
-
+/*
 app.post('/api/login', (req, res) => {
     const { usuario, clave } = req.body;
 
@@ -195,6 +197,91 @@ app.post('/api/login', (req, res) => {
         } else {
             res.status(401).json({ success: false, message: 'Usuario o contraseña incorrectos.' });
         }
+    });
+});
+*/
+
+app.post('/api/login', (req, res) => {
+    const { usuario, clave } = req.body;
+
+    if (!usuario || !clave) {
+        return res.status(400).json({ success: false, message: 'Por favor, ingrese usuario y contraseña.' });
+    }
+
+    // 🔐 Cifrar la clave introducida para compararla con la de la BD
+    const claveMd5 = crypto.createHash('md5').update(clave).digest('hex');
+
+    const sql = 'SELECT * FROM asesor WHERE usuario = ? AND clave = ?';
+    db.query(sql, [usuario, claveMd5], (err, results) => {
+        if (err) {
+            console.error('Error en el servidor al intentar iniciar sesión:', err);
+            return res.status(500).json({ success: false, message: 'Error interno en el servidor.' });
+        }
+
+        if (results.length > 0) {
+            const asesor = results[0];
+
+            // Guardar datos en la sesión
+            req.session.usuario = {
+                id: asesor.id,
+                cedula: asesor.cedula,
+                usuario: asesor.usuario,
+                nombre: asesor.nombre,
+                email: asesor.email,
+                rol_id: asesor.rol_id
+            };
+
+            // Forzar el guardado de la sesión
+            req.session.save((saveErr) => {
+                if (saveErr) {
+                    console.error('Error al guardar la sesión:', saveErr);
+                }
+                res.json({
+                    success: true,
+                    message: 'Autenticación exitosa',
+                    redirectUrl: '/dashboard'
+                });
+            });
+
+        } else {
+            res.status(401).json({ success: false, message: 'Usuario o contraseña incorrectos.' });
+        }
+    });
+});
+
+
+
+
+app.post('/api/asesores', (req, res) => {
+    const { cedula, usuario, clave, nombre, email, rol_id } = req.body;
+    const sqlVerificar = 'SELECT * FROM asesor WHERE cedula = ? OR usuario = ?';
+
+    db.query(sqlVerificar, [cedula, usuario], (err, results) => {
+        if (err) {
+            console.error('Error al verificar duplicados:', err);
+            return res.status(500).json({ success: false, message: 'Error en el servidor' });
+        }
+
+        if (results.length > 0) {
+            const existeCedula = results.some(row => row.cedula === cedula);
+            const mensaje = existeCedula ?
+                'Ya existe un asesor registrado con esta cédula.' :
+                'El nombre de usuario ya está en uso. Elija otro.';
+
+            return res.status(400).json({ success: false, message: mensaje });
+        }
+
+        // 🔐 Cifrar la contraseña usando MD5
+        const claveMd5 = crypto.createHash('md5').update(clave).digest('hex');
+
+        const sqlInsert = 'INSERT INTO asesor (cedula, usuario, clave, nombre, email, rol_id) VALUES (?, ?, ?, ?, ?, ?)';
+        db.query(sqlInsert, [cedula, usuario, claveMd5, nombre, email, rol_id], (err, result) => {
+            if (err) {
+                console.error('Error al crear asesor:', err);
+                return res.status(500).json({ success: false, message: 'Error al registrar el asesor en la base de datos' });
+            }
+            res.json({ success: true, message: 'Asesor registrado exitosamente', id: result.insertId });
+        });
     });
 });
 
