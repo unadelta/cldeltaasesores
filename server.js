@@ -35,6 +35,8 @@ app.use(session({
 // ==========================================
 // 2. CONFIGURACIÓN DE CONEXIÓN DUAL INTELIGENTE
 // ==========================================
+
+/*
 // ==========================================
 // 2. CONFIGURACIÓN DE CONEXIÓN DUAL BLINDADA
 // ==========================================
@@ -94,6 +96,134 @@ pool.getConnection((err, connection) => {
 });
 
 module.exports = db;
+
+*/
+
+// ==========================================
+// 2. CONFIGURACIÓN DE CONEXIÓN DUAL INTELIGENTE (LOCAL / NUBE)
+// ==========================================
+
+// Detectamos si estamos en producción evaluando si existe la variable de entorno de la nube
+/*
+const isProduction = process.env.NODE_ENV === 'production' || !!process.env.MYSQLHOST || !!process.env.DB_HOST;
+
+const dbHost = isProduction ? (process.env.MYSQLHOST || process.env.DB_HOST) : 'localhost';
+const dbUser = isProduction ? (process.env.MYSQLUSER || process.env.DB_USER) : 'root';
+const dbPassword = isProduction ? (process.env.MYSQLPASSWORD || process.env.DB_PASSWORD) : '';
+const dbName = isProduction ? (process.env.MYSQLDATABASE || process.env.DB_NAME || 'asesores') : 'asesores';
+const dbPort = Number(isProduction ? (process.env.MYSQLPORT || process.env.DB_PORT || 4000) : 3306);
+
+const poolConfig = {
+    host: dbHost,
+    user: dbUser,
+    password: dbPassword,
+    database: dbName,
+    port: dbPort,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+    connectTimeout: 15000,
+    // El SSL se activa automáticamente si estamos usando TiDB Cloud u otra plataforma de nube compatible
+    ...(isProduction && {
+        ssl: {
+            rejectUnauthorized: false
+        }
+    })
+};
+
+// Creamos el pool estándar compatible con callbacks y promesas
+const pool = mysql.createPool(poolConfig);
+
+const db = {
+    query: (...args) => pool.query(...args),
+    execute: (...args) => pool.execute(...args),
+    getConnection: (cb) => pool.getConnection(cb),
+    promise: () => pool.promise()
+};
+
+// Prueba de conexión al arrancar
+pool.getConnection((err, connection) => {
+    if (err) {
+        console.error('❌ ERROR de conexión a la base de datos:', err.message);
+        if (!isProduction && (err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT')) {
+            console.error('💡 Consejo: Asegúrate de tener encendido MySQL en el panel de control de XAMPP.');
+        }
+    } else {
+        if (isProduction) {
+            console.log(`✅ [PRODUCCIÓN] Conectado exitosamente a la nube ☁️ [Host: ${dbHost}]`);
+        } else {
+            console.log(`✅ [DESARROLLO LOCAL] Conectado exitosamente a XAMPP 🏠 [Host: localhost:3306]`);
+        }
+        connection.release();
+    }
+});
+
+module.exports = db;
+*/
+// ==========================================
+// 2. CONFIGURACIÓN DE CONEXIÓN DUAL INTELIGENTE (LOCAL / NUBE)
+// ==========================================
+
+// Detectamos producción estrictamente si Render o el entorno define NODE_ENV como 'production'
+const isProduction = process.env.NODE_ENV === 'production';
+
+// Configuración adaptativa basada en el entorno
+const dbHost = isProduction ? process.env.MYSQLHOST : (process.env.DB_HOST || 'localhost');
+const dbUser = isProduction ? process.env.MYSQLUSER : (process.env.DB_USER || 'root');
+const dbPassword = isProduction ? process.env.MYSQLPASSWORD : (process.env.DB_PASSWORD !== undefined ? process.env.DB_PASSWORD : '');
+const dbName = isProduction ? (process.env.MYSQLDATABASE || 'asesores') : (process.env.DB_NAME || 'asesores');
+const dbPort = Number(isProduction ? (process.env.MYSQLPORT || 4000) : (process.env.DB_PORT || 3306));
+
+const poolConfig = {
+    host: dbHost,
+    user: dbUser,
+    password: dbPassword,
+    database: dbName,
+    port: dbPort,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+    connectTimeout: 20000,
+    // El SSL solo se activa si estamos en producción (TiDB Cloud)
+    ...(isProduction && {
+        ssl: {
+            rejectUnauthorized: false
+        }
+    })
+};
+
+// Creamos el pool estándar compatible con callbacks y promesas
+const pool = mysql.createPool(poolConfig);
+
+const db = {
+    query: (...args) => pool.query(...args),
+    execute: (...args) => pool.execute(...args),
+    getConnection: (cb) => pool.getConnection(cb),
+    promise: () => pool.promise()
+};
+
+// Prueba de conexión al arrancar
+pool.getConnection((err, connection) => {
+    if (err) {
+        console.error('❌ ERROR de conexión a la base de datos:', err.message);
+        if (!isProduction && (err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT')) {
+            console.error('💡 Consejo: Asegúrate de tener encendido MySQL en el panel de control de XAMPP.');
+        }
+    } else {
+        if (isProduction) {
+            console.log(`✅ [PRODUCCIÓN - RENDER] Conectado exitosamente a TiDB Cloud ☁️ [Host: ${dbHost}]`);
+        } else {
+            console.log(`✅ [DESARROLLO LOCAL - XAMPP] Conectado exitosamente 🏠 [Host: localhost:${dbPort}]`);
+        }
+        connection.release();
+    }
+});
+
+module.exports = db;
+
+
+
+
 // Importar rutas secundarias si las usas
 const dbAdminRoutes = require('./routes/db_admin.routes');
 app.use('/api/db', dbAdminRoutes);
