@@ -226,7 +226,7 @@ module.exports = db;
 // ==========================================
 // 2. CONFIGURACIÓN DE CONEXIÓN DUAL BLINDADA (LOCAL / NUBE)
 // ==========================================
-
+/*
 // El entorno es producción si Render lo define o si existe explícitamente MYSQLHOST en las variables
 const isProduction = process.env.NODE_ENV === 'production' || (process.env.MYSQLHOST && process.env.MYSQLHOST.includes('tidbcloud'));
 
@@ -273,6 +273,69 @@ pool.getConnection((err, connection) => {
             console.error('💡 Consejo: Asegúrate de tener encendido MySQL en el panel de control de XAMPP.');
         } else if (isProduction && err.code === 'ETIMEDOUT') {
             console.error('💡 Consejo Cloud: Revisa si tu red bloquea el puerto 4000 o si la IP está permitida en TiDB Cloud.');
+        }
+    } else {
+        if (isProduction) {
+            console.log(`✅ [PRODUCCIÓN - NUBE] Conectado exitosamente a TiDB Cloud ☁️ [Host: ${dbHost}]`);
+        } else {
+            console.log(`✅ [DESARROLLO LOCAL - XAMPP] Conectado exitosamente 🏠 [Host: localhost:${dbPort}]`);
+        }
+        connection.release();
+    }
+});
+
+module.exports = db;
+*/
+
+// ==========================================
+// 2. CONFIGURACIÓN DE CONEXIÓN DUAL DEFINITIVA (LOCAL / NUBE)
+// ==========================================
+
+// Forzamos producción únicamente si la variable NODE_ENV es 'production' de forma explícita
+const isProduction = process.env.NODE_ENV === 'production';
+
+// Si no estamos en producción (ej. ejecutando node server.js en tu PC), 
+// ignoramos por completo cualquier rastro de la nube y usamos XAMPP local.
+const dbHost = isProduction ? (process.env.MYSQLHOST || 'gateway01.eu-central-1.prod.aws.tidbcloud.com') : 'localhost';
+const dbUser = isProduction ? (process.env.MYSQLUSER || '3y4a4WdkntBdFhr.root') : (process.env.DB_USER || 'root');
+const dbPassword = isProduction ? (process.env.MYSQLPASSWORD ? process.env.MYSQLPASSWORD.trim() : '') : (process.env.DB_PASSWORD !== undefined ? process.env.DB_PASSWORD : '');
+const dbName = isProduction ? (process.env.MYSQLDATABASE || 'asesores') : (process.env.DB_NAME || 'asesores');
+const dbPort = Number(isProduction ? (process.env.MYSQLPORT || 4000) : 3306); // 👈 Forzamos 3306 local y 4000 en nube
+
+const poolConfig = {
+    host: dbHost,
+    user: dbUser,
+    password: dbPassword,
+    database: dbName,
+    port: dbPort,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+    connectTimeout: 20000,
+    // El SSL solo se activa si estamos verdaderamente en producción (TiDB Cloud)
+    ...(isProduction && {
+        ssl: {
+            rejectUnauthorized: false
+        }
+    })
+};
+
+// Creamos el pool estándar compatible con callbacks y promesas
+const pool = mysql.createPool(poolConfig);
+
+const db = {
+    query: (...args) => pool.query(...args),
+    execute: (...args) => pool.execute(...args),
+    getConnection: (cb) => pool.getConnection(cb),
+    promise: () => pool.promise()
+};
+
+// Prueba de conexión al arrancar
+pool.getConnection((err, connection) => {
+    if (err) {
+        console.error('❌ ERROR de conexión a la base de datos:', err.message);
+        if (!isProduction && (err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT')) {
+            console.error('💡 Consejo: Asegúrate de tener encendido MySQL en el panel de control de XAMPP.');
         }
     } else {
         if (isProduction) {
