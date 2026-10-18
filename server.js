@@ -1130,6 +1130,8 @@ app.get('/api/control_correcciones', async(req, res) => {
         return res.status(401).json({ success: false, message: 'No autorizado' });
     }
 
+    const cedulaAsesorSesion = String(req.session.usuario.cedula || req.session.usuario.id || '').trim();
+
     try {
         const query = `
             SELECT 
@@ -1138,29 +1140,26 @@ app.get('/api/control_correcciones', async(req, res) => {
                 cc.nombre_alumno,
                 cc.codigo_carrera,
                 cc.codigo_materia,
+                cc.tipo_correccion,
                 cc.cedula_asesor,
                 cc.nombre_asesor,
                 cc.fecha,
                 cc.semestre,
-                MAX(a.descripcion_carrera) AS descripcion_carrera,
-                COALESCE(t.codigo, cc.tipo_correccion, '') AS tipo_correccion,
                 COALESCE(t.descripcion, 'Sin clasificar') AS descripcion_tarea
             FROM control_correcciones cc
-            LEFT JOIN alumno a ON TRIM(cc.codigo_carrera) COLLATE utf8mb4_general_ci = TRIM(a.codigo_carrera) COLLATE utf8mb4_general_ci
-            LEFT JOIN tarea t ON TRIM(cc.tipo_correccion) COLLATE utf8mb4_general_ci = TRIM(t.codigo) COLLATE utf8mb4_general_ci 
-                              OR TRIM(cc.tipo_correccion) COLLATE utf8mb4_general_ci = CAST(t.id AS CHAR) COLLATE utf8mb4_general_ci
-            GROUP BY cc.id
+            LEFT JOIN tarea t ON TRIM(cc.tipo_correccion) = TRIM(t.codigo)
+            WHERE cc.cedula_asesor = ? OR cc.cedula_asesor LIKE CONCAT('%', ?, '%')
             ORDER BY cc.fecha DESC
         `;
 
-        const [rows] = await db.promise().query(query);
+        const [rows] = await db.promise().query(query, [cedulaAsesorSesion, cedulaAsesorSesion]);
         res.json({ success: true, data: rows });
     } catch (err) {
-        console.error('❌ Error al obtener control_correcciones:', err);
-        res.status(500).json({ success: false, message: 'Error en el servidor al consultar los registros' });
+        console.error('❌ Error detallado en control_correcciones:', err);
+        // Esto enviará el error exacto de SQL al navegador para verlo de inmediato
+        res.status(500).json({ success: false, message: 'Error SQL: ' + err.message });
     }
 });
-
 
 app.post('/api/control_correcciones', async(req, res) => {
     try {
