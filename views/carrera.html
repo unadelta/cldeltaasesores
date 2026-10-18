@@ -7,6 +7,41 @@
     <title>Gestión de Carreras - Sistema Asesores UNA</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        /* Estilos personalizados para las ventanas emergentes (Toasts / Modales) */
+        
+        .modal-notificacion .modal-content {
+            border: none;
+            border-radius: 1rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        }
+        
+        .icon-box {
+            width: 70px;
+            height: 70px;
+            margin: 0 auto 15px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.2rem;
+        }
+        
+        .icon-box.success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        
+        .icon-box.danger {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        
+        .icon-box.warning {
+            background-color: #fff8e1;
+            color: #f57f17;
+        }
+    </style>
 </head>
 
 <body class="bg-light">
@@ -21,20 +56,17 @@
                 <h3 class="fw-bold text-primary"><i class="bi bi-mortarboard me-2"></i>Módulo de Carreras</h3>
             </div>
             <div class="col-sm-6 text-sm-end mt-2 mt-sm-0">
-                <button class="btn btn-success" onclick="abrirModalCrear()">
+                <button class="btn btn-success rounded-pill px-3 shadow-sm" onclick="abrirModalCrear()">
                     <i class="bi bi-plus-circle me-1"></i> Nueva Carrera
                 </button>
             </div>
         </div>
 
-        <!-- ALERTA DINÁMICA -->
-        <div id="alertaCarrera" class="alert d-none shadow-sm" role="alert"></div>
-
         <!-- TABLA DE CARRERAS -->
-        <div class="card border-0 shadow-sm">
+        <div class="card border-0 shadow-sm rounded-3">
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle">
+                    <table class="table table-hover align-middle mb-0">
                         <thead class="table-primary">
                             <tr>
                                 <th>ID</th>
@@ -56,31 +88,66 @@
 
     <!-- MODAL PARA CREAR / EDITAR CARRERA -->
     <div class="modal fade" id="modalCarrera" tabindex="-1" aria-labelledby="modalCarreraLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 shadow">
                 <form id="formCarrera" onsubmit="guardarCarrera(event)">
-                    <div class="modal-header bg-primary text-white">
-                        <h5 class="modal-title" id="modalCarreraLabel">Registrar Carrera</h5>
+                    <div class="modal-header bg-primary text-white border-0">
+                        <h5 class="modal-title fw-bold" id="modalCarreraLabel">Registrar Carrera</h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <div class="modal-body">
+                    <div class="modal-body p-4">
                         <input type="hidden" id="carreraId">
 
                         <div class="mb-3">
                             <label for="codigo" class="form-label fw-semibold">Código de Carrera</label>
-                            <input type="text" class="form-control" id="codigo" required autocomplete="off">
+                            <input type="text" class="form-control" id="codigo" required autocomplete="off" placeholder="Ej: 236">
                         </div>
 
                         <div class="mb-3">
                             <label for="nombre_carrera" class="form-label fw-semibold">Nombre de Carrera</label>
-                            <input type="text" class="form-control" id="nombre_carrera" required autocomplete="off">
+                            <input type="text" class="form-control" id="nombre_carrera" required autocomplete="off" placeholder="Ej: Ingeniería de Sistemas">
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary" id="btnGuardar">Guardar</button>
+                    <div class="modal-footer border-0 pt-0">
+                        <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary rounded-pill px-4" id="btnGuardar">Guardar</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL ELEGANTE DE NOTIFICACIÓN / MENSAJE EMERGENTE -->
+    <div class="modal fade modal-notificacion" id="modalNotificacion" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content text-center p-3">
+                <div class="modal-body">
+                    <div id="notifIconoBox" class="icon-box success">
+                        <i id="notifIcono" class="bi bi-check-lg"></i>
+                    </div>
+                    <h5 id="notifTitulo" class="fw-bold mb-2">¡Éxito!</h5>
+                    <p id="notifMensaje" class="text-muted mb-3 fs-6">Operación realizada con éxito.</p>
+                    <button type="button" class="btn btn-primary rounded-pill px-4 w-100" data-bs-dismiss="modal">Aceptar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE CONFIRMACIÓN DE ELIMINACIÓN -->
+    <div class="modal fade modal-notificacion" id="modalConfirmarEliminar" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content text-center p-3">
+                <div class="modal-body">
+                    <div class="icon-box warning">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">¿Eliminar carrera?</h5>
+                    <p class="text-muted mb-4 fs-6">Esta acción no se puede deshacer.</p>
+                    <div class="d-flex justify-content-center gap-2">
+                        <button type="button" class="btn btn-light rounded-pill px-3 w-50" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-danger rounded-pill px-3 w-50" id="btnConfirmarEliminar">Eliminar</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -89,11 +156,25 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let modalCarreraInstance = null;
+        let modalNotifInstance = null;
+        let modalConfirmEliminarInstance = null;
+        let idCarreraAEliminar = null;
 
-        // 1. Inicialización principal para verificar sesión y cargar la tabla de carreras
+        // 1. Inicialización principal
         document.addEventListener("DOMContentLoaded", async() => {
             modalCarreraInstance = new bootstrap.Modal(document.getElementById('modalCarrera'));
+            modalNotifInstance = new bootstrap.Modal(document.getElementById('modalNotificacion'));
+            modalConfirmEliminarInstance = new bootstrap.Modal(document.getElementById('modalConfirmarEliminar'));
+
             await verificarSesionYCargar();
+
+            // Evento para el botón de confirmación de eliminación
+            document.getElementById('btnConfirmarEliminar').addEventListener('click', async() => {
+                modalConfirmEliminarInstance.hide();
+                if (idCarreraAEliminar) {
+                    await procesarEliminacion(idCarreraAEliminar);
+                }
+            });
         });
 
         async function verificarSesionYCargar() {
@@ -130,13 +211,13 @@
                         tbody.innerHTML += `
                             <tr>
                                 <td>${carrera.id}</td>
-                                <td>${carrera.codigo}</td>
-                                <td>${carrera.nombre_carrera}</td>
+                                <td><span class="badge bg-secondary">${carrera.codigo}</span></td>
+                                <td class="fw-semibold text-secondary">${carrera.nombre_carrera}</td>
                                 <td class="text-center">
-                                    <button class="btn btn-sm btn-outline-primary me-1" onclick="abrirModalEditar(${carrera.id}, '${carrera.codigo}', '${nombreEscapado}')" title="Editar">
+                                    <button class="btn btn-sm btn-outline-primary rounded-circle me-1" onclick="abrirModalEditar(${carrera.id}, '${carrera.codigo}', '${nombreEscapado}')" title="Editar">
                                         <i class="bi bi-pencil"></i>
                                     </button>
-                                    <button class="btn btn-sm btn-outline-danger" onclick="eliminarCarrera(${carrera.id})" title="Eliminar">
+                                    <button class="btn btn-sm btn-outline-danger rounded-circle" onclick="confirmarEliminar(${carrera.id})" title="Eliminar">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </td>
@@ -191,34 +272,37 @@
 
                 const data = await res.json();
 
-                // Validamos si la respuesta del servidor es exitosa (código 2xx o success: true)
                 if (res.ok && (data.success !== false)) {
                     modalCarreraInstance.hide();
+                    const titulo = id ? '¡Carrera Modificada!' : '¡Carrera Creada!';
+                    const msj = id ?
+                        'Los cambios en la carrera se han guardado exitosamente.' :
+                        'La nueva carrera ha sido registrada en el sistema.';
 
-                    // Mensaje dinámico según si fue creación o actualización
-                    const mensajeExito = id ?
-                        '¡La carrera se ha modificado exitosamente!' :
-                        '¡La carrera se ha creado exitosamente!';
-
-                    mostrarAlerta(data.message || mensajeExito, 'success');
+                    mostrarEmergente(titulo, data.message || msj, 'success');
                     await cargarCarreras();
                 } else {
-                    // Si el backend detecta código repetido u otro error de validación
-                    let mensajeError = data.message || 'No se pudo completar la operación.';
+                    let titulo = 'Atención';
+                    let mensajeError = data.message || 'No se pudo procesar la solicitud.';
+
                     if (res.status === 400 || res.status === 409 || (data.message && data.message.toLowerCase().includes('duplicate'))) {
-                        mensajeError = `El código de carrera "${codigo}" ya se encuentra registrado. No se permiten códigos duplicados.`;
+                        titulo = 'Código Duplicado';
+                        mensajeError = `El código de carrera "${codigo}" ya existe en el sistema. Introduce uno diferente.`;
                     }
-                    mostrarAlerta(mensajeError, 'danger');
+                    mostrarEmergente(titulo, mensajeError, 'danger');
                 }
             } catch (err) {
                 console.error("Error en la petición:", err);
-                mostrarAlerta('Error de conexión con el servidor', 'danger');
+                mostrarEmergente('Error de Conexión', 'No se pudo conectar con el servidor.', 'danger');
             }
         }
 
-        async function eliminarCarrera(id) {
-            if (!confirm('¿Está seguro de que desea eliminar esta carrera?')) return;
+        function confirmarEliminar(id) {
+            idCarreraAEliminar = id;
+            modalConfirmEliminarInstance.show();
+        }
 
+        async function procesarEliminacion(id) {
             try {
                 const res = await fetch(`/api/carreras/${id}`, {
                     method: 'DELETE'
@@ -226,45 +310,50 @@
                 const data = await res.json();
 
                 if (res.ok && (data.success !== false)) {
-                    mostrarAlerta(data.message || 'La carrera se ha eliminado exitosamente.', 'success');
+                    mostrarEmergente('¡Carrera Eliminada!', data.message || 'La carrera se ha eliminado exitosamente.', 'success');
                     await cargarCarreras();
                 } else {
-                    mostrarAlerta(data.message || 'No se pudo eliminar la carrera.', 'danger');
+                    mostrarEmergente('Error al Eliminar', data.message || 'No se pudo eliminar la carrera.', 'danger');
                 }
             } catch (err) {
                 console.error("Error al eliminar:", err);
-                mostrarAlerta('Error de conexión con el servidor', 'danger');
+                mostrarEmergente('Error de Conexión', 'No se pudo conectar con el servidor.', 'danger');
+            } finally {
+                idCarreraAEliminar = null;
             }
         }
 
-        function mostrarAlerta(mensaje, tipo) {
-            const alerta = document.getElementById('alertaCarrera');
-            alerta.className = `alert alert-${tipo} alert-dismissible fade show`;
-            alerta.innerHTML = `
-                <i class="bi ${tipo === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill'} me-2"></i>
-                ${mensaje}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            `;
-            alerta.classList.remove('d-none');
+        // Función centralizada para desplegar la ventana emergente elegante
+        function mostrarEmergente(titulo, mensaje, tipo = 'success') {
+            const iconoBox = document.getElementById('notifIconoBox');
+            const icono = document.getElementById('notifIcono');
 
-            // Ocultar automáticamente a los 5 segundos
-            setTimeout(() => {
-                alerta.classList.add('d-none');
-            }, 5000);
+            iconoBox.className = `icon-box ${tipo}`;
+            if (tipo === 'success') {
+                icono.className = 'bi bi-check-lg';
+            } else if (tipo === 'danger') {
+                icono.className = 'bi bi-x-lg';
+            } else {
+                icono.className = 'bi bi-exclamation-lg';
+            }
+
+            document.getElementById('notifTitulo').textContent = titulo;
+            document.getElementById('notifMensaje').textContent = mensaje;
+
+            modalNotifInstance.show();
         }
 
         function cerrarSesion() {
             window.location.href = '/';
         }
 
-        // 2. Script para cargar el HTML del Navbar dinámicamente y pintar el nombre de usuario
+        // 2. Script para cargar el HTML del Navbar dinámicamente
         document.addEventListener("DOMContentLoaded", function() {
             fetch('/views/navbar.html')
                 .then(response => response.text())
                 .then(data => {
                     document.getElementById('navbar-container').innerHTML = data;
 
-                    // Consultar y pintar el nombre del usuario en sesión después de cargar el menú
                     fetch('/api/user-session')
                         .then(res => res.json())
                         .then(sesion => {
