@@ -28,7 +28,7 @@
         </div>
 
         <!-- ALERTA DINÁMICA -->
-        <div id="alertaCarrera" class="alert d-none" role="alert"></div>
+        <div id="alertaCarrera" class="alert d-none shadow-sm" role="alert"></div>
 
         <!-- TABLA DE CARRERAS -->
         <div class="card border-0 shadow-sm">
@@ -190,14 +190,28 @@
                 });
 
                 const data = await res.json();
-                if (res.ok || data.success) {
+
+                // Validamos si la respuesta del servidor es exitosa (código 2xx o success: true)
+                if (res.ok && (data.success !== false)) {
                     modalCarreraInstance.hide();
-                    mostrarAlerta(data.message || 'Operación exitosa', 'success');
+
+                    // Mensaje dinámico según si fue creación o actualización
+                    const mensajeExito = id ?
+                        '¡La carrera se ha modificado exitosamente!' :
+                        '¡La carrera se ha creado exitosamente!';
+
+                    mostrarAlerta(data.message || mensajeExito, 'success');
                     await cargarCarreras();
                 } else {
-                    mostrarAlerta(data.message || 'Error al guardar', 'danger');
+                    // Si el backend detecta código repetido u otro error de validación
+                    let mensajeError = data.message || 'No se pudo completar la operación.';
+                    if (res.status === 400 || res.status === 409 || (data.message && data.message.toLowerCase().includes('duplicate'))) {
+                        mensajeError = `El código de carrera "${codigo}" ya se encuentra registrado. No se permiten códigos duplicados.`;
+                    }
+                    mostrarAlerta(mensajeError, 'danger');
                 }
             } catch (err) {
+                console.error("Error en la petición:", err);
                 mostrarAlerta('Error de conexión con el servidor', 'danger');
             }
         }
@@ -211,23 +225,32 @@
                 });
                 const data = await res.json();
 
-                if (res.ok || data.success) {
-                    mostrarAlerta(data.message || 'Carrera eliminada', 'success');
+                if (res.ok && (data.success !== false)) {
+                    mostrarAlerta(data.message || 'La carrera se ha eliminado exitosamente.', 'success');
                     await cargarCarreras();
                 } else {
-                    mostrarAlerta(data.message || 'Error al eliminar', 'danger');
+                    mostrarAlerta(data.message || 'No se pudo eliminar la carrera.', 'danger');
                 }
             } catch (err) {
+                console.error("Error al eliminar:", err);
                 mostrarAlerta('Error de conexión con el servidor', 'danger');
             }
         }
 
         function mostrarAlerta(mensaje, tipo) {
             const alerta = document.getElementById('alertaCarrera');
-            alerta.className = `alert alert-${tipo}`;
-            alerta.textContent = mensaje;
+            alerta.className = `alert alert-${tipo} alert-dismissible fade show`;
+            alerta.innerHTML = `
+                <i class="bi ${tipo === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill'} me-2"></i>
+                ${mensaje}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
             alerta.classList.remove('d-none');
-            setTimeout(() => alerta.classList.add('d-none'), 4000);
+
+            // Ocultar automáticamente a los 5 segundos
+            setTimeout(() => {
+                alerta.classList.add('d-none');
+            }, 5000);
         }
 
         function cerrarSesion() {
