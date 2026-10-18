@@ -191,9 +191,18 @@
                     cedulaAsesorGlobal = String(data.user.cedula || data.user.id || '').trim();
                     nombreAsesorGlobal = data.user.nombre || 'Asesor';
 
-                    // Mostrar el nombre del usuario en el navbar si existe el elemento contenedor
+                    // Actualización robusta del nombre en el navbar
                     const spanNombre = document.getElementById('nombre-asesor-nav');
-                    if (spanNombre) spanNombre.textContent = nombreAsesorGlobal;
+                    if (spanNombre) {
+                        spanNombre.textContent = nombreAsesorGlobal;
+                    } else {
+                        const userElements = document.querySelectorAll('#navbar-container .dropdown-toggle, #navbar-container .navbar-text, #navbar-container [id*="user"], #navbar-container [id*="nombre"]');
+                        userElements.forEach(el => {
+                            if (el.textContent.includes('Cargando') || el.children.length === 0) {
+                                el.innerHTML = `<i class="bi bi-person-circle me-1"></i> ${nombreAsesorGlobal}`;
+                            }
+                        });
+                    }
 
                     await inicializarCatalogo();
                     await cargarMaterias();
@@ -228,7 +237,6 @@
                 const data = await res.json();
 
                 if (data.success && Array.isArray(data.data)) {
-                    // Tomamos todas las materias generales disponibles para el catálogo de selección
                     catalogoMateriasGlobal = data.data;
 
                     if (catalogoMateriasGlobal.length === 0) {
@@ -269,7 +277,6 @@
                 tbody.innerHTML = '';
 
                 if (data.success && Array.isArray(data.data)) {
-                    // Muestra todas las materias de la tabla general para que estén accesibles a los asesores
                     listaMateriasGestionadasGlobal = data.data;
 
                     if (listaMateriasGestionadasGlobal.length === 0) {
