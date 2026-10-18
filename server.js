@@ -1040,102 +1040,6 @@ app.delete('/api/control_asesoria/:id', (req, res) => {
 });
 
 
-// Modulo correcciones
-app.get('/api/control_correcciones', async(req, res) => {
-    if (!req.session || !req.session.usuario) {
-        return res.status(401).json({ success: false, message: 'No autorizado' });
-    }
-
-    const cedulaAsesorSesion = req.session.usuario.cedula;
-
-    try {
-        const query = `
-            SELECT 
-                cc.id,
-                cc.cedula_alumno,
-                cc.nombre_alumno,
-                cc.codigo_carrera,
-                cc.codigo_materia,
-                cc.cedula_asesor,
-                cc.nombre_asesor,
-                cc.fecha,
-                cc.semestre,
-                MAX(a.descripcion_carrera) AS descripcion_carrera,
-                COALESCE(t.codigo, cc.tipo_correccion, '') AS tipo_correccion,
-                COALESCE(t.descripcion, 'Sin clasificar') AS descripcion_tarea
-            FROM control_correcciones cc
-            LEFT JOIN alumno a ON TRIM(cc.codigo_carrera) COLLATE utf8mb4_general_ci = TRIM(a.codigo_carrera) COLLATE utf8mb4_general_ci
-            LEFT JOIN tarea t ON TRIM(cc.tipo_correccion) COLLATE utf8mb4_general_ci = TRIM(t.codigo) COLLATE utf8mb4_general_ci 
-                              OR TRIM(cc.tipo_correccion) COLLATE utf8mb4_general_ci = CAST(t.id AS CHAR) COLLATE utf8mb4_general_ci
-            WHERE TRIM(cc.cedula_asesor) LIKE CONCAT('%', TRIM(?), '%')
-            GROUP BY cc.id
-            ORDER BY cc.fecha DESC
-        `;
-
-        const [rows] = await db.promise().query(query, [cedulaAsesorSesion]);
-        res.json({ success: true, data: rows });
-    } catch (err) {
-        console.error('❌ Error al obtener control_correcciones:', err);
-        res.status(500).json({ success: false, message: 'Error en el servidor al consultar los registros' });
-    }
-});
-
-
-
-
-
-app.post('/api/control_correcciones', async(req, res) => {
-    try {
-        const {
-            cedula_alumno,
-            nombre_alumno,
-            codigo_carrera,
-            codigo_materia,
-            tipo_correccion,
-            semestre, // 👈 Capturar el semestre enviado desde el formulario
-            cedula_asesor,
-            nombre_asesor,
-            fecha
-        } = req.body;
-
-        if (!cedula_alumno || !codigo_materia || !tipo_correccion || !semestre || !cedula_asesor) {
-            return res.status(400).json({
-                success: false,
-                message: 'Faltan campos obligatorios por completar (incluyendo el semestre).'
-            });
-        }
-
-        const fechaRegistro = fecha ? new Date(fecha) : new Date();
-
-        const query = `
-            INSERT INTO control_correcciones 
-            (cedula_alumno, nombre_alumno, codigo_carrera, codigo_materia, tipo_correccion, semestre, cedula_asesor, nombre_asesor, fecha) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `;
-
-        await db.promise().query(query, [
-            cedula_alumno,
-            nombre_alumno,
-            codigo_carrera,
-            codigo_materia,
-            tipo_correccion,
-            semestre, // 👈 Incluir el semestre aquí
-            cedula_asesor,
-            nombre_asesor,
-            fechaRegistro
-        ]);
-
-        res.json({ success: true, message: 'Corrección registrada exitosamente' });
-    } catch (err) {
-        console.error('Error al insertar en control_correcciones:', err);
-        res.status(500).json({ success: false, message: 'Error en el servidor al guardar la corrección' });
-    }
-});
-
-
-
-
-
 
 
 
@@ -1217,6 +1121,108 @@ app.get('/api/reporcorrecciones', (req, res) => {
 });
 
 
+
+
+// Modulo correcciones
+
+app.get('/api/control_correcciones', async(req, res) => {
+    if (!req.session || !req.session.usuario) {
+        return res.status(401).json({ success: false, message: 'No autorizado' });
+    }
+
+    try {
+        const query = `
+            SELECT 
+                cc.id,
+                cc.cedula_alumno,
+                cc.nombre_alumno,
+                cc.codigo_carrera,
+                cc.codigo_materia,
+                cc.cedula_asesor,
+                cc.nombre_asesor,
+                cc.fecha,
+                cc.semestre,
+                MAX(a.descripcion_carrera) AS descripcion_carrera,
+                COALESCE(t.codigo, cc.tipo_correccion, '') AS tipo_correccion,
+                COALESCE(t.descripcion, 'Sin clasificar') AS descripcion_tarea
+            FROM control_correcciones cc
+            LEFT JOIN alumno a ON TRIM(cc.codigo_carrera) COLLATE utf8mb4_general_ci = TRIM(a.codigo_carrera) COLLATE utf8mb4_general_ci
+            LEFT JOIN tarea t ON TRIM(cc.tipo_correccion) COLLATE utf8mb4_general_ci = TRIM(t.codigo) COLLATE utf8mb4_general_ci 
+                              OR TRIM(cc.tipo_correccion) COLLATE utf8mb4_general_ci = CAST(t.id AS CHAR) COLLATE utf8mb4_general_ci
+            GROUP BY cc.id
+            ORDER BY cc.fecha DESC
+        `;
+
+        const [rows] = await db.promise().query(query);
+        res.json({ success: true, data: rows });
+    } catch (err) {
+        console.error('❌ Error al obtener control_correcciones:', err);
+        res.status(500).json({ success: false, message: 'Error en el servidor al consultar los registros' });
+    }
+});
+
+
+app.post('/api/control_correcciones', async(req, res) => {
+    try {
+        const {
+            cedula_alumno,
+            nombre_alumno,
+            codigo_carrera,
+            codigo_materia,
+            tipo_correccion,
+            semestre, // 👈 Capturar el semestre enviado desde el formulario
+            cedula_asesor,
+            nombre_asesor,
+            fecha
+        } = req.body;
+
+        if (!cedula_alumno || !codigo_materia || !tipo_correccion || !semestre || !cedula_asesor) {
+            return res.status(400).json({
+                success: false,
+                message: 'Faltan campos obligatorios por completar (incluyendo el semestre).'
+            });
+        }
+
+        const fechaRegistro = fecha ? new Date(fecha) : new Date();
+
+        const query = `
+            INSERT INTO control_correcciones 
+            (cedula_alumno, nombre_alumno, codigo_carrera, codigo_materia, tipo_correccion, semestre, cedula_asesor, nombre_asesor, fecha) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+
+        await db.promise().query(query, [
+            cedula_alumno,
+            nombre_alumno,
+            codigo_carrera,
+            codigo_materia,
+            tipo_correccion,
+            semestre, // 👈 Incluir el semestre aquí
+            cedula_asesor,
+            nombre_asesor,
+            fechaRegistro
+        ]);
+
+        res.json({ success: true, message: 'Corrección registrada exitosamente' });
+    } catch (err) {
+        console.error('Error al insertar en control_correcciones:', err);
+        res.status(500).json({ success: false, message: 'Error en el servidor al guardar la corrección' });
+    }
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 app.put('/api/control_correcciones/:id', async(req, res) => {
     try {
         const { id } = req.params;
@@ -1272,6 +1278,15 @@ app.delete('/api/control_correcciones/:id', async(req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
+
+
+
+
+
+
+
+
+
 
 // ==========================================
 // RUTAS PARA EL MÓDULO DE CALIFICACIONES Y REGISTRO DINÁMICO
