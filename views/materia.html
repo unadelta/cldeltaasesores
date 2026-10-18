@@ -96,7 +96,7 @@
 
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label for="codigo_select" class="form-label fw-semibold">Seleccione la Asignatura (Catálogo UNA)</label>
+                                <label for="codigo_select" class="form-label fw-semibold">Seleccione la Asignatura (Catálogo)</label>
                                 <select class="form-select" id="codigo_select" required onchange="autocompletarMateria()">
                                     <option value="" selected disabled>Cargando catálogo...</option>
                                 </select>
@@ -128,7 +128,7 @@
                             </div>
                             <div class="col-md-4">
                                 <label for="semestre" class="form-label fw-semibold">Semestre</label>
-                                <input type="text" class="form-control" id="semestre" required placeholder="Ej. 2026-1" pattern="^\d{4}-[1-2]$">
+                                <input type="text" class="form-control" id="semestre" required placeholder="Ej. 2026-2" pattern="^\d{4}-[1-2]$">
                                 <div class="form-text text-muted small">Formato: 2026-1, 2026-2, etc.</div>
                             </div>
                         </div>
@@ -178,6 +178,7 @@
         let listaMateriasGestionadasGlobal = [];
         let catalogoMateriasGlobal = [];
         let cedulaAsesorGlobal = '';
+        let nombreAsesorGlobal = '';
 
         document.addEventListener("DOMContentLoaded", async() => {
             modalMateriaInstance = new bootstrap.Modal(document.getElementById('modalMateria'));
@@ -188,13 +189,19 @@
                 const data = await res.json();
                 if (data.authenticated) {
                     cedulaAsesorGlobal = String(data.user.cedula || data.user.id || '').trim();
+                    nombreAsesorGlobal = data.user.nombre || 'Asesor';
+
+                    // Mostrar el nombre del usuario en el navbar si existe el elemento contenedor
+                    const spanNombre = document.getElementById('nombre-asesor-nav');
+                    if (spanNombre) spanNombre.textContent = nombreAsesorGlobal;
+
                     await inicializarCatalogo();
                     await cargarMaterias();
                 } else {
                     window.location.href = '/';
                 }
             } catch (err) {
-                console.error("Error crítico:", err);
+                console.error("Error crítico de sesión:", err);
                 window.location.href = '/';
             }
         });
@@ -217,15 +224,15 @@
             selectCodigo.innerHTML = '<option value="" selected disabled>Cargando catálogo...</option>';
 
             try {
-                const res = await fetch('/api/materiauna');
+                const res = await fetch('/api/materias');
                 const data = await res.json();
 
                 if (data.success && Array.isArray(data.data)) {
-                    // Filtrar estrictamente por la cédula del asesor en la sesión actual
-                    catalogoMateriasGlobal = data.data.filter(mat => String(mat.cedula_asesor || "").trim() === cedulaAsesorGlobal);
+                    // Tomamos todas las materias generales disponibles para el catálogo de selección
+                    catalogoMateriasGlobal = data.data;
 
                     if (catalogoMateriasGlobal.length === 0) {
-                        selectCodigo.innerHTML = '<option value="" selected disabled>No tiene asignaturas asociadas en el catálogo</option>';
+                        selectCodigo.innerHTML = '<option value="" selected disabled>No hay asignaturas en el catálogo</option>';
                         return;
                     }
 
@@ -262,10 +269,11 @@
                 tbody.innerHTML = '';
 
                 if (data.success && Array.isArray(data.data)) {
-                    listaMateriasGestionadasGlobal = data.data.filter(m => String(m.cedula_asesor || "").trim() === cedulaAsesorGlobal);
+                    // Muestra todas las materias de la tabla general para que estén accesibles a los asesores
+                    listaMateriasGestionadasGlobal = data.data;
 
                     if (listaMateriasGestionadasGlobal.length === 0) {
-                        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">No hay materias gestionadas registradas para este asesor.</td></tr>`;
+                        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">No hay materias registradas en el sistema.</td></tr>`;
                         return;
                     }
 
@@ -303,7 +311,7 @@
                         `;
                     });
                 } else {
-                    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">Error al cargar materias gestionadas.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">Error al cargar materias.</td></tr>`;
                 }
             } catch (err) {
                 console.error("Error conexión materias:", err);
