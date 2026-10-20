@@ -130,6 +130,7 @@ app.get('/', (req, res) => {
 // RUTA DE AUTENTICACIÓN (LOGIN)
 // ==========================================
 
+
 app.post('/api/login', (req, res) => {
     const { usuario, clave } = req.body;
 
@@ -137,8 +138,11 @@ app.post('/api/login', (req, res) => {
         return res.status(400).json({ success: false, message: 'Por favor, ingrese usuario y contraseña.' });
     }
 
-    // 🔐 Cifrar la clave introducida para compararla con la de la BD
+    // OPCIÓN A: Si el frontend envía texto plano, esto lo pasa a MD5 aquí:
     const claveMd5 = crypto.createHash('md5').update(clave).digest('hex');
+
+    // (OPCIÓN B: Si tu frontend ya envía la clave cifrada en MD5, 
+    //  comenta la línea de arriba y usa directamente: const claveMd5 = clave;)
 
     const sql = 'SELECT * FROM asesor WHERE usuario = ? AND clave = ?';
     db.query(sql, [usuario, claveMd5], (err, results) => {
@@ -173,12 +177,11 @@ app.post('/api/login', (req, res) => {
             });
 
         } else {
+            // Si entra aquí, significa que el usuario o el hash MD5 no coinciden con la BD
             res.status(401).json({ success: false, message: 'Usuario o contraseña incorrectos.' });
         }
     });
 });
-
-
 
 
 app.post('/api/asesores', (req, res) => {
@@ -1816,20 +1819,6 @@ app.get('/control_materia', (req, res) => {
 // ==========================================
 
 // 1. OBTENER TODAS LAS MATERIAS
-/*
-app.get('/api/materiauna', (req, res) => {
-    //const query = 'SELECT id, codigo, descripcion FROM materia_una';
-    const query = 'SELECT id, codigo, descripcion FROM materia_una ORDER BY codigo ASC';
-
-    pool.query(query, (err, results) => {
-        if (err) {
-            console.error("❌ Error al obtener materias de MySQL:", err);
-            return res.status(500).json({ success: false, message: "Error en el servidor" });
-        }
-        res.json({ success: true, data: results });
-    });
-});
-*/
 
 // 1. OBTENER TODAS LAS MATERIAS (Incluyendo la cédula del asesor)
 app.get('/api/materiauna', (req, res) => {
@@ -1844,87 +1833,6 @@ app.get('/api/materiauna', (req, res) => {
     });
 });
 
-/*
-
-// 2. REGISTRAR NUEVA MATERIA (Con validación de código duplicado)
-app.post('/api/materiauna', (req, res) => {
-    const { codigo, descripcion } = req.body;
-
-    if (!codigo || !descripcion) {
-        return res.status(400).json({ success: false, message: 'El código y la descripción son obligatorios.' });
-    }
-
-    // Verificar si el código ya existe
-    pool.query('SELECT id FROM materia_una WHERE codigo = ?', [codigo], (err, existing) => {
-        if (err) {
-            console.error('❌ Error al verificar código duplicado:', err);
-            return res.status(500).json({ success: false, message: 'Error en el servidor' });
-        }
-
-        if (existing.length > 0) {
-            return res.status(400).json({
-                success: false,
-                message: `El código de materia "${codigo}" ya se encuentra registrado en la base de datos.`
-            });
-        }
-
-        // Insertar la nueva materia
-        pool.query('INSERT INTO materia_una (codigo, descripcion) VALUES (?, ?)', [codigo, descripcion], (err, result) => {
-            if (err) {
-                console.error('❌ Error al registrar materia en MySQL:', err);
-                return res.status(500).json({ success: false, message: 'Error interno al registrar la materia.' });
-            }
-
-            res.json({
-                success: true,
-                message: 'Materia registrada exitosamente',
-                insertId: result.insertId
-            });
-        });
-    });
-});
-
-
-// 3. ACTUALIZAR MATERIA EXISTENTE
-app.put('/api/materiauna/:id', (req, res) => {
-    const { id } = req.params;
-    const { codigo, descripcion } = req.body;
-
-    if (!codigo || !descripcion) {
-        return res.status(400).json({ success: false, message: 'El código y la descripción son obligatorios.' });
-    }
-
-    // Verificar si otro registro diferente ya está usando el código
-    pool.query('SELECT id FROM materia_una WHERE codigo = ? AND id != ?', [codigo, id], (err, existing) => {
-        if (err) {
-            console.error('❌ Error al verificar código duplicado en actualización:', err);
-            return res.status(500).json({ success: false, message: 'Error en el servidor' });
-        }
-
-        if (existing.length > 0) {
-            return res.status(400).json({
-                success: false,
-                message: `El código "${codigo}" ya pertenece a otra materia registrada.`
-            });
-        }
-
-        // Ejecutar actualización
-        pool.query('UPDATE materia_una SET codigo = ?, descripcion = ? WHERE id = ?', [codigo, descripcion, id], (err, result) => {
-            if (err) {
-                // <-- AQUÍ ESTÁ EL CAMBIO CLAVE PARA VER EL ERROR EN CONSOLA -->
-                console.error('❌ ERROR REAL DE MYSQL AL ACTUALIZAR:', err);
-                return res.status(500).json({ success: false, message: 'Error en BD: ' + err.message });
-            }
-
-            if (result.affectedRows === 0) {
-                return res.status(404).json({ success: false, message: 'No se encontró la materia a actualizar.' });
-            }
-
-            res.json({ success: true, message: 'Materia actualizada exitosamente' });
-        });
-    });
-});
-*/
 
 // REGISTRAR NUEVA MATERIA (POST)
 app.post('/api/materiauna', (req, res) => {
@@ -2193,62 +2101,6 @@ app.get('/api/asesorcarrera', (req, res) => {
     });
 });
 
-/*
-// 2. CREAR UN NUEVO REGISTRO EN ASESOR_CARRERA
-app.post('/api/asesorcarrera', (req, res) => {
-    const { asesor_cedula, carrera, asignatura, cantidad_alumno, semestre } = req.body;
-
-    if (!asesor_cedula || !carrera || !asignatura || !cantidad_alumno || !semestre) {
-        return res.status(400).json({ success: false, message: 'Faltan campos obligatorios por completar.' });
-    }
-
-    // Validar si la asignatura ya está registrada para el mismo semestre
-    db.query('SELECT id FROM asesor_carrera WHERE asignatura = ? AND semestre = ?', [asignatura, semestre], (err, duplicado) => {
-        if (err) {
-            console.error('❌ Error al verificar duplicados:', err);
-            return res.status(500).json({ success: false, message: 'Error interno en el servidor.' });
-        }
-
-        if (duplicado.length > 0) {
-            return res.status(400).json({
-                success: false,
-                message: `La asignatura ya fue registrada para ese semestre.`
-            });
-        }
-
-        // Verificar que la asignatura exista en materia_una
-        db.query('SELECT codigo FROM materia_una WHERE codigo = ?', [asignatura], (err, materiaExiste) => {
-            if (err) {
-                console.error('❌ Error al verificar asignatura:', err);
-                return res.status(500).json({ success: false, message: 'Error interno en el servidor.' });
-            }
-
-            if (materiaExiste.length === 0) {
-                return res.status(400).json({ success: false, message: 'La asignatura seleccionada no existe en la tabla materia_una.' });
-            }
-
-            const insertQuery = `
-                INSERT INTO asesor_carrera (asesor_cedula, carrera, asignatura, cantidad_alumno, semestre) 
-                VALUES (?, ?, ?, ?, ?)
-            `;
-
-            db.query(insertQuery, [asesor_cedula, carrera, asignatura, cantidad_alumno, semestre], (err, result) => {
-                if (err) {
-                    console.error('❌ Error al guardar en asesor_carrera:', err);
-                    return res.status(500).json({ success: false, message: 'Error al registrar los datos en la base de datos.' });
-                }
-
-                res.status(201).json({
-                    success: true,
-                    message: 'Registro guardado exitosamente.',
-                    id: result.insertId
-                });
-            });
-        });
-    });
-});
-
-*/
 
 app.post('/api/asesorcarrera', (req, res) => {
     const { asesor_cedula, carrera, asignatura, cantidad_alumno, semestre } = req.body;
