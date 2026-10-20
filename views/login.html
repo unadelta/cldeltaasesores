@@ -9,7 +9,8 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 </head>
 
-<body class="d-flex align-items-center justify-content-center vh-100" style="background-color: #1F91DC !important;">
+<body class="bg-light d-flex align-items-center justify-content-center vh-100">
+
     <div class="card border-0 shadow-sm p-4" style="width: 100%; max-width: 400px;">
 
         <!-- LOGO Y CABECERA -->
@@ -17,9 +18,7 @@
             <div class="mb-2">
                 <img src="/jpg/logouna.jpg" alt="Logo UNA" height="65" class="p-1 bg-white rounded shadow-sm" onerror="this.style.display='none'">
             </div>
-            <h6 class="fw-bold text-secondary mb-1">Universidad Nacional Abierta</h6>
-            <!-- SUBTÍTULO DESTACADO CON ESTILO DIRECTO -->
-            <div class="fw-bold text-dark mb-2" style="font-size: 0.88rem; letter-spacing: 0.3px;">Centro Local Delta Amacuro</div>
+            <h6 class="fw-bold text-secondary mb-2">Universidad Nacional Abierta</h6>
             <h4 class="fw-bold text-primary mb-1">Sistema Asesores UNA</h4>
             <p class="text-muted small">Ingrese sus credenciales para continuar</p>
         </div>
@@ -91,7 +90,7 @@
                     },
                     body: JSON.stringify({
                         usuario,
-                        clave
+                        clave //modificado password:clave
                     })
                 });
 

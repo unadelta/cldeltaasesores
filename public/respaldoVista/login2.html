@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión - Sistema Asesores UNA</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+</head>
+
+<body class="bg-light d-flex align-items-center justify-content-center vh-100">
+
+    <div class="card border-0 shadow-sm p-4" style="width: 100%; max-width: 400px;">
+
+        <!-- LOGO Y CABECERA -->
+        <div class="text-center mb-4">
+            <div class="mb-2">
+                <img src="/jpg/logouna.jpg" alt="Logo UNA" height="65" class="p-1 bg-white rounded shadow-sm" onerror="this.style.display='none'">
+            </div>
+            <h6 class="fw-bold text-secondary mb-2">Universidad Nacional Abierta</h6>
+            <h4 class="fw-bold text-primary mb-1">Sistema Asesores UNA</h4>
+            <p class="text-muted small">Ingrese sus credenciales para continuar</p>
+        </div>
+
+        <div id="alertLogin" class="alert alert-danger d-none py-2 fs-6 text-center" role="alert"></div>
+
+        <form id="formLogin" onsubmit="iniciarSesion(event)" autocomplete="nope">
+            <input type="text" style="display:none" name="fakeusernameremembered">
+            <input type="password" style="display:none" name="fakepasswordremembered">
+
+            <div class="mb-3">
+                <label for="usuario" class="form-label fw-semibold">Usuario</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-white"><i class="bi bi-person"></i></span>
+                    <input type="text" class="form-control" id="usuario" placeholder="Ingrese su usuario" autocomplete="new-password" required>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label for="clave" class="form-label fw-semibold">Contraseña</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-white"><i class="bi bi-lock"></i></span>
+                    <input type="password" class="form-control" id="clave" placeholder="Ingrese su contraseña" autocomplete="new-password" required>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 fw-bold py-2">
+                <i class="bi bi-box-arrow-in-right me-1"></i> Entrar
+            </button>
+        </form>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function limpiarCampos() {
+            const form = document.getElementById('formLogin');
+            if (form) form.reset();
+
+            const inputUsuario = document.getElementById('usuario');
+            const inputClave = document.getElementById('clave');
+
+            if (inputUsuario) inputUsuario.value = '';
+            if (inputClave) inputClave.value = '';
+        }
+
+        window.addEventListener("pageshow", (event) => {
+            limpiarCampos();
+            setTimeout(limpiarCampos, 50);
+        });
+
+        document.addEventListener("DOMContentLoaded", () => {
+            limpiarCampos();
+            setTimeout(limpiarCampos, 50);
+        });
+
+        async function iniciarSesion(e) {
+            e.preventDefault();
+            const alertLogin = document.getElementById('alertLogin');
+            alertLogin.classList.add('d-none');
+
+            const usuario = document.getElementById('usuario').value.trim();
+            const clave = document.getElementById('clave').value.trim();
+
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        usuario,
+                        clave //modificado password:clave
+                    })
+                });
+
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    window.location.href = '/dashboard';
+                } else {
+                    alertLogin.textContent = data.message || 'Credenciales inválidas';
+                    alertLogin.classList.remove('d-none');
+                }
+            } catch (err) {
+                alertLogin.textContent = 'Error de conexión con el servidor';
+                alertLogin.classList.remove('d-none');
+            }
+        }
+    </script>
+</body>
+
+</html>
