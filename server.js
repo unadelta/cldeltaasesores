@@ -130,7 +130,7 @@ app.get('/', (req, res) => {
 // RUTA DE AUTENTICACIÓN (LOGIN)
 // ==========================================
 
-
+/*
 app.post('/api/login', (req, res) => {
     const { usuario, clave } = req.body;
 
@@ -182,7 +182,35 @@ app.post('/api/login', (req, res) => {
         }
     });
 });
+*/
 
+app.post('/api/login', (req, res) => {
+    const { usuario, clave } = req.body;
+
+    console.log("--- INTENTO DE LOGIN ---");
+    console.log("Usuario recibido:", usuario);
+    console.log("Clave en texto plano recibida:", clave);
+
+    const claveMd5 = crypto.createHash('md5').update(clave).digest('hex');
+    console.log("Hash MD5 generado:", claveMd5);
+
+    const sql = 'SELECT * FROM asesor WHERE usuario = ? AND clave = ?';
+    db.query(sql, [usuario, claveMd5], (err, results) => {
+        if (err) {
+            console.error('Error en el servidor:', err);
+            return res.status(500).json({ success: false, message: 'Error interno.' });
+        }
+
+        console.log("Resultados encontrados en la BD:", results.length);
+
+        if (results.length > 0) {
+            // ... resto de tu código de sesión ...
+            res.json({ success: true, redirectUrl: '/dashboard' });
+        } else {
+            res.status(401).json({ success: false, message: 'Usuario o contraseña incorrectos.' });
+        }
+    });
+});
 
 app.post('/api/asesores', (req, res) => {
     const { cedula, usuario, clave, nombre, email, rol_id } = req.body;
