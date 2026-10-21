@@ -23,6 +23,7 @@ const transporter = nodemailer.createTransport({
         user: 'una.deltaamacuro.tucu.com', // Tu correo institucional o del sistema
         pass: 'cldeltaamacuro' // Contraseña de aplicación de tu correo
     }
+
 });
 
 // ==========================================
@@ -130,7 +131,8 @@ app.get('/', (req, res) => {
 // RUTA DE AUTENTICACIÓN (LOGIN)
 // ==========================================
 
-/*
+
+
 app.post('/api/login', (req, res) => {
     const { usuario, clave } = req.body;
 
@@ -138,11 +140,8 @@ app.post('/api/login', (req, res) => {
         return res.status(400).json({ success: false, message: 'Por favor, ingrese usuario y contraseña.' });
     }
 
-    // OPCIÓN A: Si el frontend envía texto plano, esto lo pasa a MD5 aquí:
+    // 🔐 Cifrar la clave introducida en formato MD5 para compararla con la de la BD
     const claveMd5 = crypto.createHash('md5').update(clave).digest('hex');
-
-    // (OPCIÓN B: Si tu frontend ya envía la clave cifrada en MD5, 
-    //  comenta la línea de arriba y usa directamente: const claveMd5 = clave;)
 
     const sql = 'SELECT * FROM asesor WHERE usuario = ? AND clave = ?';
     db.query(sql, [usuario, claveMd5], (err, results) => {
@@ -177,40 +176,14 @@ app.post('/api/login', (req, res) => {
             });
 
         } else {
-            // Si entra aquí, significa que el usuario o el hash MD5 no coinciden con la BD
+            // Si las credenciales no coinciden con el hash MD5 de la BD
             res.status(401).json({ success: false, message: 'Usuario o contraseña incorrectos.' });
         }
     });
 });
-*/
 
-app.post('/api/login', (req, res) => {
-    const { usuario, clave } = req.body;
 
-    console.log("--- INTENTO DE LOGIN ---");
-    console.log("Usuario recibido:", usuario);
-    console.log("Clave en texto plano recibida:", clave);
 
-    const claveMd5 = crypto.createHash('md5').update(clave).digest('hex');
-    console.log("Hash MD5 generado:", claveMd5);
-
-    const sql = 'SELECT * FROM asesor WHERE usuario = ? AND clave = ?';
-    db.query(sql, [usuario, claveMd5], (err, results) => {
-        if (err) {
-            console.error('Error en el servidor:', err);
-            return res.status(500).json({ success: false, message: 'Error interno.' });
-        }
-
-        console.log("Resultados encontrados en la BD:", results.length);
-
-        if (results.length > 0) {
-            // ... resto de tu código de sesión ...
-            res.json({ success: true, redirectUrl: '/dashboard' });
-        } else {
-            res.status(401).json({ success: false, message: 'Usuario o contraseña incorrectos.' });
-        }
-    });
-});
 
 app.post('/api/asesores', (req, res) => {
     const { cedula, usuario, clave, nombre, email, rol_id } = req.body;
