@@ -15,7 +15,7 @@ const crypto = require('crypto'); // Asegúrate de tener esto arriba en tu serve
 // Importar rutas secundarias si las usas
 const dbAdminRoutes = require('./routes/db_admin.routes');
 */
-
+/*
 const express = require('express');
 const mysql = require('mysql2');
 require('dotenv').config();
@@ -32,9 +32,24 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
+*/
 
+const express = require('express');
+const mysql = require('mysql2');
+require('dotenv').config();
+const path = require('path');
+const fs = require('fs');
+const cors = require('cors');
+const session = require('express-session');
+const crypto = require('crypto');
 
+// 1. PRIMERO CREAS LA INSTANCIA DE EXPRESS
+const app = express();
 
+// 2. DESPUÉS YA PUEDES USAR app.use()
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cors());
 // ==========================================
 // 1. MIDDLEWARES GLOBALES Y SESIÓN (¡DEBEN IR PRIMERO!)
 // ==========================================
