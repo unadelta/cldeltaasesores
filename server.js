@@ -248,6 +248,7 @@ app.post('/api/asesores', (req, res) => {
 // ==========================================
 // RUTA DE AUTENTICACIÓN (LOGIN) - CORREGIDA PARA NUBE
 // ==========================================
+/*
 app.post('/api/login', async(req, res) => {
     const { usuario, clave } = req.body;
 
@@ -297,7 +298,63 @@ app.post('/api/login', async(req, res) => {
         return res.status(500).json({ success: false, message: 'Error interno en el servidor.' });
     }
 });
+*/
 
+app.post('/api/login', async(req, res) => {
+    const { usuario, clave } = req.body;
+
+    console.log("🔍 Intento de login para usuario:", usuario);
+    console.log("🔍 Clave en texto plano recibida:", clave);
+
+    if (!usuario || !clave) {
+        return res.status(400).json({ success: false, message: 'Por favor, ingrese usuario y contraseña.' });
+    }
+
+    try {
+        // 🔐 Cifrar la clave introducida en formato MD5
+        const claveMd5 = crypto.createHash('md5').update(clave).digest('hex');
+        console.log("🔍 Hash MD5 calculado:", claveMd5);
+
+        // Usamos .promise() para asegurar la espera en TiDB Cloud y TRIM para evitar espacios
+        const [results] = await db.promise().query(
+            'SELECT * FROM asesor WHERE TRIM(usuario) = TRIM(?) AND clave = ?', [usuario, claveMd5]
+        );
+
+        console.log("🔍 Resultados encontrados en BD:", results.length);
+
+        if (results.length > 0) {
+            const asesor = results[0];
+
+            // Guardar datos en la sesión
+            req.session.usuario = {
+                id: asesor.id,
+                cedula: asesor.cedula,
+                usuario: asesor.usuario,
+                nombre: asesor.nombre,
+                email: asesor.email,
+                rol_id: asesor.rol_id
+            };
+
+            req.session.save((saveErr) => {
+                if (saveErr) {
+                    console.error('Error al guardar la sesión:', saveErr);
+                }
+                res.json({
+                    success: true,
+                    message: 'Autenticación exitosa',
+                    redirectUrl: '/dashboard'
+                });
+            });
+
+        } else {
+            res.status(401).json({ success: false, message: 'Usuario o contraseña incorrectos.' });
+        }
+
+    } catch (err) {
+        console.error('Error en el servidor al intentar iniciar sesión:', err);
+        return res.status(500).json({ success: false, message: 'Error interno en el servidor.' });
+    }
+});
 
 
 
