@@ -42,6 +42,7 @@ const fs = require('fs');
 const cors = require('cors');
 const session = require('express-session');
 const crypto = require('crypto');
+const dbAdminRoutes = require('./routes/db_admin.routes');
 
 // 1. PRIMERO CREAS LA INSTANCIA DE EXPRESS
 const app = express();
