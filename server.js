@@ -13,18 +13,6 @@ const crypto = require('crypto'); // Asegúrate de tener esto arriba en tu serve
 // Importar rutas secundarias si las usas
 const dbAdminRoutes = require('./routes/db_admin.routes');
 
-const nodemailer = require('nodemailer');
-
-
-// Configurar el transporte de correo (ej. usando Gmail o SMTP)
-const transporter = nodemailer.createTransport({
-    service: 'gmail', // O el servicio SMTP que utilices
-    auth: {
-        user: 'una.deltaamacuro.tucu.com', // Tu correo institucional o del sistema
-        pass: 'cldeltaamacuro' // Contraseña de aplicación de tu correo
-    }
-
-});
 
 // ==========================================
 // 1. MIDDLEWARES GLOBALES Y SESIÓN (¡DEBEN IR PRIMERO!)
