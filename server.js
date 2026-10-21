@@ -95,7 +95,7 @@ pool.getConnection((err, connection) => {
     }
 });
 
-module.exports = db;
+//module.exports = db;
 
 
 
@@ -1772,11 +1772,13 @@ app.get('/reporconsolidado', (req, res) => {
 
 app.use('/api/db', dbAdminRoutes);
 
-
+/*
 // --- Ruta de prueba ---
 app.get('/', (req, res) => {
     res.send('Servidor API Asesores UNA funcionando.');
 });
+
+*/
 
 // ==========================================
 // RUTA DE VISTA PARA GESTIÓN DE MATERIAS
