@@ -1795,7 +1795,7 @@ app.get('/', (req, res) => {
 // ==========================================
 
 
-
+/*
 app.get('/control_materia', (req, res) => {
     // Valida si el usuario tiene sesión activa usando 'usuario'
     if (!req.session || !req.session.usuario) {
@@ -1804,6 +1804,8 @@ app.get('/control_materia', (req, res) => {
 
     res.sendFile(path.join(__dirname, 'views', 'control_materia.html'));
 });
+*/
+
 
 // Ruta para la vista HTML de control de materias
 app.get('/control_materia', (req, res) => {
